@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "mari-gunting",
+    "name": "Mari Gunting",
     "slug": "mari-gunting",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.marigunting.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience.",
+        "NSLocationAlwaysUsageDescription": "Mari Gunting needs your location to track barber arrival and provide real-time updates."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +21,30 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.marigunting.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience."
+        }
+      ]
+    ],
+    "scheme": "marigunting",
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
