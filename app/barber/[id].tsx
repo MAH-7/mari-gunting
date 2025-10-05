@@ -6,6 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency, formatDistance } from '@/utils/format';
+import { SkeletonCircle, SkeletonText, SkeletonBase, SkeletonImage } from '@/components/Skeleton';
 
 const { width } = Dimensions.get('window');
 
@@ -37,9 +38,81 @@ export default function BarberProfileScreen() {
           <Text style={styles.headerTitle}>Barber Profile</Text>
           <View style={{ width: 24 }} />
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B14F" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+        
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Skeleton Profile Header */}
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              <SkeletonCircle size={100} />
+            </View>
+            <View style={styles.profileInfo}>
+              <SkeletonText width="60%" height={24} style={{ marginBottom: 8 }} />
+              <SkeletonText width="40%" height={16} style={{ marginBottom: 6 }} />
+              <SkeletonText width="35%" height={14} />
+            </View>
+          </View>
+
+          {/* Skeleton Stats */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <SkeletonText width={60} height={28} style={{ marginBottom: 6 }} />
+              <SkeletonText width={70} height={14} />
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <SkeletonText width={60} height={28} style={{ marginBottom: 6 }} />
+              <SkeletonText width={70} height={14} />
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <SkeletonText width={60} height={28} style={{ marginBottom: 6 }} />
+              <SkeletonText width={70} height={14} />
+            </View>
+          </View>
+
+          {/* Skeleton Sections */}
+          <View style={styles.section}>
+            <SkeletonText width="30%" height={20} style={{ marginBottom: 12 }} />
+            <SkeletonText width="100%" height={16} lines={3} spacing={8} />
+          </View>
+
+          <View style={styles.section}>
+            <SkeletonText width="40%" height={20} style={{ marginBottom: 12 }} />
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+              <SkeletonBase width={100} height={32} borderRadius={16} />
+              <SkeletonBase width={90} height={32} borderRadius={16} />
+              <SkeletonBase width={110} height={32} borderRadius={16} />
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SkeletonText width="30%" height={20} style={{ marginBottom: 12 }} />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <SkeletonImage width={200} height={150} borderRadius={12} />
+              <SkeletonImage width={200} height={150} borderRadius={12} />
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SkeletonText width="50%" height={20} style={{ marginBottom: 16 }} />
+            <View style={{ gap: 12 }}>
+              <SkeletonBase width="100%" height={80} borderRadius={12} />
+              <SkeletonBase width="100%" height={80} borderRadius={12} />
+            </View>
+          </View>
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        {/* Skeleton Bottom Bar */}
+        <View style={styles.bottomBar}>
+          <View style={styles.bottomBarContent}>
+            <View style={styles.priceInfo}>
+              <SkeletonText width={80} height={14} style={{ marginBottom: 4 }} />
+              <SkeletonText width={100} height={24} />
+            </View>
+            <SkeletonBase width={140} height={52} borderRadius={26} />
+          </View>
         </View>
       </SafeAreaView>
     );

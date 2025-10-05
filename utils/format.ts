@@ -20,13 +20,19 @@ export const formatPrice = (amount: number): string => {
   }).format(amount);
 };
 
-// Time formatting
+// Time formatting - Convert 24h to 12h format (e.g., "14:30" -> "2:30 PM")
 export const formatTime = (time: string): string => {
-  // Convert HH:mm to 12-hour format
+  if (!time) return '';
   const [hours, minutes] = time.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours % 12 || 12;
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+// Time range formatting (e.g., "09:00 - 21:00" -> "9:00 AM - 9:00 PM")
+export const formatTimeRange = (startTime: string, endTime: string): string => {
+  if (!startTime || !endTime) return 'Closed';
+  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
 };
 
 // Date formatting

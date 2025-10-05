@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -59,13 +60,13 @@ export default function SuccessModal({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: MODAL_ANIMATION.BACKDROP_FADE_IN,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
-          damping: 20,
-          stiffness: 90,
+          damping: MODAL_ANIMATION.SPRING.damping,
+          stiffness: MODAL_ANIMATION.SPRING.stiffness,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
@@ -80,12 +81,12 @@ export default function SuccessModal({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 150,
+          duration: MODAL_ANIMATION.BACKDROP_FADE_OUT,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT,
-          duration: 200,
+          duration: MODAL_ANIMATION.SLIDE_DURATION,
           useNativeDriver: true,
         }),
       ]).start();
@@ -159,7 +160,7 @@ export default function SuccessModal({
                 <TouchableOpacity
                   style={styles.primaryButton}
                   onPress={primaryButton.onPress}
-                  activeOpacity={0.8}
+                  activeOpacity={ACTIVE_OPACITY.PRIMARY}
                 >
                   {primaryButton.icon && (
                     <Ionicons
@@ -180,7 +181,7 @@ export default function SuccessModal({
                 <TouchableOpacity
                   style={styles.secondaryButton}
                   onPress={secondaryButton.onPress}
-                  activeOpacity={0.8}
+                  activeOpacity={ACTIVE_OPACITY.SECONDARY}
                 >
                   {secondaryButton.icon && (
                     <Ionicons

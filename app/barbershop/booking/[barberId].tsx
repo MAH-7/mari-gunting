@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,21 +6,28 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency, formatPrice } from '@/utils/format';
-import { useStore } from '@/store/useStore';
 
-export default function CreateBookingScreen() {
-  const { barberId } = useLocalSearchParams<{ barberId: string }>();
-  const currentUser = useStore((state) => state.currentUser);
+export default function BarbershopBookingScreen() {
+  const { barberId, shopId } = useLocalSearchParams<{ barberId: string; shopId: string }>();
   
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
 
+  // Fetch barber details
   const { data: barberResponse } = useQuery({
     queryKey: ['barber', barberId],
     queryFn: () => api.getBarberById(barberId),
   });
 
+  // Fetch barbershop details
+  const { data: shopResponse } = useQuery({
+    queryKey: ['barbershop', shopId],
+    queryFn: () => api.getBarbershopById(shopId),
+  });
+
   const barber = barberResponse?.data;
+  const shop = shopResponse?.data;
   const selectedServices = barber?.services.filter(s => selectedServiceIds.includes(s.id)) || [];
   
   // Toggle service selection
@@ -31,27 +38,56 @@ export default function CreateBookingScreen() {
         : [...prev, serviceId]
     );
   };
-  
-  // Get customer addresses from authenticated user
-  const addresses = currentUser?.savedAddresses || [];
+
+  // Generate next 7 days for date selection
+  const dates = useMemo(() => {
+    const result = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayNumber = date.getDate();
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const fullDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      result.push({
+        id: fullDate,
+        dayName,
+        dayNumber,
+        month,
+        isToday: i === 0,
+      });
+    }
+    
+    return result;
+  }, []);
+
+  // Generate time slots (9 AM - 9 PM in 30 min intervals)
+  const timeSlots = useMemo(() => {
+    const slots = [];
+    const startHour = 9;
+    const endHour = 21;
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const displayTime = `${hour > 12 ? hour - 12 : hour}:${minute.toString().padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+        slots.push({ id: time, label: displayTime });
+      }
+    }
+    
+    return slots;
+  }, []);
   
   // Calculate totals
   const subtotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
   
-  // Calculate distance and travel cost
-  // In production, this would calculate distance between customer address and barber location
-  const selectedAddr = addresses.find(a => a.id === selectedAddress);
-  const distance = barber?.distance || 3.5; // Use barber's current distance or default
-  
-  // NEW PRICING MODEL: RM 5 base (0-4km) + RM 1/km after 4km
-  let travelCost = 0;
-  if (distance <= 4) {
-    travelCost = 5; // Base fare for 0-4 km
-  } else {
-    travelCost = 5 + ((distance - 4) * 1); // Base + RM 1/km after 4km
-  }
-  travelCost = Math.round(travelCost * 100) / 100; // Round to 2 decimals
+  // NO TRAVEL COST for barbershop bookings (walk-in service)
+  const travelCost = 0;
   
   // Platform fee
   const platformFee = 2.00; // RM 2 platform fee
@@ -61,7 +97,7 @@ export default function CreateBookingScreen() {
   const barberServiceEarning = Math.round((subtotal * 0.88) * 100) / 100;
   
   // Calculate total
-  const total = Math.round((subtotal + travelCost + platformFee) * 100) / 100;
+  const total = Math.round((subtotal + platformFee) * 100) / 100;
 
   const handleBookNow = () => {
     if (selectedServiceIds.length === 0) {
@@ -69,8 +105,13 @@ export default function CreateBookingScreen() {
       return;
     }
     
-    if (!selectedAddress) {
-      Alert.alert('Required', 'Please select a service location');
+    if (!selectedDate) {
+      Alert.alert('Required', 'Please select a booking date');
+      return;
+    }
+
+    if (!selectedTime) {
+      Alert.alert('Required', 'Please select a booking time');
       return;
     }
 
@@ -79,18 +120,21 @@ export default function CreateBookingScreen() {
       pathname: '/payment-method',
       params: {
         // Booking data
+        bookingType: 'barbershop',
         barberId: barber.id,
+        shopId: shop.id,
         barberName: barber.name,
         barberAvatar: barber.avatar,
+        shopName: shop.name,
+        shopAddress: shop.address,
         serviceIds: selectedServiceIds.join(','),
         services: JSON.stringify(selectedServices),
-        addressId: selectedAddress,
-        address: JSON.stringify(addresses.find(a => a.id === selectedAddress)),
-        distance: distance.toString(),
+        scheduledDate: selectedDate,
+        scheduledTime: selectedTime,
         
-        // Pricing
+        // Pricing (NO travel cost for barbershop)
         subtotal: subtotal.toString(),
-        travelCost: travelCost.toString(),
+        travelCost: '0',
         platformFee: platformFee.toString(),
         serviceCommission: serviceCommission.toString(),
         barberServiceEarning: barberServiceEarning.toString(),
@@ -103,7 +147,7 @@ export default function CreateBookingScreen() {
     } as any);
   };
 
-  if (!barber) {
+  if (!barber || !shop) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
@@ -132,20 +176,49 @@ export default function CreateBookingScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* On-Demand Info Banner */}
+        {/* Walk-In Info Banner */}
         <View style={styles.infoBanner}>
           <View style={styles.infoBannerIcon}>
-            <Ionicons name="flash" size={20} color="#00B14F" />
+            <Ionicons name="storefront" size={20} color="#007AFF" />
           </View>
           <View style={styles.infoBannerContent}>
-            <Text style={styles.infoBannerTitle}>On-Demand Service</Text>
-            <Text style={styles.infoBannerText}>Your barber will arrive at your location as soon as possible</Text>
+            <Text style={styles.infoBannerTitle}>Barbershop Visit</Text>
+            <Text style={styles.infoBannerText}>Visit the shop at your scheduled time for your service</Text>
+          </View>
+        </View>
+
+        {/* Barbershop Location */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Barbershop</Text>
+          <View style={styles.shopCard}>
+            <Image source={{ uri: shop.image }} style={styles.shopImage} />
+            <View style={styles.shopInfo}>
+              <View style={styles.shopNameRow}>
+                <Text style={styles.shopName}>{shop.name}</Text>
+                {shop.isVerified && (
+                  <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
+                )}
+              </View>
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={14} color="#00B14F" />
+                <Text style={styles.locationText} numberOfLines={2}>{shop.address}</Text>
+              </View>
+              <View style={styles.hoursRow}>
+                <Ionicons name="time-outline" size={14} color="#8E8E93" />
+                <Text style={styles.hoursText}>
+                  {shop.operatingHours.includes('-') 
+                    ? shop.operatingHours.split(' - ').map(time => formatTime(time.trim())).join(' - ')
+                    : shop.operatingHours
+                  }
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
         {/* Barber Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Barber</Text>
+          <Text style={styles.sectionTitle}>Your Barber</Text>
           <View style={styles.barberCard}>
             <Image source={{ uri: barber.avatar }} style={styles.barberAvatar} />
             <View style={styles.barberInfo}>
@@ -202,45 +275,76 @@ export default function CreateBookingScreen() {
           })}
         </View>
 
-        {/* Select Address */}
+        {/* Date Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Location</Text>
-          {addresses.length > 0 ? (
-            addresses.map((addr) => (
+          <Text style={styles.sectionTitle}>Select Date</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.dateScroll}
+            contentContainerStyle={{ paddingRight: 20 }}
+          >
+            {dates.map((date) => (
               <TouchableOpacity
-                key={addr.id}
+                key={date.id}
                 style={[
-                  styles.addressCard,
-                  selectedAddress === addr.id && styles.addressCardActive,
+                  styles.dateChip,
+                  selectedDate === date.id && styles.dateChipActive
                 ]}
-                onPress={() => setSelectedAddress(addr.id)}
+                onPress={() => setSelectedDate(date.id)}
                 activeOpacity={0.7}
               >
-                <View style={[
-                  styles.radioCircle,
-                  selectedAddress === addr.id && styles.radioCircleActive,
+                <Text style={[
+                  styles.dateDay,
+                  selectedDate === date.id && styles.dateDayActive
                 ]}>
-                  {selectedAddress === addr.id && <View style={styles.radioInner} />}
-                </View>
-                <View style={styles.addressInfo}>
-                  <Text style={styles.addressLabel}>{addr.label}</Text>
-                  <Text style={styles.addressText}>{addr.fullAddress}</Text>
-                  {addr.notes && (
-                    <Text style={styles.addressNotes}>Note: {addr.notes}</Text>
-                  )}
-                </View>
-                <Ionicons name="location" size={20} color="#00B14F" />
+                  {date.dayName}
+                </Text>
+                <Text style={[
+                  styles.dateNumber,
+                  selectedDate === date.id && styles.dateNumberActive
+                ]}>
+                  {date.dayNumber}
+                </Text>
+                <Text style={[
+                  styles.dateMonth,
+                  selectedDate === date.id && styles.dateMonthActive
+                ]}>
+                  {date.month}
+                </Text>
+                {date.isToday && (
+                  <View style={styles.todayBadge}>
+                    <Text style={styles.todayText}>Today</Text>
+                  </View>
+                )}
               </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyAddresses}>
-              <Ionicons name="location-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyAddressesText}>No saved addresses</Text>
-              <TouchableOpacity style={styles.addAddressButton}>
-                <Text style={styles.addAddressButtonText}>+ Add Address</Text>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Time Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Select Time</Text>
+          <View style={styles.timeGrid}>
+            {timeSlots.map((slot) => (
+              <TouchableOpacity
+                key={slot.id}
+                style={[
+                  styles.timeChip,
+                  selectedTime === slot.id && styles.timeChipActive
+                ]}
+                onPress={() => setSelectedTime(slot.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.timeLabel,
+                  selectedTime === slot.id && styles.timeLabelActive
+                ]}>
+                  {slot.label}
+                </Text>
               </TouchableOpacity>
-            </View>
-          )}
+            ))}
+          </View>
         </View>
 
         {/* Price Breakdown */}
@@ -250,10 +354,6 @@ export default function CreateBookingScreen() {
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Services ({selectedServices.length})</Text>
               <Text style={styles.priceValue}>{formatCurrency(subtotal)}</Text>
-            </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Travel Fee ({distance.toFixed(1)} km)</Text>
-              <Text style={styles.priceValue}>{formatPrice(travelCost)}</Text>
             </View>
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Platform Fee</Text>
@@ -280,13 +380,13 @@ export default function CreateBookingScreen() {
         <TouchableOpacity 
           style={[
             styles.bookButton,
-            (selectedServiceIds.length === 0 || !selectedAddress) && styles.bookButtonDisabled
+            (selectedServiceIds.length === 0 || !selectedDate || !selectedTime) && styles.bookButtonDisabled
           ]}
           onPress={handleBookNow}
-          disabled={selectedServiceIds.length === 0 || !selectedAddress}
+          disabled={selectedServiceIds.length === 0 || !selectedDate || !selectedTime}
           activeOpacity={0.8}
         >
-          <Text style={styles.bookButtonText}>Request Barber Now</Text>
+          <Text style={styles.bookButtonText}>Confirm Booking</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -336,14 +436,14 @@ const styles = StyleSheet.create({
   },
   infoBanner: {
     flexDirection: 'row',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#EFF6FF',
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#00B14F20',
+    borderColor: '#007AFF20',
     gap: 12,
   },
   infoBannerIcon: {
@@ -361,12 +461,57 @@ const styles = StyleSheet.create({
   infoBannerTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#007AFF',
   },
   infoBannerText: {
     fontSize: 13,
-    color: '#047857',
+    color: '#1E40AF',
     lineHeight: 18,
+  },
+  shopCard: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  shopImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#E5E5EA',
+  },
+  shopInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  shopNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  shopName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1C1C1E',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  hoursText: {
+    fontSize: 13,
+    color: '#8E8E93',
   },
   barberCard: {
     flexDirection: 'row',
@@ -478,27 +623,50 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E5E5EA',
-    minWidth: 100,
+    minWidth: 70,
+    alignItems: 'center',
   },
   dateChipActive: {
     backgroundColor: '#F0FDF4',
     borderColor: '#00B14F',
   },
-  dateLabel: {
-    fontSize: 14,
+  dateDay: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#1C1C1E',
-    textAlign: 'center',
+    color: '#8E8E93',
     marginBottom: 4,
   },
-  dateLabelActive: {
+  dateDayActive: {
+    color: '#00B14F',
+  },
+  dateNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginBottom: 2,
+  },
+  dateNumberActive: {
+    color: '#00B14F',
+  },
+  dateMonth: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#8E8E93',
+  },
+  dateMonthActive: {
     color: '#00B14F',
   },
   todayBadge: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#00B14F',
-    textAlign: 'center',
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: '#00B14F',
+    borderRadius: 8,
+  },
+  todayText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   timeGrid: {
     flexDirection: 'row',
@@ -506,12 +674,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   timeChip: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#F2F2F7',
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E5E5EA',
+    minWidth: 100,
+    alignItems: 'center',
   },
   timeChipActive: {
     backgroundColor: '#F0FDF4',
@@ -524,80 +694,6 @@ const styles = StyleSheet.create({
   },
   timeLabelActive: {
     color: '#00B14F',
-  },
-  addressCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#E5E5EA',
-  },
-  addressCardActive: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#00B14F',
-  },
-  radioCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioCircleActive: {
-    borderColor: '#00B14F',
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#00B14F',
-  },
-  addressInfo: {
-    flex: 1,
-  },
-  addressLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1C1C1E',
-    marginBottom: 4,
-  },
-  addressText: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-  addressNotes: {
-    fontSize: 12,
-    color: '#8E8E93',
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  emptyAddresses: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 12,
-  },
-  emptyAddressesText: {
-    fontSize: 15,
-    color: '#8E8E93',
-  },
-  addAddressButton: {
-    marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#00B14F',
-    borderRadius: 8,
-  },
-  addAddressButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   priceBreakdown: {
     gap: 12,

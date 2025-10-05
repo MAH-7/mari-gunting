@@ -342,4 +342,48 @@ export const api = {
       },
     };
   },
+
+  getBarbershopById: async (id: string): Promise<ApiResponse<any>> => {
+    await delay(500);
+    const shop = mockBarbershops.find(s => s.id === id);
+    
+    if (!shop) {
+      return {
+        success: false,
+        error: 'Barbershop not found',
+      };
+    }
+    
+    return {
+      success: true,
+      data: shop,
+    };
+  },
+
+  getReviewsByBarbershopId: async (shopId: string): Promise<ApiResponse<Review[]>> => {
+    await delay(500);
+    // For now, return empty reviews for barbershops
+    // In production, you would filter reviews by shopId
+    const reviews = mockReviews.filter(r => r.barberId === shopId);
+    
+    // Sort by most recent first
+    reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return {
+      success: true,
+      data: reviews,
+    };
+  },
+
+  getBarbersByShopId: async (shopId: string): Promise<ApiResponse<Barber[]>> => {
+    await delay(600);
+    // For now, return all barbers (in production, filter by shopId)
+    // You would have a relationship between barbers and shops
+    const barbers = mockBarbers.filter(b => b.isOnline); // Return only online barbers for demo
+    
+    return {
+      success: true,
+      data: barbers,
+    };
+  },
 };

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
+import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -20,7 +21,6 @@ export interface FilterOptions {
   priceRange: 'all' | 'budget' | 'mid' | 'premium';
   openNow: boolean;
   verifiedOnly: boolean;
-  sortBy: 'recommended' | 'distance' | 'rating' | 'price_low' | 'price_high';
 }
 
 interface FilterModalProps {
@@ -40,7 +40,6 @@ export default function FilterModal({
   const [priceRange, setPriceRange] = useState(currentFilters.priceRange);
   const [openNow, setOpenNow] = useState(currentFilters.openNow);
   const [verifiedOnly, setVerifiedOnly] = useState(currentFilters.verifiedOnly);
-  const [sortBy, setSortBy] = useState(currentFilters.sortBy);
 
   const slideAnim = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -52,7 +51,6 @@ export default function FilterModal({
       setPriceRange(currentFilters.priceRange);
       setOpenNow(currentFilters.openNow);
       setVerifiedOnly(currentFilters.verifiedOnly);
-      setSortBy(currentFilters.sortBy);
 
       // Animate in
       slideAnim.setValue(SCREEN_HEIGHT);
@@ -61,13 +59,13 @@ export default function FilterModal({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: MODAL_ANIMATION.BACKDROP_FADE_IN,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
-          damping: 25,
-          stiffness: 120,
+          damping: MODAL_ANIMATION.SPRING.damping,
+          stiffness: MODAL_ANIMATION.SPRING.stiffness,
           useNativeDriver: true,
         }),
       ]).start();
@@ -76,12 +74,12 @@ export default function FilterModal({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 150,
+          duration: MODAL_ANIMATION.BACKDROP_FADE_OUT,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT,
-          duration: 200,
+          duration: MODAL_ANIMATION.SLIDE_DURATION,
           useNativeDriver: true,
         }),
       ]).start();
@@ -93,7 +91,6 @@ export default function FilterModal({
     setPriceRange('all');
     setOpenNow(false);
     setVerifiedOnly(false);
-    setSortBy('recommended');
   };
 
   const handleApply = () => {
@@ -102,27 +99,16 @@ export default function FilterModal({
       priceRange,
       openNow,
       verifiedOnly,
-      sortBy,
     });
     onClose();
   };
 
   const getPriceRangeLabel = (range: string) => {
     switch (range) {
-      case 'budget': return 'RM 10-20';
+      case 'budget': return 'RM 0-20';
       case 'mid': return 'RM 20-40';
       case 'premium': return 'RM 40+';
       default: return 'All Prices';
-    }
-  };
-
-  const getSortLabel = (sort: string) => {
-    switch (sort) {
-      case 'distance': return 'Nearest First';
-      case 'rating': return 'Highest Rated';
-      case 'price_low': return 'Lowest Price';
-      case 'price_high': return 'Highest Price';
-      default: return 'Recommended';
     }
   };
 
@@ -205,6 +191,7 @@ export default function FilterModal({
               <Ionicons name="cash" size={20} color="#00B14F" />
               <Text style={styles.sectionTitle}>Price Range</Text>
             </View>
+            <Text style={styles.sectionSubtitle}>Based on starting price</Text>
             <View style={styles.priceGrid}>
               <TouchableOpacity
                 style={[
@@ -213,12 +200,20 @@ export default function FilterModal({
                 ]}
                 onPress={() => setPriceRange('all')}
               >
-                <Text style={[
-                  styles.priceChipText,
-                  priceRange === 'all' && styles.priceChipTextActive,
-                ]}>
-                  All
-                </Text>
+                <View style={styles.priceChipContent}>
+                  <Text style={[
+                    styles.priceChipText,
+                    priceRange === 'all' && styles.priceChipTextActive,
+                  ]}>
+                    All
+                  </Text>
+                  <Text style={[
+                    styles.priceChipSubtext,
+                    priceRange === 'all' && styles.priceChipSubtextActive,
+                  ]}>
+                    Any price
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -230,15 +225,23 @@ export default function FilterModal({
               >
                 <Ionicons 
                   name="wallet" 
-                  size={14} 
+                  size={16} 
                   color={priceRange === 'budget' ? '#FFFFFF' : '#6B7280'} 
                 />
-                <Text style={[
-                  styles.priceChipText,
-                  priceRange === 'budget' && styles.priceChipTextActive,
-                ]}>
-                  RM 10-20
-                </Text>
+                <View style={styles.priceChipContent}>
+                  <Text style={[
+                    styles.priceChipText,
+                    priceRange === 'budget' && styles.priceChipTextActive,
+                  ]}>
+                    Budget
+                  </Text>
+                  <Text style={[
+                    styles.priceChipSubtext,
+                    priceRange === 'budget' && styles.priceChipSubtextActive,
+                  ]}>
+                    RM 0-20
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -250,15 +253,23 @@ export default function FilterModal({
               >
                 <Ionicons 
                   name="pricetag" 
-                  size={14} 
+                  size={16} 
                   color={priceRange === 'mid' ? '#FFFFFF' : '#6B7280'} 
                 />
-                <Text style={[
-                  styles.priceChipText,
-                  priceRange === 'mid' && styles.priceChipTextActive,
-                ]}>
-                  RM 20-40
-                </Text>
+                <View style={styles.priceChipContent}>
+                  <Text style={[
+                    styles.priceChipText,
+                    priceRange === 'mid' && styles.priceChipTextActive,
+                  ]}>
+                    Mid
+                  </Text>
+                  <Text style={[
+                    styles.priceChipSubtext,
+                    priceRange === 'mid' && styles.priceChipSubtextActive,
+                  ]}>
+                    RM 20-40
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -270,43 +281,24 @@ export default function FilterModal({
               >
                 <Ionicons 
                   name="diamond" 
-                  size={14} 
+                  size={16} 
                   color={priceRange === 'premium' ? '#FFFFFF' : '#6B7280'} 
                 />
-                <Text style={[
-                  styles.priceChipText,
-                  priceRange === 'premium' && styles.priceChipTextActive,
-                ]}>
-                  RM 40+
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Sort By */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="swap-vertical" size={20} color="#00B14F" />
-              <Text style={styles.sectionTitle}>Sort By</Text>
-            </View>
-            <View style={styles.sortGrid}>
-              {(['recommended', 'distance', 'rating', 'price_low'] as const).map((sort) => (
-                <TouchableOpacity
-                  key={sort}
-                  style={[
-                    styles.sortChip,
-                    sortBy === sort && styles.sortChipActive,
-                  ]}
-                  onPress={() => setSortBy(sort)}
-                >
+                <View style={styles.priceChipContent}>
                   <Text style={[
-                    styles.sortChipText,
-                    sortBy === sort && styles.sortChipTextActive,
+                    styles.priceChipText,
+                    priceRange === 'premium' && styles.priceChipTextActive,
                   ]}>
-                    {getSortLabel(sort)}
+                    Premium
                   </Text>
-                </TouchableOpacity>
-              ))}
+                  <Text style={[
+                    styles.priceChipSubtext,
+                    priceRange === 'premium' && styles.priceChipSubtextActive,
+                  ]}>
+                    RM 40+
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -439,6 +431,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 12,
+    marginTop: -8,
+  },
   distanceContainer: {
     alignItems: 'center',
     marginBottom: 16,
@@ -496,30 +494,18 @@ const styles = StyleSheet.create({
   priceChipTextActive: {
     color: '#FFFFFF',
   },
-  sortGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  priceChipContent: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
-  sortChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+  priceChipSubtext: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    marginTop: 2,
   },
-  sortChipActive: {
-    borderColor: '#00B14F',
-    backgroundColor: '#F0FDF4',
-  },
-  sortChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  sortChipTextActive: {
-    color: '#00B14F',
+  priceChipSubtextActive: {
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   toggleOption: {
     flexDirection: 'row',

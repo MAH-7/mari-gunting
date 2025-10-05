@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -56,13 +57,13 @@ export default function ConfirmationModal({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: MODAL_ANIMATION.BACKDROP_FADE_IN,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
-          damping: 20,
-          stiffness: 90,
+          damping: MODAL_ANIMATION.SPRING.damping,
+          stiffness: MODAL_ANIMATION.SPRING.stiffness,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
@@ -77,12 +78,12 @@ export default function ConfirmationModal({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 150,
+          duration: MODAL_ANIMATION.BACKDROP_FADE_OUT,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: SCREEN_HEIGHT,
-          duration: 200,
+          duration: MODAL_ANIMATION.SLIDE_DURATION,
           useNativeDriver: true,
         }),
       ]).start();
@@ -143,7 +144,7 @@ export default function ConfirmationModal({
                   ]}
                   onPress={onConfirm}
                   disabled={isLoading}
-                  activeOpacity={0.8}
+                  activeOpacity={ACTIVE_OPACITY.PRIMARY}
                 >
                   {isLoading ? (
                     <ActivityIndicator
@@ -167,7 +168,7 @@ export default function ConfirmationModal({
                   style={styles.cancelButton}
                   onPress={onClose}
                   disabled={isLoading}
-                  activeOpacity={0.8}
+                  activeOpacity={ACTIVE_OPACITY.SECONDARY}
                 >
                   <Text style={styles.cancelButtonText}>{cancelText}</Text>
                 </TouchableOpacity>

@@ -9,6 +9,7 @@ import { BookingStatus } from '@/types';
 import { useState } from 'react';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import SuccessModal from '@/components/SuccessModal';
+import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 
 export default function BookingDetailScreen() {
   const { id, quickBook } = useLocalSearchParams<{ id: string; quickBook?: string }>();
@@ -166,9 +167,101 @@ export default function BookingDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B14F" />
-          <Text style={styles.loadingText}>Loading booking details...</Text>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backIconButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Booking Details</Text>
+          <View style={styles.headerRight} />
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Skeleton Status Card */}
+          <View style={[styles.statusCard, { backgroundColor: '#F3F4F6', alignItems: 'center', paddingVertical: 32 }]}>
+            <SkeletonCircle size={48} style={{ marginBottom: 16 }} />
+            <SkeletonText width="60%" height={20} style={{ marginBottom: 8 }} />
+            <SkeletonText width="80%" height={14} style={{ marginBottom: 8 }} />
+            <SkeletonText width="40%" height={12} />
+          </View>
+
+          {/* Skeleton Progress Timeline */}
+          <View style={styles.progressCard}>
+            <SkeletonText width="40%" height={18} style={{ marginBottom: 16 }} />
+            <View style={{ gap: 16 }}>
+              {[1, 2, 3].map((item) => (
+                <View key={item} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <SkeletonCircle size={32} />
+                  <View style={{ flex: 1, marginLeft: 16 }}>
+                    <SkeletonText width="50%" height={16} style={{ marginBottom: 4 }} />
+                    <SkeletonText width="70%" height={12} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Skeleton Barber Info */}
+          <View style={styles.card}>
+            <SkeletonText width="35%" height={18} style={{ marginBottom: 16 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SkeletonCircle size={64} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <SkeletonText width="50%" height={18} style={{ marginBottom: 6 }} />
+                <SkeletonText width="40%" height={14} style={{ marginBottom: 6 }} />
+                <SkeletonText width="35%" height={14} />
+              </View>
+            </View>
+          </View>
+
+          {/* Skeleton Details Card */}
+          <View style={styles.card}>
+            <SkeletonText width="40%" height={18} style={{ marginBottom: 16 }} />
+            <View style={{ gap: 16 }}>
+              {[1, 2, 3, 4].map((item) => (
+                <View key={item} style={{ flexDirection: 'row' }}>
+                  <View style={{ width: 100 }}>
+                    <SkeletonText width="80%" height={12} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <SkeletonText width="70%" height={16} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Skeleton Payment Summary */}
+          <View style={styles.card}>
+            <SkeletonText width="45%" height={18} style={{ marginBottom: 16 }} />
+            <View style={{ gap: 12 }}>
+              {[1, 2, 3].map((item) => (
+                <View key={item} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <SkeletonText width="40%" height={14} />
+                  <SkeletonText width={60} height={14} />
+                </View>
+              ))}
+              <View style={{ height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 }} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <SkeletonText width="30%" height={20} />
+                <SkeletonText width={80} height={22} />
+              </View>
+            </View>
+          </View>
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        {/* Skeleton Action Buttons */}
+        <View style={styles.bottomActionBar}>
+          <SkeletonBase width="48%" height={52} borderRadius={12} />
+          <SkeletonBase width="48%" height={52} borderRadius={12} />
         </View>
       </SafeAreaView>
     );

@@ -38,6 +38,8 @@ export interface Barbershop {
   id: string;
   name: string;
   image: string;
+  logo: string;
+  photos?: string[]; // Array of additional photos for the image carousel
   rating: number;
   reviewsCount: number;
   address: string;
