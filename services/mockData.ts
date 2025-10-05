@@ -1,4 +1,4 @@
-import { Barber, Service, Booking, Customer, Address, Review } from '@/types';
+import { Barber, BarbershopStaff, Service, Booking, Customer, Address, Review } from '@/types';
 
 // Mock Services (Prices in MYR)
 export const mockServices: Service[] = [
@@ -556,9 +556,9 @@ export const mockBarbershops = [
       tuesday: { open: '09:00', close: '21:00', isOpen: true },
       wednesday: { open: '09:00', close: '21:00', isOpen: true },
       thursday: { open: '09:00', close: '21:00', isOpen: true },
-      friday: { open: '09:00', close: '21:00', isOpen: true },
+      friday: { open: '09:00', close: '21:00', isOpen: false },
       saturday: { open: '10:00', close: '20:00', isOpen: true },
-      sunday: { open: '10:00', close: '18:00', isOpen: true },
+      sunday: { open: '10:00', close: '20:00', isOpen: true },
     },
     bookingsCount: 1580,
     services: [
@@ -593,7 +593,7 @@ export const mockBarbershops = [
       thursday: { open: '10:00', close: '22:00', isOpen: true },
       friday: { open: '10:00', close: '23:00', isOpen: true },
       saturday: { open: '10:00', close: '23:00', isOpen: true },
-      sunday: { open: '11:00', close: '21:00', isOpen: true },
+      sunday: { open: '11:00', close: '23:00', isOpen: true },
     },
     bookingsCount: 2340,
     services: [
@@ -879,6 +879,348 @@ export const mockBarbershops = [
       { id: '3', name: 'Beard Styling', price: 28, duration: 25 },
       { id: '4', name: 'Hair Treatment', price: 75, duration: 60 },
     ],
+  },
+];
+
+// Mock Barbershop Staff (Shop Employees - DIFFERENT from freelance barbers)
+export const mockBarbershopStaff: BarbershopStaff[] = [
+  // Staff for shop1: Kedai Gunting Rambut Ali
+  // Shop services: Haircut (15), Hair Wash (8), Shave (12)
+  {
+    id: 'staff1',
+    barbershopId: 'shop1',
+    employeeNumber: 'KGA-001',
+    name: 'Rahim Abdullah',
+    avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=200',
+    bio: 'Senior barber at Kedai Gunting Ali. Specializing in traditional Malay haircuts and classic styles.',
+    rating: 4.7,
+    totalReviews: 89,
+    completedJobs: 456,
+    joinedDate: '2020-05-12',
+    specializations: ['Traditional Cuts', 'Classic Styles', 'Senior & Kids'],
+    photos: [
+      'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=300',
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300',
+    ],
+    serviceIds: ['1', '2', '3'], // Can perform all shop1 services
+    workSchedule: {
+      monday: [{ start: '09:00', end: '18:00' }],
+      tuesday: [{ start: '09:00', end: '18:00' }],
+      wednesday: [{ start: '09:00', end: '18:00' }],
+      thursday: [{ start: '09:00', end: '18:00' }],
+      friday: [{ start: '09:00', end: '18:00' }],
+      saturday: [{ start: '10:00', end: '20:00' }],
+      sunday: [{ start: '10:00', end: '18:00' }],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  {
+    id: 'staff2',
+    barbershopId: 'shop1',
+    employeeNumber: 'KGA-002',
+    name: 'Ismail Hassan',
+    avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=200',
+    bio: 'Quick and efficient barber. Great with walk-in customers and simple haircuts.',
+    rating: 4.5,
+    totalReviews: 67,
+    completedJobs: 298,
+    joinedDate: '2021-08-20',
+    specializations: ['Quick Cuts', 'Shaves', 'Basic Styling'],
+    photos: [
+      'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=300',
+    ],
+    serviceIds: ['1', '2', '3'], // Can perform all shop1 services
+    workSchedule: {
+      monday: [{ start: '09:00', end: '21:00' }],
+      tuesday: [{ start: '09:00', end: '21:00' }],
+      wednesday: [{ start: '09:00', end: '21:00' }],
+      thursday: [{ start: '09:00', end: '21:00' }],
+      friday: [{ start: '09:00', end: '21:00' }],
+      saturday: [{ start: '10:00', end: '20:00' }],
+      sunday: [],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  
+  // Staff for shop2: The Gentleman Barber
+  // Shop services: Premium Cut (45), Hot Towel Shave (38), Hair Color (120), Beard Trim (25)
+  {
+    id: 'staff3',
+    barbershopId: 'shop2',
+    employeeNumber: 'TGB-001',
+    name: 'Vincent Lee',
+    avatar: 'https://images.unsplash.com/photo-1557862921-37829c790f19?w=200',
+    bio: 'Master barber specializing in premium cuts and hot towel shaves. Trained in London.',
+    rating: 4.9,
+    totalReviews: 145,
+    completedJobs: 782,
+    joinedDate: '2019-03-10',
+    specializations: ['Premium Cuts', 'Hot Towel Shave', 'Executive Grooming'],
+    certifications: ['London School of Barbering', 'Master Barber Certificate'],
+    photos: [
+      'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=300',
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300',
+      'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=300',
+    ],
+    serviceIds: ['1', '2', '3', '4'], // Can perform all shop2 services
+    workSchedule: {
+      monday: [{ start: '10:00', end: '22:00' }],
+      tuesday: [{ start: '10:00', end: '22:00' }],
+      wednesday: [{ start: '10:00', end: '22:00' }],
+      thursday: [{ start: '10:00', end: '22:00' }],
+      friday: [{ start: '10:00', end: '23:00' }],
+      saturday: [{ start: '10:00', end: '23:00' }],
+      sunday: [],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  {
+    id: 'staff4',
+    barbershopId: 'shop2',
+    employeeNumber: 'TGB-002',
+    name: 'Adrian Tan',
+    avatar: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=200',
+    bio: 'Specialist in modern fades and contemporary styling. Passionate about hair design.',
+    rating: 4.8,
+    totalReviews: 112,
+    completedJobs: 523,
+    joinedDate: '2020-06-15',
+    specializations: ['Modern Fades', 'Contemporary Cuts', 'Hair Design'],
+    photos: [
+      'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=300',
+      'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=300',
+    ],
+    serviceIds: ['1', '2', '4'], // Can do Premium Cut, Shave, Beard Trim (not Hair Color)
+    workSchedule: {
+      monday: [{ start: '10:00', end: '22:00' }],
+      tuesday: [{ start: '10:00', end: '22:00' }],
+      wednesday: [{ start: '10:00', end: '22:00' }],
+      thursday: [{ start: '10:00', end: '22:00' }],
+      friday: [{ start: '10:00', end: '23:00' }],
+      saturday: [{ start: '10:00', end: '23:00' }],
+      sunday: [{ start: '11:00', end: '21:00' }],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  
+  // Staff for shop3: Salon Lelaki Kasual
+  // Shop services: Haircut (18), Styling (25)
+  {
+    id: 'staff5',
+    barbershopId: 'shop3',
+    employeeNumber: 'SLK-001',
+    name: 'Zul Azman',
+    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200',
+    bio: 'Casual and friendly barber. Good with regular customers and simple styling.',
+    rating: 4.4,
+    totalReviews: 56,
+    completedJobs: 234,
+    joinedDate: '2022-01-18',
+    specializations: ['Casual Cuts', 'Basic Styling', 'Quick Service'],
+    photos: [
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300',
+    ],
+    serviceIds: ['1', '2'], // Can perform all shop3 services
+    workSchedule: {
+      monday: [{ start: '10:00', end: '20:00' }],
+      tuesday: [{ start: '10:00', end: '20:00' }],
+      wednesday: [{ start: '10:00', end: '20:00' }],
+      thursday: [{ start: '10:00', end: '20:00' }],
+      friday: [{ start: '10:00', end: '20:00' }],
+      saturday: [{ start: '10:00', end: '19:00' }],
+      sunday: [],
+    },
+    isAvailable: true,
+    isVerified: false,
+  },
+  
+  // Staff for shop4: Barbershop Mat Rock
+  // Shop services: Potongan Biasa (12), Potongan + Cuci (20), Gunting Janggut (10)
+  {
+    id: 'staff6',
+    barbershopId: 'shop4',
+    employeeNumber: 'BMR-001',
+    name: 'Mat Rock',
+    avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200',
+    bio: 'Owner and head barber. Known for fast service and traditional expertise.',
+    rating: 4.7,
+    totalReviews: 156,
+    completedJobs: 892,
+    joinedDate: '2018-02-05',
+    specializations: ['Traditional Malay Cuts', 'Fast Service', 'All Ages'],
+    photos: [
+      'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=300',
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300',
+    ],
+    serviceIds: ['1', '2', '3'], // Can perform all shop4 services
+    workSchedule: {
+      monday: [{ start: '08:30', end: '20:30' }],
+      tuesday: [{ start: '08:30', end: '20:30' }],
+      wednesday: [{ start: '08:30', end: '20:30' }],
+      thursday: [{ start: '08:30', end: '20:30' }],
+      friday: [{ start: '08:30', end: '21:00' }],
+      saturday: [{ start: '09:00', end: '20:00' }],
+      sunday: [{ start: '10:00', end: '18:00' }],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  {
+    id: 'staff7',
+    barbershopId: 'shop4',
+    employeeNumber: 'BMR-002',
+    name: 'Kamarul Izwan',
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200',
+    bio: 'Junior barber learning from Mat Rock. Eager and hardworking.',
+    rating: 4.3,
+    totalReviews: 34,
+    completedJobs: 145,
+    joinedDate: '2023-06-12',
+    specializations: ['Basic Haircuts', 'Kids Friendly', 'Apprentice'],
+    photos: [
+      'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=300',
+    ],
+    serviceIds: ['1', '2'], // Can do basic cuts only (still learning)
+    workSchedule: {
+      monday: [{ start: '08:30', end: '20:30' }],
+      tuesday: [{ start: '08:30', end: '20:30' }],
+      wednesday: [{ start: '08:30', end: '20:30' }],
+      thursday: [{ start: '08:30', end: '20:30' }],
+      friday: [{ start: '08:30', end: '21:00' }],
+      saturday: [{ start: '09:00', end: '20:00' }],
+      sunday: [],
+    },
+    isAvailable: true,
+    isVerified: false,
+  },
+  
+  // Staff for shop7: Executive Grooming Lounge
+  // Shop services: Signature Cut (68), Royal Shave (55), Hair Spa (88), Beard Grooming (35), Color & Highlights (150)
+  {
+    id: 'staff8',
+    barbershopId: 'shop7',
+    employeeNumber: 'EGL-001',
+    name: 'James Khoo',
+    avatar: 'https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=200',
+    bio: 'Executive grooming specialist with 15 years experience. Caters to corporate clients.',
+    rating: 4.9,
+    totalReviews: 187,
+    completedJobs: 1234,
+    joinedDate: '2019-01-10',
+    specializations: ['Executive Cuts', 'Premium Grooming', 'Corporate Style'],
+    certifications: ['Master Barber', 'Hair Spa Specialist', 'Color Expert'],
+    photos: [
+      'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=300',
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300',
+      'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=300',
+    ],
+    serviceIds: ['1', '2', '3', '4', '5'], // Can perform all shop7 services (full master)
+    workSchedule: {
+      monday: [{ start: '10:00', end: '22:00' }],
+      tuesday: [{ start: '10:00', end: '22:00' }],
+      wednesday: [{ start: '10:00', end: '22:00' }],
+      thursday: [{ start: '10:00', end: '22:00' }],
+      friday: [{ start: '10:00', end: '23:00' }],
+      saturday: [{ start: '10:00', end: '23:00' }],
+      sunday: [{ start: '11:00', end: '21:00' }],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  {
+    id: 'staff9',
+    barbershopId: 'shop7',
+    employeeNumber: 'EGL-002',
+    name: 'Samuel Wong',
+    avatar: 'https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?w=200',
+    bio: 'Hair coloring and modern styling expert. Creative and detail-oriented.',
+    rating: 4.8,
+    totalReviews: 98,
+    completedJobs: 456,
+    joinedDate: '2020-09-15',
+    specializations: ['Hair Coloring', 'Modern Styling', 'Creative Cuts'],
+    certifications: ['Advanced Coloring Techniques', 'Modern Styling Certificate'],
+    photos: [
+      'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=300',
+      'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=300',
+    ],
+    serviceIds: ['1', '3', '5'], // Specializes in cuts, spa, and coloring
+    workSchedule: {
+      monday: [{ start: '10:00', end: '22:00' }],
+      tuesday: [],
+      wednesday: [{ start: '10:00', end: '22:00' }],
+      thursday: [{ start: '10:00', end: '22:00' }],
+      friday: [{ start: '10:00', end: '23:00' }],
+      saturday: [{ start: '10:00', end: '23:00' }],
+      sunday: [{ start: '11:00', end: '21:00' }],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  
+  // Staff for shop10: Kings & Queens Barber
+  // Shop services: Classic Cut (32), Fade Cut (38), Beard Styling (28), Hair Treatment (75)
+  {
+    id: 'staff10',
+    barbershopId: 'shop10',
+    employeeNumber: 'KQB-001',
+    name: 'Ariff Zakaria',
+    avatar: 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=200',
+    bio: 'Versatile barber skilled in both classic and modern techniques. Great with fades.',
+    rating: 4.7,
+    totalReviews: 123,
+    completedJobs: 678,
+    joinedDate: '2020-03-22',
+    specializations: ['Fade Specialist', 'Classic & Modern', 'Beard Artistry'],
+    photos: [
+      'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=300',
+      'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=300',
+    ],
+    serviceIds: ['1', '2', '3', '4'], // Can perform all shop10 services
+    workSchedule: {
+      monday: [{ start: '09:00', end: '21:30' }],
+      tuesday: [{ start: '09:00', end: '21:30' }],
+      wednesday: [{ start: '09:00', end: '21:30' }],
+      thursday: [{ start: '09:00', end: '21:30' }],
+      friday: [{ start: '09:00', end: '22:00' }],
+      saturday: [{ start: '10:00', end: '22:00' }],
+      sunday: [{ start: '10:00', end: '20:00' }],
+    },
+    isAvailable: true,
+    isVerified: true,
+  },
+  {
+    id: 'staff11',
+    barbershopId: 'shop10',
+    employeeNumber: 'KQB-002',
+    name: 'Patrick Lim',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200',
+    bio: 'Experienced with hair treatments and premium grooming services.',
+    rating: 4.6,
+    totalReviews: 87,
+    completedJobs: 423,
+    joinedDate: '2021-07-08',
+    specializations: ['Hair Treatment', 'Premium Grooming', 'Scalp Care'],
+    photos: [
+      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300',
+      'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=300',
+    ],
+    serviceIds: ['1', '4'], // Specializes in cuts and hair treatments
+    workSchedule: {
+      monday: [{ start: '09:00', end: '21:30' }],
+      tuesday: [],
+      wednesday: [{ start: '09:00', end: '21:30' }],
+      thursday: [{ start: '09:00', end: '21:30' }],
+      friday: [{ start: '09:00', end: '22:00' }],
+      saturday: [{ start: '10:00', end: '22:00' }],
+      sunday: [{ start: '10:00', end: '20:00' }],
+    },
+    isAvailable: true,
+    isVerified: true,
   },
 ];
 

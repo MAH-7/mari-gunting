@@ -56,6 +56,58 @@ export interface Barbershop {
   }[];
 }
 
+// Barbershop Staff (Shop Employees)
+// These are DIFFERENT from freelance Barbers - they work at physical shop locations
+export interface BarbershopStaff {
+  id: string;
+  barbershopId: string;          // Which shop they work at (required)
+  employeeNumber?: string;        // Shop's internal employee ID
+  
+  // Personal Info
+  name: string;
+  avatar: string;
+  bio: string;
+  email?: string;
+  phone?: string;
+  
+  // Performance Metrics (specific to this barbershop)
+  rating: number;                 // Rating from customers at THIS shop
+  totalReviews: number;           // Total reviews at THIS shop
+  completedJobs: number;          // Jobs completed at THIS shop
+  joinedDate: string;             // When they joined THIS shop
+  
+  // Skills & Portfolio
+  specializations: string[];      // e.g., ['Modern Cuts', 'Fade', 'Beard Styling']
+  certifications?: string[];      // Professional certifications
+  photos?: string[];              // Portfolio photos of their work
+  
+  // Services (references shop's service catalog)
+  // Staff can perform these services at the SHOP'S PRICES (not their own)
+  serviceIds: string[];           // IDs of shop services this staff can perform
+  // Note: Actual prices come from the barbershop's service catalog
+  
+  // Work Schedule (at this shop)
+  workSchedule?: {
+    monday: TimeSlot[];
+    tuesday: TimeSlot[];
+    wednesday: TimeSlot[];
+    thursday: TimeSlot[];
+    friday: TimeSlot[];
+    saturday: TimeSlot[];
+    sunday: TimeSlot[];
+  };
+  
+  // Status
+  isAvailable: boolean;           // Currently available at the shop
+  isVerified: boolean;            // Verified by platform
+  
+  // NOTE: Fields NOT needed for shop staff (different from freelance Barbers):
+  // - NO location (they work at shop's fixed location)
+  // - NO distance (customer goes to shop, not calculated)
+  // - NO isOnline (they're at the shop during work hours)
+  // - NO availability for mobile service (walk-in only)
+}
+
 // Address & Location
 export interface Address {
   id: string;

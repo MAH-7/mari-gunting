@@ -1,5 +1,5 @@
 import { Barber, Booking, Service, ApiResponse, PaginatedResponse, Review } from '@/types';
-import { mockBarbers, mockBookings, mockServices, mockReviews, mockBarbershops } from './mockData';
+import { mockBarbers, mockBarbershopStaff, mockBookings, mockBarbershops, mockReviews, mockServices } from './mockData';
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -41,20 +41,30 @@ export const api = {
     };
   },
 
-  getBarberById: async (id: string): Promise<ApiResponse<Barber>> => {
+  getBarberById: async (id: string): Promise<ApiResponse<any>> => {
     await delay(500);
-    const barber = mockBarbers.find(b => b.id === id);
     
-    if (!barber) {
+    // First check freelance barbers
+    const barber = mockBarbers.find(b => b.id === id);
+    if (barber) {
       return {
-        success: false,
-        error: 'Barber not found',
+        success: true,
+        data: barber,
+      };
+    }
+    
+    // Then check barbershop staff
+    const staff = mockBarbershopStaff.find(s => s.id === id);
+    if (staff) {
+      return {
+        success: true,
+        data: staff,
       };
     }
     
     return {
-      success: true,
-      data: barber,
+      success: false,
+      error: 'Barber not found',
     };
   },
 
@@ -375,15 +385,39 @@ export const api = {
     };
   },
 
-  getBarbersByShopId: async (shopId: string): Promise<ApiResponse<Barber[]>> => {
+  getBarbersByShopId: async (shopId: string): Promise<ApiResponse<any[]>> => {
     await delay(600);
-    // For now, return all barbers (in production, filter by shopId)
-    // You would have a relationship between barbers and shops
-    const barbers = mockBarbers.filter(b => b.isOnline); // Return only online barbers for demo
+    // Return barbershop staff that work at this specific shop
+    const staff = mockBarbershopStaff.filter(s => s.barbershopId === shopId);
     
     return {
       success: true,
-      data: barbers,
+      data: staff,
+    };
+  },
+
+  // Get staff member's services from shop catalog
+  getStaffServices: async (staffId: string, shopId: string): Promise<ApiResponse<any[]>> => {
+    await delay(300);
+    
+    const staff = mockBarbershopStaff.find(s => s.id === staffId);
+    const shop = mockBarbershops.find(s => s.id === shopId);
+    
+    if (!staff || !shop) {
+      return {
+        success: false,
+        error: 'Staff or shop not found',
+      };
+    }
+    
+    // Filter shop services that this staff member can perform
+    const availableServices = shop.services.filter(service => 
+      staff.serviceIds.includes(service.id)
+    );
+    
+    return {
+      success: true,
+      data: availableServices,
     };
   },
 };

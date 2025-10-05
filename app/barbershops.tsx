@@ -8,6 +8,7 @@ import { api } from '@/services/api';
 import { formatCurrency, formatDistance, formatTime } from '@/utils/format';
 import { Barbershop } from '@/types';
 import FilterModal, { FilterOptions } from '@/components/FilterModal';
+import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 
 // Get current day for checking operating hours (using Malaysia time)
 const getCurrentDay = () => {
@@ -182,10 +183,46 @@ export default function BarbershopsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#00B14F" />
-            <Text style={styles.loadingText}>Finding barbershops...</Text>
-          </View>
+          // Skeleton Loading Cards
+          <>
+            {[1, 2, 3, 4].map((item) => (
+              <View key={item} style={styles.shopCard}>
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.logoContainer}>
+                    <SkeletonBase width={64} height={64} borderRadius={12} />
+                  </View>
+                  <View style={styles.headerInfo}>
+                    <SkeletonText width="70%" height={16} style={{ marginBottom: 8 }} />
+                    <SkeletonText width="50%" height={13} />
+                  </View>
+                  <SkeletonBase width={10} height={10} borderRadius={5} />
+                </View>
+                
+                {/* Quick Info */}
+                <View style={styles.quickInfo}>
+                  <SkeletonBase width={100} height={32} borderRadius={8} />
+                  <SkeletonBase width={100} height={32} borderRadius={8} />
+                </View>
+                
+                {/* Services Preview */}
+                <View style={styles.servicesPreview}>
+                  <SkeletonBase width={80} height={28} borderRadius={14} style={{ marginRight: 8 }} />
+                  <SkeletonBase width={90} height={28} borderRadius={14} style={{ marginRight: 8 }} />
+                  <SkeletonBase width={85} height={28} borderRadius={14} />
+                </View>
+                
+                {/* Bottom Section */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                  <View>
+                    <SkeletonText width={60} height={12} style={{ marginBottom: 4 }} />
+                    <SkeletonText width={80} height={20} />
+                  </View>
+                  <SkeletonBase width={120} height={36} borderRadius={12} />
+                </View>
+              </View>
+            ))}
+          </>
         ) : sortedBarbershops.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="storefront-outline" size={64} color="#D1D5DB" />
@@ -218,6 +255,43 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
   
   // Calculate if shop is currently open dynamically
   const isOpen = shop.detailedHours ? isShopOpenNow(shop.detailedHours) : shop.isOpen;
+  
+  // Get current day's operating hours
+  const getCurrentDayHours = () => {
+    if (!shop.detailedHours) return shop.operatingHours;
+    
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const currentDay = getCurrentDay();
+    const dayInfo = shop.detailedHours[currentDay];
+    
+    // If closed today, find next open day
+    if (!dayInfo || !dayInfo.isOpen) {
+      const currentDayIndex = days.indexOf(currentDay);
+      
+      // Check next 7 days for when shop opens
+      for (let i = 1; i <= 7; i++) {
+        const nextDayIndex = (currentDayIndex + i) % 7;
+        const nextDay = days[nextDayIndex];
+        const nextDayInfo = shop.detailedHours[nextDay];
+        
+        if (nextDayInfo && nextDayInfo.isOpen) {
+          // Use shorter format to prevent overflow
+          if (i === 1) {
+            return `Tomorrow ${formatTime(nextDayInfo.open)}`;
+          } else {
+            return `${dayShortNames[nextDayIndex]} ${formatTime(nextDayInfo.open)}`;
+          }
+        }
+      }
+      
+      return 'Closed';
+    }
+    
+    return `${formatTime(dayInfo.open)} - ${formatTime(dayInfo.close)}`;
+  };
+  
+  const todayHours = getCurrentDayHours();
   
   return (
     <TouchableOpacity
@@ -282,18 +356,26 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
       {/* Quick Info */}
       <View style={styles.quickInfo}>
         <View style={styles.quickInfoItem}>
-          <Ionicons name="time-outline" size={14} color="#6B7280" />
-          <Text style={styles.quickInfoText}>
-            {shop.operatingHours.includes('-') 
-              ? shop.operatingHours.split(' - ').map(time => formatTime(time.trim())).join(' - ')
-              : shop.operatingHours
-            }
+          <Ionicons 
+            name="time-outline" 
+            size={14} 
+            color={todayHours.startsWith('Tomorrow') || todayHours.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/) ? '#F59E0B' : '#6B7280'} 
+          />
+          <Text 
+            style={[
+              styles.quickInfoText,
+              (todayHours.startsWith('Tomorrow') || todayHours.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/)) && styles.opensHoursText
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {todayHours}
           </Text>
         </View>
         <View style={styles.quickInfoDivider} />
         <View style={styles.quickInfoItem}>
           <Ionicons name="people-outline" size={14} color="#6B7280" />
-          <Text style={styles.quickInfoText}>{shop.bookingsCount}+ bookings</Text>
+          <Text style={styles.quickInfoText} numberOfLines={1}>{shop.bookingsCount}+ bookings</Text>
         </View>
       </View>
 
@@ -580,6 +662,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#6B7280',
+  },
+  opensHoursText: {
+    color: '#F59E0B',
+    fontWeight: '600',
   },
   quickInfoDivider: {
     width: 1,

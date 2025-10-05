@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
-import { formatCurrency, formatPrice } from '@/utils/format';
+import { formatCurrency, formatPrice, formatTime } from '@/utils/format';
 
 export default function BarbershopBookingScreen() {
   const { barberId, shopId } = useLocalSearchParams<{ barberId: string; shopId: string }>();
@@ -13,8 +13,9 @@ export default function BarbershopBookingScreen() {
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
+  const [showAllDates, setShowAllDates] = useState(false);
 
-  // Fetch barber details
+  // Fetch staff details
   const { data: barberResponse } = useQuery({
     queryKey: ['barber', barberId],
     queryFn: () => api.getBarberById(barberId),
@@ -26,9 +27,15 @@ export default function BarbershopBookingScreen() {
     queryFn: () => api.getBarbershopById(shopId),
   });
 
-  const barber = barberResponse?.data;
+  const barber = barberResponse?.data; // This is BarbershopStaff
   const shop = shopResponse?.data;
-  const selectedServices = barber?.services.filter(s => selectedServiceIds.includes(s.id)) || [];
+  
+  // Get staff's available services from shop catalog (staff has serviceIds, not services)
+  const staffServices = shop?.services.filter((service: any) => 
+    barber?.serviceIds?.includes(service.id)
+  ) || [];
+  
+  const selectedServices = staffServices.filter((s: any) => selectedServiceIds.includes(s.id)) || [];
   
   // Toggle service selection
   const toggleService = (serviceId: string) => {
@@ -39,48 +46,103 @@ export default function BarbershopBookingScreen() {
     );
   };
 
-  // Generate next 7 days for date selection
+  // Generate next 14 days for date selection (2 weeks)
+  // Filter out closed days based on shop's operating hours
   const dates = useMemo(() => {
+    if (!shop?.detailedHours) return [];
+    
     const result = [];
     const today = new Date();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 14; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
+      
+      const dayOfWeek = dayNames[date.getDay()];
+      const dayInfo = shop.detailedHours[dayOfWeek];
+      
+      // Skip if shop is closed on this day
+      if (!dayInfo?.isOpen) continue;
       
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
       const dayNumber = date.getDate();
       const month = date.toLocaleDateString('en-US', { month: 'short' });
       const fullDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
       
+      // Friendly labels
+      let displayLabel = '';
+      if (i === 0) displayLabel = 'Today';
+      else if (i === 1) displayLabel = 'Tomorrow';
+      else displayLabel = `${dayName}, ${dayNumber} ${month}`;
+      
       result.push({
         id: fullDate,
         dayName,
         dayNumber,
         month,
+        displayLabel,
         isToday: i === 0,
+        isTomorrow: i === 1,
+        dayOfWeek,
+        openTime: dayInfo.open,
+        closeTime: dayInfo.close,
       });
     }
     
     return result;
-  }, []);
+  }, [shop]);
 
-  // Generate time slots (9 AM - 9 PM in 30 min intervals)
+  // Generate time slots based on selected date and shop's operating hours
   const timeSlots = useMemo(() => {
-    const slots = [];
-    const startHour = 9;
-    const endHour = 21;
+    const morning = []; // 9 AM - 12 PM
+    const afternoon = []; // 12 PM - 5 PM
+    const evening = []; // 5 PM - 9 PM
     
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        const displayTime = `${hour > 12 ? hour - 12 : hour}:${minute.toString().padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
-        slots.push({ id: time, label: displayTime });
+    // If no date selected, return empty slots
+    if (!selectedDate || !shop?.detailedHours) {
+      return { morning, afternoon, evening };
+    }
+    
+    // Find the selected date info
+    const selectedDateInfo = dates.find(d => d.id === selectedDate);
+    if (!selectedDateInfo) {
+      return { morning, afternoon, evening };
+    }
+    
+    // Parse shop's opening and closing hours for this day
+    const [openHour, openMinute] = selectedDateInfo.openTime.split(':').map(Number);
+    const [closeHour, closeMinute] = selectedDateInfo.closeTime.split(':').map(Number);
+    
+    // Generate slots based on shop hours
+    // We need to generate slots from open time up to (but not including) close time
+    let currentHour = openHour;
+    let currentMinute = openMinute;
+    
+    while (currentHour < closeHour || (currentHour === closeHour && currentMinute < closeMinute)) {
+      const time = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+      const displayHour = currentHour > 12 ? currentHour - 12 : currentHour === 0 ? 12 : currentHour;
+      const displayTime = `${displayHour}:${currentMinute.toString().padStart(2, '0')} ${currentHour >= 12 ? 'PM' : 'AM'}`;
+      const slot = { id: time, label: displayTime, hour: currentHour };
+      
+      if (currentHour < 12) {
+        morning.push(slot);
+      } else if (currentHour < 17) {
+        afternoon.push(slot);
+      } else {
+        evening.push(slot);
+      }
+      
+      // Increment by 30 minutes
+      currentMinute += 30;
+      if (currentMinute >= 60) {
+        currentMinute = 0;
+        currentHour += 1;
       }
     }
     
-    return slots;
-  }, []);
+    return { morning, afternoon, evening };
+  }, [selectedDate, shop, dates]);
   
   // Calculate totals
   const subtotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
@@ -176,66 +238,50 @@ export default function BarbershopBookingScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Walk-In Info Banner */}
-        <View style={styles.infoBanner}>
-          <View style={styles.infoBannerIcon}>
-            <Ionicons name="storefront" size={20} color="#007AFF" />
-          </View>
-          <View style={styles.infoBannerContent}>
-            <Text style={styles.infoBannerTitle}>Barbershop Visit</Text>
-            <Text style={styles.infoBannerText}>Visit the shop at your scheduled time for your service</Text>
-          </View>
-        </View>
-
-        {/* Barbershop Location */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Barbershop</Text>
-          <View style={styles.shopCard}>
-            <Image source={{ uri: shop.image }} style={styles.shopImage} />
-            <View style={styles.shopInfo}>
-              <View style={styles.shopNameRow}>
-                <Text style={styles.shopName}>{shop.name}</Text>
-                {shop.isVerified && (
-                  <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
-                )}
-              </View>
-              <View style={styles.locationRow}>
-                <Ionicons name="location" size={14} color="#00B14F" />
-                <Text style={styles.locationText} numberOfLines={2}>{shop.address}</Text>
-              </View>
-              <View style={styles.hoursRow}>
-                <Ionicons name="time-outline" size={14} color="#8E8E93" />
-                <Text style={styles.hoursText}>
-                  {shop.operatingHours.includes('-') 
-                    ? shop.operatingHours.split(' - ').map(time => formatTime(time.trim())).join(' - ')
-                    : shop.operatingHours
-                  }
-                </Text>
-              </View>
+        {/* Booking Summary Card */}
+        {(selectedDate || selectedTime || selectedServiceIds.length > 0) && (
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryHeader}>
+              <Ionicons name="calendar-outline" size={20} color="#00B14F" />
+              <Text style={styles.summaryTitle}>Booking Summary</Text>
+            </View>
+            
+            <View style={styles.summaryContent}>
+              {/* Date & Time */}
+              {selectedDate && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Date & Time</Text>
+                  <View style={styles.summaryValueContainer}>
+                    <Text style={styles.summaryValue}>
+                      {dates.find(d => d.id === selectedDate)?.displayLabel || 'Not selected'}
+                    </Text>
+                    {selectedTime && (
+                      <Text style={styles.summaryValue}>
+                        {' • '}{timeSlots.morning.concat(timeSlots.afternoon, timeSlots.evening).find((s: any) => s.id === selectedTime)?.label || selectedTime}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              )}
+              
+              {/* Services */}
+              {selectedServiceIds.length > 0 && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Services</Text>
+                  <Text style={styles.summaryValue}>{selectedServiceIds.length} selected • {totalDuration} min</Text>
+                </View>
+              )}
+              
+              {/* Total */}
+              {selectedServiceIds.length > 0 && (
+                <View style={[styles.summaryRow, styles.summaryRowTotal]}>
+                  <Text style={styles.summaryLabelTotal}>Total Amount</Text>
+                  <Text style={styles.summaryValueTotal}>{formatPrice(total)}</Text>
+                </View>
+              )}
             </View>
           </View>
-        </View>
-
-        {/* Barber Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Barber</Text>
-          <View style={styles.barberCard}>
-            <Image source={{ uri: barber.avatar }} style={styles.barberAvatar} />
-            <View style={styles.barberInfo}>
-              <View style={styles.barberNameRow}>
-                <Text style={styles.barberName}>{barber.name}</Text>
-                {barber.isVerified && (
-                  <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
-                )}
-              </View>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={14} color="#FBBF24" />
-                <Text style={styles.ratingText}>{barber.rating.toFixed(1)}</Text>
-                <Text style={styles.reviewsText}>({barber.totalReviews} reviews)</Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        )}
 
         {/* Service Selection */}
         <View style={styles.section}>
@@ -245,7 +291,15 @@ export default function BarbershopBookingScreen() {
               <Text style={styles.selectedCount}>{selectedServiceIds.length} selected</Text>
             )}
           </View>
-          {barber.services.map((service) => {
+          
+          {selectedServiceIds.length === 0 && (
+            <View style={styles.emptyServices}>
+              <Ionicons name="cut-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyServicesText}>Select at least one service to continue</Text>
+            </View>
+          )}
+          
+          {staffServices.map((service: any) => {
             const isSelected = selectedServiceIds.includes(service.id);
             return (
               <TouchableOpacity 
@@ -275,98 +329,202 @@ export default function BarbershopBookingScreen() {
           })}
         </View>
 
-        {/* Date Selection */}
+        {/* Date Selection - Grab Style */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Date</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.dateScroll}
-            contentContainerStyle={{ paddingRight: 20 }}
-          >
-            {dates.map((date) => (
-              <TouchableOpacity
-                key={date.id}
-                style={[
-                  styles.dateChip,
-                  selectedDate === date.id && styles.dateChipActive
-                ]}
-                onPress={() => setSelectedDate(date.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.dateDay,
-                  selectedDate === date.id && styles.dateDayActive
-                ]}>
-                  {date.dayName}
-                </Text>
-                <Text style={[
-                  styles.dateNumber,
-                  selectedDate === date.id && styles.dateNumberActive
-                ]}>
-                  {date.dayNumber}
-                </Text>
-                <Text style={[
-                  styles.dateMonth,
-                  selectedDate === date.id && styles.dateMonthActive
-                ]}>
-                  {date.month}
-                </Text>
-                {date.isToday && (
-                  <View style={styles.todayBadge}>
-                    <Text style={styles.todayText}>Today</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={styles.dateListGrab}>
+            {(showAllDates ? dates : dates.slice(0, 5)).map((date, index) => {
+              return (
+                <TouchableOpacity
+                  key={date.id}
+                  style={[
+                    showAllDates ? styles.dateItemGrabExpanded : styles.dateItemGrab,
+                    selectedDate === date.id && styles.dateItemGrabSelected
+                  ]}
+                  onPress={() => setSelectedDate(date.id)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={[
+                    styles.dateDayGrab,
+                    selectedDate === date.id && styles.dateDayGrabSelected
+                  ]}>
+                    {date.isToday ? 'Today' : date.isTomorrow ? 'Tomorrow' : date.dayName}
+                  </Text>
+                  <Text style={[
+                    styles.dateNumberGrab,
+                    selectedDate === date.id && styles.dateNumberGrabSelected
+                  ]}>
+                    {date.dayNumber}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {dates.length > 5 && (
+            <TouchableOpacity 
+              style={styles.viewMoreDates} 
+              activeOpacity={0.7}
+              onPress={() => setShowAllDates(!showAllDates)}
+            >
+              <Text style={styles.viewMoreDatesText}>
+                {showAllDates ? 'Show less' : 'View more dates'}
+              </Text>
+              <Ionicons 
+                name={showAllDates ? 'chevron-up' : 'chevron-forward'} 
+                size={16} 
+                color="#00B14F" 
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Time Selection */}
+        {/* Time Selection - Grab Style */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Time</Text>
-          <View style={styles.timeGrid}>
-            {timeSlots.map((slot) => (
-              <TouchableOpacity
-                key={slot.id}
-                style={[
-                  styles.timeChip,
-                  selectedTime === slot.id && styles.timeChipActive
-                ]}
-                onPress={() => setSelectedTime(slot.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.timeLabel,
-                  selectedTime === slot.id && styles.timeLabelActive
-                ]}>
-                  {slot.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          
+          {!selectedDate ? (
+            <View style={styles.timeEmptyState}>
+              <Ionicons name="time-outline" size={32} color="#D1D5DB" />
+              <Text style={styles.timeEmptyText}>Please select a date first</Text>
+            </View>
+          ) : (
+            <>
+              {/* Morning */}
+              {timeSlots.morning.length > 0 && (
+                <View style={styles.timeSectionGrab}>
+                  <Text style={styles.timePeriodLabelGrab}>Morning</Text>
+                  <View style={styles.timeRowGrab}>
+                    {timeSlots.morning.map((slot: any) => (
+                      <TouchableOpacity
+                        key={slot.id}
+                        style={[
+                          styles.timeButtonGrab,
+                          selectedTime === slot.id && styles.timeButtonGrabSelected
+                        ]}
+                        onPress={() => setSelectedTime(slot.id)}
+                        activeOpacity={0.6}
+                      >
+                        <Text style={[
+                          styles.timeTextGrab,
+                          selectedTime === slot.id && styles.timeTextGrabSelected
+                        ]}>
+                          {slot.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Afternoon */}
+              {timeSlots.afternoon.length > 0 && (
+                <View style={styles.timeSectionGrab}>
+                  <Text style={styles.timePeriodLabelGrab}>Afternoon</Text>
+                  <View style={styles.timeRowGrab}>
+                    {timeSlots.afternoon.map((slot: any) => (
+                      <TouchableOpacity
+                        key={slot.id}
+                        style={[
+                          styles.timeButtonGrab,
+                          selectedTime === slot.id && styles.timeButtonGrabSelected
+                        ]}
+                        onPress={() => setSelectedTime(slot.id)}
+                        activeOpacity={0.6}
+                      >
+                        <Text style={[
+                          styles.timeTextGrab,
+                          selectedTime === slot.id && styles.timeTextGrabSelected
+                        ]}>
+                          {slot.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Evening */}
+              {timeSlots.evening.length > 0 && (
+                <View style={styles.timeSectionGrab}>
+                  <Text style={styles.timePeriodLabelGrab}>Evening</Text>
+                  <View style={styles.timeRowGrab}>
+                    {timeSlots.evening.map((slot: any) => (
+                      <TouchableOpacity
+                        key={slot.id}
+                        style={[
+                          styles.timeButtonGrab,
+                          selectedTime === slot.id && styles.timeButtonGrabSelected
+                        ]}
+                        onPress={() => setSelectedTime(slot.id)}
+                        activeOpacity={0.6}
+                      >
+                        <Text style={[
+                          styles.timeTextGrab,
+                          selectedTime === slot.id && styles.timeTextGrabSelected
+                        ]}>
+                          {slot.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* No slots available */}
+              {timeSlots.morning.length === 0 && 
+               timeSlots.afternoon.length === 0 && 
+               timeSlots.evening.length === 0 && (
+                <View style={styles.timeEmptyState}>
+                  <Ionicons name="close-circle-outline" size={32} color="#D1D5DB" />
+                  <Text style={styles.timeEmptyText}>No time slots available for this date</Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
 
-        {/* Price Breakdown */}
+        {/* Barber & Shop Info - Shop First */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Price Details</Text>
-          <View style={styles.priceBreakdown}>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Services ({selectedServices.length})</Text>
-              <Text style={styles.priceValue}>{formatCurrency(subtotal)}</Text>
+          <Text style={styles.sectionTitle}>Booking At</Text>
+          <View style={styles.compactInfoCard}>
+            {/* Shop Info */}
+            <View style={styles.shopSection}>
+              <View style={styles.shopHeader}>
+                <Ionicons name="storefront" size={18} color="#00B14F" />
+                <Text style={styles.shopNameText}>{shop.name}</Text>
+                {shop.isVerified && (
+                  <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
+                )}
+              </View>
+              <View style={styles.compactLocation}>
+                <Ionicons name="location" size={14} color="#8E8E93" />
+                <Text style={styles.compactLocationText}>{shop.address}</Text>
+              </View>
             </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Platform Fee</Text>
-              <Text style={styles.priceValue}>{formatPrice(platformFee)}</Text>
-            </View>
-            <View style={styles.priceDivider} />
-            <View style={styles.priceRow}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>{formatPrice(total)}</Text>
-            </View>
-            <View style={styles.durationRow}>
-              <Ionicons name="time-outline" size={16} color="#8E8E93" />
-              <Text style={styles.durationText}>Estimated duration: {totalDuration} minutes</Text>
+            
+            {/* Divider */}
+            <View style={styles.infoDivider} />
+            
+            {/* Barber Info */}
+            <View style={styles.barberSection}>
+              <Text style={styles.barberLabel}>Your Barber</Text>
+              <View style={styles.compactRow}>
+                <Image source={{ uri: barber.avatar }} style={styles.compactAvatar} />
+                <View style={styles.compactInfo}>
+                  <View style={styles.compactNameRow}>
+                    <Text style={styles.compactName}>{barber.name}</Text>
+                    {barber.isVerified && (
+                      <Ionicons name="checkmark-circle" size={14} color="#007AFF" />
+                    )}
+                  </View>
+                  <View style={styles.compactMeta}>
+                    <Ionicons name="star" size={12} color="#FBBF24" />
+                    <Text style={styles.compactMetaText}>{barber.rating.toFixed(1)}</Text>
+                    <Text style={styles.compactMetaText}> • </Text>
+                    <Text style={styles.compactMetaText}>{barber.completedJobs} jobs</Text>
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
         </View>
@@ -386,7 +544,9 @@ export default function BarbershopBookingScreen() {
           disabled={selectedServiceIds.length === 0 || !selectedDate || !selectedTime}
           activeOpacity={0.8}
         >
-          <Text style={styles.bookButtonText}>Confirm Booking</Text>
+          <Text style={styles.bookButtonText}>
+            Confirm Booking {selectedServiceIds.length > 0 && ` • ${formatPrice(total)}`}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -425,93 +585,188 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#FFFFFF',
     padding: 20,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1C1C1E',
-    marginBottom: 16,
-    letterSpacing: -0.4,
+    flex: 1,
+    letterSpacing: -0.3,
   },
-  infoBanner: {
-    flexDirection: 'row',
-    backgroundColor: '#EFF6FF',
-    padding: 16,
+  // Booking Summary Card
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     marginTop: 16,
-    marginBottom: 8,
-    borderRadius: 12,
+    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#007AFF20',
-    gap: 12,
+    borderColor: '#E5E7EB',
   },
-  infoBannerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+  summaryHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  infoBannerContent: {
-    flex: 1,
-    gap: 4,
-  },
-  infoBannerTitle: {
-    fontSize: 15,
+  summaryTitle: {
+    fontSize: 17,
     fontWeight: '700',
-    color: '#007AFF',
+    color: '#1C1C1E',
   },
-  infoBannerText: {
-    fontSize: 13,
-    color: '#1E40AF',
-    lineHeight: 18,
-  },
-  shopCard: {
-    flexDirection: 'row',
+  summaryContent: {
     gap: 12,
   },
-  shopImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    backgroundColor: '#E5E5EA',
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  shopInfo: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 6,
+  summaryLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
-  shopNameRow: {
+  summaryValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    flexShrink: 1,
   },
-  shopName: {
+  summaryValue: {
+    fontSize: 14,
+    color: '#1C1C1E',
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  summaryRowTotal: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  summaryLabelTotal: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    fontWeight: '700',
+  },
+  summaryValueTotal: {
+    fontSize: 20,
+    color: '#00B14F',
+    fontWeight: '800',
+  },
+  // Compact Barber & Shop Info
+  compactInfoCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  // Shop Section (Primary)
+  shopSection: {
+    gap: 8,
+  },
+  shopHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shopNameText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1C1C1E',
+    flex: 1,
   },
-  locationRow: {
+  compactLocation: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
+    marginLeft: 26, // Align with shop name (icon width + gap)
   },
-  locationText: {
+  compactLocationText: {
     flex: 1,
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 18,
   },
-  hoursRow: {
+  // Divider
+  infoDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 16,
+  },
+  // Barber Section (Secondary)
+  barberSection: {
+    gap: 12,
+  },
+  barberLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  compactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 12,
   },
-  hoursText: {
-    fontSize: 13,
+  compactAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E5E5EA',
+  },
+  compactInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  compactNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  compactName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  compactMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  compactMetaText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  // Empty States
+  emptyServices: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyServicesText: {
+    fontSize: 14,
     color: '#8E8E93',
+    textAlign: 'center',
   },
   barberCard: {
     flexDirection: 'row',
@@ -611,89 +866,113 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#00B14F',
   },
-  dateScroll: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
+  // Grab Style - Date Selection
+  dateListGrab: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  dateChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 12,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 12,
-    borderWidth: 2,
+  dateItemGrab: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: '#E5E5EA',
-    minWidth: 70,
+    paddingVertical: 12,
     alignItems: 'center',
+    minWidth: 60,
   },
-  dateChipActive: {
-    backgroundColor: '#F0FDF4',
+  dateItemGrabExpanded: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    paddingVertical: 12,
+    alignItems: 'center',
+    width: '18%', // 5 items per row with gaps
+  },
+  dateItemGrabSelected: {
+    backgroundColor: '#00B14F',
     borderColor: '#00B14F',
   },
-  dateDay: {
+  dateDayGrab: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  dateDayGrabSelected: {
+    color: '#FFFFFF',
+  },
+  dateNumberGrab: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1C1C1E',
+  },
+  dateNumberGrabSelected: {
+    color: '#FFFFFF',
+  },
+  viewMoreDates: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 12,
+    gap: 4,
+  },
+  viewMoreDatesText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#00B14F',
+  },
+  // Grab Style - Time Selection
+  timeSectionGrab: {
+    marginBottom: 20,
+  },
+  timePeriodLabelGrab: {
     fontSize: 12,
     fontWeight: '600',
     color: '#8E8E93',
-    marginBottom: 4,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  dateDayActive: {
-    color: '#00B14F',
-  },
-  dateNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1C1C1E',
-    marginBottom: 2,
-  },
-  dateNumberActive: {
-    color: '#00B14F',
-  },
-  dateMonth: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#8E8E93',
-  },
-  dateMonthActive: {
-    color: '#00B14F',
-  },
-  todayBadge: {
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: '#00B14F',
-    borderRadius: 8,
-  },
-  todayText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  timeGrid: {
+  timeRowGrab: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
-  timeChip: {
-    paddingHorizontal: 16,
+  timeButtonGrab: {
     paddingVertical: 12,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 12,
-    borderWidth: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: '#E5E5EA',
-    minWidth: 100,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '23%', // 4 items per row with gaps
   },
-  timeChipActive: {
-    backgroundColor: '#F0FDF4',
+  timeButtonGrabSelected: {
+    backgroundColor: '#00B14F',
     borderColor: '#00B14F',
   },
-  timeLabel: {
-    fontSize: 14,
+  timeTextGrab: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#1C1C1E',
   },
-  timeLabelActive: {
-    color: '#00B14F',
+  timeTextGrabSelected: {
+    color: '#FFFFFF',
+  },
+  timeEmptyState: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  timeEmptyText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
   },
   priceBreakdown: {
     gap: 12,

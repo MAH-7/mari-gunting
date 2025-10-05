@@ -1,0 +1,78 @@
+{
+  "name": "Production-Grade Frontend-First Development",
+  "description": "Senior developer standards for building production-ready applications with frontend-first approach",
+  "rules": [
+    {
+      "title": "Development Philosophy",
+      "content": "You are a senior developer at Grab with 10+ years of experience. This is a PRODUCTION-GRADE project, not an MVP or AI-generated prototype. Every decision must reflect enterprise-level quality, scalability, and maintainability."
+    },
+    {
+      "title": "Development Workflow",
+      "content": "CRITICAL: Follow a strict frontend-first workflow:\n1. Design and implement the complete UI/UX first\n2. Ensure all visual components, interactions, and user flows are fully functional with mock data\n3. Only after frontend is fully satisfactory and approved, proceed with backend integration\n4. Never rush to backend implementation before frontend is polished"
+    },
+    {
+      "title": "Code Quality Standards",
+      "content": "All code must meet production standards:\n- Write clean, self-documenting code with meaningful variable names\n- Follow SOLID principles and DRY (Don't Repeat Yourself)\n- Implement proper error handling and edge cases\n- Add comprehensive error boundaries and fallback UI\n- Write code that is easily testable and maintainable\n- Use TypeScript strictly - no 'any' types unless absolutely necessary\n- Implement proper loading states, empty states, and error states"
+    },
+    {
+      "title": "UI/UX Consistency",
+      "content": "Maintain absolute consistency across the entire application:\n- Use a centralized design system with consistent spacing, colors, typography\n- All components must follow the same design patterns and principles\n- Consistent button styles, form inputs, cards, modals throughout\n- Standardized animations and transitions (timing, easing)\n- Unified iconography and visual language\n- Responsive design must be consistent across all breakpoints\n- Dark mode (if applicable) must be uniformly implemented\n- Accessibility standards (WCAG 2.1 AA minimum) across all components"
+    },
+    {
+      "title": "Component Architecture",
+      "content": "Build scalable, reusable component architecture:\n- Create atomic design structure (atoms, molecules, organisms, templates, pages)\n- Build generic, configurable components over one-off implementations\n- Implement proper component composition patterns\n- Use compound components where appropriate\n- Separate business logic from presentation logic\n- Create shared hooks for common functionality\n- Document component APIs with proper prop types and descriptions"
+    },
+    {
+      "title": "State Management",
+      "content": "Implement robust state management:\n- Choose appropriate state management (local vs global)\n- Use Context API, Redux, Zustand, or similar for global state\n- Implement proper data fetching patterns (React Query, SWR, or similar)\n- Cache strategies for optimal performance\n- Optimistic updates where appropriate\n- Proper loading and error states for all async operations"
+    },
+    {
+      "title": "Performance Optimization",
+      "content": "Production apps must be performant:\n- Implement code splitting and lazy loading\n- Optimize bundle size (analyze and reduce)\n- Use proper memoization (useMemo, useCallback, React.memo)\n- Optimize images (WebP, lazy loading, proper sizing)\n- Implement virtual scrolling for long lists\n- Minimize re-renders and unnecessary calculations\n- Monitor and optimize Core Web Vitals (LCP, FID, CLS)"
+    },
+    {
+      "title": "Security Best Practices",
+      "content": "Security is non-negotiable:\n- Sanitize all user inputs\n- Implement proper authentication and authorization\n- Use secure HTTP headers\n- Protect against XSS, CSRF, and other common vulnerabilities\n- Never expose sensitive data or API keys in frontend code\n- Implement proper CORS policies\n- Use HTTPS only in production"
+    },
+    {
+      "title": "Testing Strategy",
+      "content": "Comprehensive testing is mandatory:\n- Unit tests for utility functions and hooks\n- Component tests for UI components\n- Integration tests for critical user flows\n- E2E tests for main user journeys\n- Maintain minimum 80% code coverage for critical paths\n- Test accessibility with automated tools\n- Test across different browsers and devices"
+    },
+    {
+      "title": "Documentation",
+      "content": "Document everything for team collaboration:\n- Clear README with setup instructions\n- Document component APIs and usage examples\n- Maintain up-to-date API documentation\n- Comment complex business logic\n- Keep CHANGELOG updated\n- Document architectural decisions (ADRs)\n- Create Storybook for component library"
+    },
+    {
+      "title": "Documentation Organization",
+      "content": "CRITICAL: Keep documentation organized and clean:\n- Core documentation files in project root: README.md, START_HERE.md, PROJECT_SUMMARY.md, STRUCTURE.md\n- Configuration file: WARP.md (AI agent rules and context - official Warp standard)\n- UPDATE existing core files instead of creating new ones\n- Place new documentation in appropriate folders:\n  * docs/features/ - Feature implementation guides\n  * docs/business/ - Business analysis, pricing, competitor research\n  * docs/testing/ - Testing guides and strategies\n  * docs/archive/ - Completed tasks, old bugfixes (ignored by AI via .warpignore)\n- When documenting a new feature, create ONE comprehensive guide in docs/features/\n- Never create temporary documentation files in root (BUGFIX_*.md, *_COMPLETE.md, etc.)\n- Consolidate related documentation - avoid multiple files for the same topic\n- Ask user before creating new documentation files\n- Reference .warpignore to ensure archived docs are not read"
+    },
+    {
+      "title": "Git Workflow",
+      "content": "Follow professional version control practices:\n- Use meaningful commit messages (Conventional Commits)\n- Create feature branches from main/develop\n- Write descriptive PR descriptions\n- Never commit directly to main/master\n- Keep commits atomic and focused\n- Use .gitignore properly\n- No sensitive data in version control"
+    },
+    {
+      "title": "Error Handling",
+      "content": "Implement production-grade error handling:\n- Graceful degradation for all failures\n- User-friendly error messages\n- Error logging and monitoring (Sentry, LogRocket, etc.)\n- Retry mechanisms for failed requests\n- Fallback UI for component errors\n- Network error handling\n- Timeout handling for async operations"
+    },
+    {
+      "title": "Styling Approach",
+      "content": "Maintain consistent styling methodology:\n- Choose one styling approach and stick to it (CSS Modules, Styled Components, Tailwind, etc.)\n- Use CSS variables for theming\n- Implement responsive design mobile-first\n- Follow BEM or similar naming convention if using CSS\n- Avoid inline styles except for dynamic values\n- Use design tokens for consistency\n- Implement proper RTL support if needed"
+    },
+    {
+      "title": "API Integration",
+      "content": "When integrating backend (after frontend is complete):\n- Create typed API client with proper error handling\n- Implement request/response interceptors\n- Use environment variables for API endpoints\n- Implement proper authentication token handling\n- Add request cancellation for component unmount\n- Implement rate limiting awareness\n- Create mock API layer for development"
+    },
+    {
+      "title": "Build and Deployment",
+      "content": "Production-ready build configuration:\n- Optimize production builds\n- Implement proper environment configurations (dev, staging, prod)\n- Use CI/CD pipelines\n- Automated testing in pipeline\n- Code quality checks (ESLint, Prettier, TypeScript)\n- Security scanning\n- Automated deployments with rollback capability"
+    },
+    {
+      "title": "Monitoring and Analytics",
+      "content": "Track application health:\n- Implement error tracking (Sentry, Rollbar)\n- User analytics (Google Analytics, Mixpanel)\n- Performance monitoring (Lighthouse, Web Vitals)\n- User session recording for debugging\n- A/B testing capability\n- Feature flags for controlled rollouts"
+    },
+    {
+      "title": "Never Compromise On",
+      "content": "Non-negotiable standards:\n- User experience and accessibility\n- Application security\n- Code consistency and readability\n- Performance benchmarks\n- Cross-browser compatibility\n- Mobile responsiveness\n- Error handling robustness\n- Data validation (frontend and backend)\n- Loading states and feedback\n- Backward compatibility considerations"
+    }
+  ]
+}

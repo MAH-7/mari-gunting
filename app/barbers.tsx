@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency, formatDistance } from '@/utils/format';
 import { Barber } from '@/types';
+import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 
 export default function BarbersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,10 +110,34 @@ export default function BarbersScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#00B14F" />
-            <Text style={styles.loadingText}>Finding barbers...</Text>
-          </View>
+          // Skeleton Loading Cards
+          <>
+            {[1, 2, 3, 4].map((item) => (
+              <View key={item} style={styles.card}>
+                <View style={styles.cardInner}>
+                  <SkeletonCircle size={72} />
+                  <View style={styles.info}>
+                    <View style={styles.topRow}>
+                      <SkeletonText width="60%" height={15} />
+                    </View>
+                    <View style={styles.metaRow}>
+                      <SkeletonBase width={50} height={13} borderRadius={6} style={{ marginTop: 6 }} />
+                    </View>
+                    <View style={styles.distanceRow}>
+                      <SkeletonBase width={80} height={13} borderRadius={6} style={{ marginTop: 6 }} />
+                    </View>
+                    <View style={styles.bottom}>
+                      <View>
+                        <SkeletonText width={40} height={10} style={{ marginBottom: 4 }} />
+                        <SkeletonText width={60} height={17} />
+                      </View>
+                      <SkeletonBase width={80} height={24} borderRadius={12} />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
         ) : sortedBarbers.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="cut-outline" size={64} color="#D1D5DB" />

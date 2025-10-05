@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency } from '@/utils/format';
 import { ACTIVE_OPACITY } from '@/constants/animations';
-import { Barber } from '@/types';
+import { Barber, BarbershopStaff } from '@/types';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 
 export default function SelectBarberScreen() {
@@ -140,6 +140,20 @@ export default function SelectBarberScreen() {
         </View>
       </View>
 
+      {/* Shop Pricing Info */}
+      <View style={styles.pricingBanner}>
+        <View style={styles.pricingContent}>
+          <Ionicons name="pricetag-outline" size={20} color="#00B14F" />
+          <View style={styles.pricingInfo}>
+            <Text style={styles.pricingLabel}>Services starting from</Text>
+            <Text style={styles.pricingValue}>
+              {formatCurrency(Math.min(...shop.services.map((s: any) => s.price)))}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.pricingNote}>All staff offer same services at shop's prices</Text>
+      </View>
+
       {/* Barbers List */}
       <ScrollView 
         style={styles.scrollView} 
@@ -159,29 +173,23 @@ export default function SelectBarberScreen() {
               <Text style={styles.sectionSubtitle}>Choose your preferred barber</Text>
             </View>
 
-            {barbers.map((barber: Barber) => {
-              const lowestPrice = barber.services.length > 0 
-                ? Math.min(...barber.services.map(s => s.price))
-                : 0;
-
+            {barbers.map((staff: BarbershopStaff) => {
               return (
-                <TouchableOpacity
-                  key={barber.id}
+                <View
+                  key={staff.id}
                   style={styles.barberCard}
-                  onPress={() => router.push(`/barbershop/booking/${barber.id}?shopId=${shopId}` as any)}
-                  activeOpacity={ACTIVE_OPACITY.SECONDARY}
                 >
-                  {/* Barber Avatar & Info */}
+                  {/* Staff Avatar & Info */}
                   <View style={styles.barberHeader}>
                     <View style={styles.avatarContainer}>
-                      <Image source={{ uri: barber.avatar }} style={styles.barberAvatar} />
-                      {barber.isOnline && <View style={styles.onlineBadge} />}
+                      <Image source={{ uri: staff.avatar }} style={styles.barberAvatar} />
+                      {staff.isAvailable && <View style={styles.onlineBadge} />}
                     </View>
                     
                     <View style={styles.barberInfo}>
                       <View style={styles.barberNameRow}>
-                        <Text style={styles.barberName}>{barber.name}</Text>
-                        {barber.isVerified && (
+                        <Text style={styles.barberName}>{staff.name}</Text>
+                        {staff.isVerified && (
                           <Ionicons name="checkmark-circle" size={18} color="#3B82F6" />
                         )}
                       </View>
@@ -189,54 +197,54 @@ export default function SelectBarberScreen() {
                       <View style={styles.barberMeta}>
                         <View style={styles.ratingContainer}>
                           <Ionicons name="star" size={14} color="#FBBF24" />
-                          <Text style={styles.ratingText}>{barber.rating.toFixed(1)}</Text>
-                          <Text style={styles.reviewsText}>({barber.totalReviews})</Text>
+                          <Text style={styles.ratingText}>{staff.rating.toFixed(1)}</Text>
+                          <Text style={styles.reviewsText}>({staff.totalReviews})</Text>
                         </View>
                         <View style={styles.metaDivider} />
-                        <Text style={styles.jobsText}>{barber.completedJobs} jobs</Text>
+                        <Text style={styles.jobsText}>{staff.completedJobs} jobs</Text>
                       </View>
 
-                      {barber.isOnline ? (
+                      {staff.isAvailable ? (
                         <View style={styles.statusBadge}>
                           <View style={styles.statusDot} />
-                          <Text style={styles.statusText}>Available Now</Text>
+                          <Text style={styles.statusText}>Available Today</Text>
                         </View>
                       ) : (
                         <View style={[styles.statusBadge, styles.statusBadgeOffline]}>
-                          <Text style={styles.statusTextOffline}>Offline</Text>
+                          <Text style={styles.statusTextOffline}>Not Available</Text>
                         </View>
                       )}
                     </View>
                   </View>
 
                   {/* Specializations */}
-                  {barber.specializations && barber.specializations.length > 0 && (
+                  {staff.specializations && staff.specializations.length > 0 && (
                     <View style={styles.specializationsContainer}>
-                      {barber.specializations.slice(0, 3).map((spec: string, idx: number) => (
+                      {staff.specializations.slice(0, 3).map((spec: string, idx: number) => (
                         <View key={idx} style={styles.specPill}>
                           <Text style={styles.specPillText}>{spec}</Text>
                         </View>
                       ))}
-                      {barber.specializations.length > 3 && (
+                      {staff.specializations.length > 3 && (
                         <View style={styles.morePill}>
-                          <Text style={styles.morePillText}>+{barber.specializations.length - 3}</Text>
+                          <Text style={styles.morePillText}>+{staff.specializations.length - 3}</Text>
                         </View>
                       )}
                     </View>
                   )}
 
-                  {/* Services Info */}
+                  {/* Select Button - Full Width */}
                   <View style={styles.barberFooter}>
-                    <View style={styles.priceContainer}>
-                      <Text style={styles.priceLabel}>Starting from</Text>
-                      <Text style={styles.priceValue}>{formatCurrency(lowestPrice)}</Text>
-                    </View>
-                    <View style={styles.selectButton}>
-                      <Text style={styles.selectButtonText}>Select</Text>
-                      <Ionicons name="arrow-forward" size={16} color="#00B14F" />
-                    </View>
+                    <TouchableOpacity 
+                      style={styles.selectButtonFull}
+                      onPress={() => router.push(`/barbershop/booking/${staff.id}?shopId=${shopId}` as any)}
+                      activeOpacity={ACTIVE_OPACITY.PRIMARY}
+                    >
+                      <Text style={styles.selectButtonFullText}>Select {staff.name.split(' ')[0]}</Text>
+                      <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                </View>
               );
             })}
           </>
@@ -336,6 +344,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  pricingBanner: {
+    backgroundColor: '#F0FDF4',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#BBF7D0',
+  },
+  pricingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  pricingInfo: {
+    flex: 1,
+  },
+  pricingLabel: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  pricingValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#00B14F',
+  },
+  pricingNote: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
   scrollView: {
     flex: 1,
@@ -515,37 +555,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   barberFooter: {
+    marginTop: 4,
+  },
+  selectButtonFull: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  priceContainer: {
-    gap: 2,
-  },
-  priceLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  priceValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#00B14F',
-  },
-  selectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    justifyContent: 'center',
+    backgroundColor: '#00B14F',
+    paddingVertical: 14,
     borderRadius: 12,
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: '#00B14F',
+    gap: 8,
   },
-  selectButtonText: {
-    fontSize: 15,
+  selectButtonFullText: {
+    fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#FFFFFF',
   },
 });

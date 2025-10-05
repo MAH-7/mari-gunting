@@ -9,6 +9,7 @@ import { useStore } from '@/store/useStore';
 import { formatCurrency, formatShortDate, formatTime } from '@/utils/format';
 import { Booking, BookingStatus } from '@/types';
 import BookingFilterModal, { BookingFilterOptions } from '@/components/BookingFilterModal';
+import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 
 export default function BookingsScreen() {
   const currentUser = useStore((state) => state.currentUser);
@@ -142,10 +143,69 @@ export default function BookingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#00B14F" />
-            <Text style={styles.loadingText}>Loading bookings...</Text>
-          </View>
+          // Skeleton Loading Cards
+          <>
+            {[1, 2, 3].map((item) => (
+              <View key={item} style={styles.bookingCard}>
+                {/* Status Bar Skeleton */}
+                <View style={[styles.statusBar, { backgroundColor: '#F3F4F6' }]}>
+                  <SkeletonBase width={100} height={20} borderRadius={10} />
+                  <SkeletonBase width={50} height={16} borderRadius={8} />
+                </View>
+                
+                {/* Progress Bar Skeleton */}
+                <View style={styles.progressContainer}>
+                  <SkeletonBase width="100%" height={4} borderRadius={2} />
+                </View>
+                
+                {/* Card Content */}
+                <View style={styles.cardContent}>
+                  {/* Barber Row Skeleton */}
+                  <View style={styles.barberRow}>
+                    <SkeletonCircle size={56} />
+                    <View style={styles.barberInfo}>
+                      <SkeletonText width="60%" height={18} style={{ marginBottom: 6 }} />
+                      <SkeletonText width="40%" height={14} />
+                    </View>
+                  </View>
+                  
+                  {/* Services Section Skeleton */}
+                  <View style={styles.servicesSection}>
+                    <SkeletonText width={60} height={12} style={{ marginBottom: 10 }} />
+                    <View style={styles.serviceRow}>
+                      <SkeletonText width="50%" height={14} />
+                      <SkeletonText width={60} height={14} />
+                    </View>
+                    <View style={styles.serviceRow}>
+                      <SkeletonText width="45%" height={14} />
+                      <SkeletonText width={60} height={14} />
+                    </View>
+                  </View>
+                  
+                  {/* Details Section Skeleton */}
+                  <View style={styles.detailsSection}>
+                    <View style={styles.detailRow}>
+                      <SkeletonBase width={32} height={32} borderRadius={8} />
+                      <SkeletonText width="70%" height={14} style={{ marginLeft: 8 }} />
+                    </View>
+                    <View style={styles.detailRow}>
+                      <SkeletonBase width={32} height={32} borderRadius={8} />
+                      <SkeletonText width="65%" height={14} style={{ marginLeft: 8 }} />
+                    </View>
+                  </View>
+                  
+                  {/* Footer Skeleton */}
+                  <View style={styles.footer}>
+                    <View style={styles.totalSection}>
+                      <SkeletonText width={40} height={12} style={{ marginBottom: 4 }} />
+                      <SkeletonText width={80} height={20} />
+                    </View>
+                    <SkeletonBase width={80} height={36} borderRadius={12} />
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
         ) : displayBookings.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons 
