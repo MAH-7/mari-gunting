@@ -1,0 +1,12 @@
+{
+  "name": "@mari-gunting/shared",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true,
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "zustand": "*"
+  }
+}

@@ -248,6 +248,16 @@ export default function ProfileScreen() {
             </View>
           ))}
 
+          {/* TEST BUTTON - View Provider App */}
+          <TouchableOpacity 
+            style={styles.testProviderButton} 
+            activeOpacity={0.8}
+            onPress={() => router.push('/provider/(tabs)/dashboard')}
+          >
+            <Ionicons name="flask" size={20} color="#3B82F6" />
+            <Text style={styles.testProviderButtonText}>🧪 Test Provider App</Text>
+          </TouchableOpacity>
+
           {/* Logout Button */}
           <TouchableOpacity 
             style={styles.logoutButton} 
@@ -472,6 +482,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: 'bold',
+  },
+  testProviderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginTop: 8,
+    borderWidth: 2,
+    borderColor: '#BFDBFE',
+    borderStyle: 'dashed',
+    gap: 10,
+  },
+  testProviderButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#3B82F6',
   },
   logoutButton: {
     flexDirection: 'row',

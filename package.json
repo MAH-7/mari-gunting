@@ -1,46 +1,20 @@
 {
-  "name": "mari-gunting",
+  "name": "mari-gunting-monorepo",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
-  },
-  "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-native-community/slider": "^5.0.1",
-    "@react-navigation/native": "^7.1.17",
-    "@tanstack/react-query": "^5.90.2",
-    "axios": "^1.12.2",
-    "date-fns": "^4.1.0",
-    "expo": "~54.0.12",
-    "expo-blur": "~15.0.7",
-    "expo-calendar": "~15.0.7",
-    "expo-document-picker": "^14.0.7",
-    "expo-font": "^14.0.8",
-    "expo-haptics": "~15.0.7",
-    "expo-image-picker": "~17.0.8",
-    "expo-linear-gradient": "~15.0.7",
-    "expo-linking": "^8.0.8",
-    "expo-location": "~19.0.7",
-    "expo-router": "^6.0.10",
-    "expo-splash-screen": "^31.0.10",
-    "expo-status-bar": "~3.0.8",
-    "expo-system-ui": "^6.0.7",
-    "nativewind": "^2.0.11",
-    "react": "19.1.0",
-    "react-native": "0.81.4",
-    "react-native-safe-area-context": "^5.6.1",
-    "react-native-screens": "^4.16.0",
-    "tailwindcss": "^3.3.2",
-    "zustand": "^5.0.8"
+    "customer": "cd apps/customer && npm start",
+    "provider": "cd apps/provider && npm start",
+    "install:all": "npm install && npm run install:customer && npm run install:provider && npm run install:shared",
+    "install:customer": "cd apps/customer && npm install",
+    "install:provider": "cd apps/provider && npm install",
+    "install:shared": "cd packages/shared && npm install"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "babel-preset-expo": "^54.0.3",
     "typescript": "~5.9.2"
-  },
-  "private": true
+  }
 }

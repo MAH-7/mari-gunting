@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Mari Gunting",
+    "slug": "mari-gunting-customer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.marigunting.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience.",
+        "NSLocationAlwaysUsageDescription": "Mari Gunting needs your location to track barber arrival and provide real-time updates."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.marigunting.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience."
+        }
+      ]
+    ],
+    "scheme": "marigunting",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
