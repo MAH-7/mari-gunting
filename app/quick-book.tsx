@@ -17,14 +17,18 @@ export default function QuickBookScreen() {
     mutationFn: (data: { time: string; radius: number; maxPrice: number }) => 
       api.quickBook('any', data.time),
     onSuccess: (response) => {
-      setIsSearching(false);
       // Check if the response was successful and has barber data
       if (response.success && response.data?.barber?.id) {
         const barberId = response.data.barber.id;
-        // Navigate to confirm booking screen (unified flow)
-        router.push(`/booking/create?barberId=${barberId}` as any);
+        // Small delay to allow modal to close smoothly before navigation
+        setTimeout(() => {
+          setIsSearching(false);
+          // Navigate to confirm booking screen (unified flow)
+          router.push(`/booking/create?barberId=${barberId}` as any);
+        }, 300);
       } else {
         // No barber available
+        setIsSearching(false);
         console.log('Quick book failed:', response.error || 'No barber found');
         setShowErrorModal(true);
       }

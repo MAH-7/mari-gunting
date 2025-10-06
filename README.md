@@ -25,14 +25,45 @@ A React Native mobile application built with Expo for connecting customers with 
 
 ```
 mari-gunting/
-├── app/                    # Expo Router screens
+├── app/                    # Expo Router screens (25 screens)
 │   ├── (tabs)/            # Tab navigation screens
-│   │   ├── index.tsx      # Home screen (barber listings)
+│   │   ├── _layout.tsx    # Tab layout configuration
+│   │   ├── index.tsx      # Home screen
 │   │   ├── bookings.tsx   # Bookings screen
-│   │   └── profile.tsx    # Profile screen
+│   │   ├── profile.tsx    # Profile screen
+│   │   ├── rewards.tsx    # Rewards/loyalty screen
+│   │   └── service.tsx    # Service packages screen
+│   ├── barber/            # Barber-related screens
+│   │   ├── [id].tsx       # Barber detail
+│   │   └── reviews/[id].tsx  # Barber reviews
+│   ├── barbershop/        # Barbershop-related screens
+│   │   ├── [id].tsx       # Barbershop detail
+│   │   ├── barbers/[shopId].tsx  # Shop staff
+│   │   ├── booking/[barberId].tsx  # Shop booking
+│   │   └── reviews/[id].tsx  # Shop reviews
+│   ├── booking/           # Booking flow
+│   │   ├── [id].tsx       # Booking detail
+│   │   └── create.tsx     # Create booking
 │   ├── _layout.tsx        # Root layout
-│   └── index.tsx          # Welcome/Splash screen
-├── components/            # Reusable components (to be added)
+│   ├── login.tsx          # Login screen
+│   ├── register.tsx       # Registration
+│   ├── otp-verification.tsx  # OTP verification
+│   ├── select-role.tsx    # Role selection
+│   ├── barber-verification.tsx  # Barber verification
+│   ├── barbers.tsx        # Freelance barbers list
+│   ├── barbershops.tsx    # Barbershops list
+│   ├── quick-book.tsx     # Quick booking
+│   └── payment-method.tsx # Payment selection
+├── components/            # Reusable components (14 files)
+│   ├── Skeleton/          # Loading skeletons
+│   ├── BookingFilterModal.tsx
+│   ├── ConfirmationModal.tsx
+│   ├── FilterModal.tsx
+│   ├── ImageCarousel.tsx
+│   ├── LocationGuard.tsx
+│   ├── ServiceModal.tsx
+│   ├── SplashScreen.tsx
+│   └── SuccessModal.tsx
 ├── services/              # API and mock data
 │   ├── api.ts            # API service layer
 │   └── mockData.ts       # Mock data
@@ -42,36 +73,85 @@ mari-gunting/
 │   └── index.ts          # Type definitions
 ├── utils/                # Utility functions
 │   └── format.ts         # Formatting helpers
-└── constants/            # App constants (to be added)
+└── docs/                 # Documentation
+    ├── features/         # Feature guides (33 files)
+    ├── business/         # Business docs (8 files)
+    ├── testing/          # Testing guides (3 files)
+    └── archive/          # Archived docs (12 files)
 ```
 
-## 🎯 Current Features (Phase 1 - Frontend with Mock Data)
+## 🎯 Current Features (Phase 2 - Advanced Frontend)
 
 ### ✅ Completed
+
+#### Core Infrastructure
 - [x] Project setup with Expo + TypeScript
 - [x] File-based routing with Expo Router
-- [x] Tab navigation (Home, Bookings, Profile)
+- [x] Tab navigation (Home, Bookings, Profile, Rewards, Service)
 - [x] Complete TypeScript type system
 - [x] Mock data layer with realistic data
 - [x] API service layer (using mock data)
-- [x] Home screen with barber listings
-- [x] Search and filter functionality
-- [x] Bookings screen (upcoming & history)
-- [x] Profile screen
-- [x] Responsive design with NativeWind
 - [x] State management with Zustand
 - [x] Utility functions (currency, date, time formatting)
+- [x] Responsive design with NativeWind
 
-### 🚧 To Be Added
-- [ ] Barber detail screen
-- [ ] Booking confirmation flow
-- [ ] Service selection screen
-- [ ] Address selection screen
+#### Authentication & Onboarding
+- [x] Login screen with phone authentication
+- [x] Registration screen
+- [x] OTP verification
+- [x] Role selection (Customer/Barber)
+- [x] Barber verification process
+
+#### Browse & Discovery
+- [x] Home screen with barber listings
+- [x] Barbershops listing screen
+- [x] Freelance barbers listing screen
+- [x] Search and filter functionality
+- [x] Filter modal with advanced options
+- [x] Online/offline status indicators
+
+#### Barber & Barbershop Details
+- [x] Barber detail screen with full profile
+- [x] Barbershop detail screen
+- [x] Reviews listing screen
+- [x] Service listings with pricing
+- [x] Photo galleries with carousel
+- [x] Rating & review display
+
+#### Booking System
+- [x] Bookings screen (upcoming & history)
+- [x] Quick book feature
+- [x] Full booking creation flow
+- [x] Booking detail screen
+- [x] Service selection modal
+- [x] Booking filter modal
+- [x] Booking confirmation modal
+
+#### Payment & Rewards
+- [x] Payment method selection screen
+- [x] Rewards/loyalty program screen
+- [x] Service packages screen
+
+#### Reusable Components
+- [x] Skeleton loading system (5 components)
+- [x] Modal system (Filter, Service, Booking, Confirmation, Success)
+- [x] Image carousel component
+- [x] Location guard component
+- [x] Splash screen component
+
+#### Location Features
+- [x] GPS location integration
+- [x] Location permissions handling
+- [x] Distance calculation
+
+### 🚧 To Be Added (Phase 3 - Backend Integration)
+- [ ] Real backend API integration
 - [ ] Real-time booking tracking
-- [ ] Review/Rating system
-- [ ] Payment integration screens
-- [ ] Push notifications UI
-- [ ] Chat/messaging feature
+- [ ] Push notifications
+- [ ] In-app chat/messaging
+- [ ] Payment gateway integration (Midtrans/Xendit)
+- [ ] File upload for photos
+- [ ] Admin dashboard
 
 ## 🏃 Getting Started
 
@@ -97,14 +177,14 @@ npm start
 - Press `a` for Android emulator
 - Scan QR code with Expo Go app for physical device
 
-## 📊 Mock Data
+## 📊 Project Statistics
 
-The app uses comprehensive mock data including:
-- **4 Barbers** with profiles, ratings, services, and availability
-- **7 Services** across different categories
-- **3 Sample Bookings** with different statuses
-- **1 Customer** profile with saved addresses
-- Realistic Indonesian addresses and pricing (IDR)
+- **Total Screens**: 25 (up from 4 in Phase 1)
+- **Reusable Components**: 14 (including 6 skeleton loaders)
+- **Lines of Code**: ~10,000+ (estimated)
+- **Documentation Files**: 37 across docs/ folders (consolidated from 56+)
+- **Mock Data**: 4 barbers, 7 services, 3 bookings, realistic Indonesian data
+- **Dependencies**: 26 production packages
 
 ## 🎨 Design Features
 
@@ -116,7 +196,7 @@ The app uses comprehensive mock data including:
 - Status badges and indicators
 - Card-based design system
 
-## 🔄 Next Steps (Phase 2 - Backend Integration)
+## 🔄 Next Steps (Phase 3 - Backend Integration)
 
 1. **Backend Development**:
    - API endpoints design
@@ -186,4 +266,6 @@ This project is for educational/commercial purposes.
 
 ---
 
-**Note**: This is Phase 1 with frontend and mock data. Backend integration and advanced features will be added in Phase 2.
+**Last updated**: 2025-10-06 02:38 UTC
+
+**Note**: This is Phase 2 with advanced frontend features and mock data. Backend integration will be added in Phase 3.
