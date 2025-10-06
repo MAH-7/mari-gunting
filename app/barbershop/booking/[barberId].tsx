@@ -182,13 +182,15 @@ export default function BarbershopBookingScreen() {
       pathname: '/payment-method',
       params: {
         // Booking data
-        bookingType: 'barbershop',
+        type: 'scheduled-shop',        // NEW: Booking type for barbershop
+        bookingType: 'barbershop',     // Keep for payment screen compatibility
         barberId: barber.id,
         shopId: shop.id,
         barberName: barber.name,
         barberAvatar: barber.avatar,
         shopName: shop.name,
         shopAddress: shop.address,
+        shopPhone: shop.phone,         // NEW: Shop phone number
         serviceIds: selectedServiceIds.join(','),
         services: JSON.stringify(selectedServices),
         scheduledDate: selectedDate,

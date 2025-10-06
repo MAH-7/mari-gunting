@@ -112,6 +112,9 @@ export default function CreateBookingScreen() {
     router.push({
       pathname: '/payment-method',
       params: {
+        // Booking type
+        type: 'on-demand',        // NEW: Freelance/on-demand booking type
+        
         // Booking data
         barberId: barber.id,
         barberName: barber.name,

@@ -145,9 +145,16 @@ export type ServiceCategory =
   | 'premium';
 
 // Booking Types
+export type BookingType = 
+  | 'on-demand'        // Quick Book / Choose Barber (ASAP, barber travels to customer)
+  | 'scheduled-shop'   // Barbershop (scheduled appointment, customer walks in)
+  | 'scheduled-home';  // Future: Scheduled home service
+
 export type BookingStatus = 
   | 'pending'
   | 'accepted'
+  | 'confirmed'         // For barbershop bookings
+  | 'ready'             // For barbershop: ready for customer
   | 'on-the-way'
   | 'in-progress'
   | 'completed'
@@ -155,6 +162,7 @@ export type BookingStatus =
 
 export interface Booking {
   id: string;
+  type: BookingType;     // Booking type: on-demand, scheduled-shop, or scheduled-home
   customerId: string;
   customerName?: string;
   customer?: Customer;
@@ -162,6 +170,13 @@ export interface Booking {
   barberName?: string;
   barberAvatar?: string;
   barber?: Barber;
+  
+  // Barbershop-specific fields
+  shopId?: string;       // For barbershop bookings
+  shopName?: string;     // Shop name
+  shopAddress?: string;  // Shop physical address
+  shopPhone?: string;    // Shop contact number
+  
   serviceId?: string;
   serviceName?: string;
   services?: Service[];

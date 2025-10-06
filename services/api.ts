@@ -178,11 +178,22 @@ export const api = {
   createBooking: async (bookingData: Partial<Booking>): Promise<ApiResponse<Booking>> => {
     await delay(1000);
     
+    // Validate booking type
+    if (!bookingData.type) {
+      return {
+        success: false,
+        error: 'Booking type is required',
+      };
+    }
+    
+    // Set initial status based on booking type
+    const initialStatus = bookingData.type === 'scheduled-shop' ? 'pending' : 'pending';
+    
     // Simulate creating a booking
     const newBooking: Booking = {
       id: `bk${Date.now()}`,
       ...bookingData,
-      status: 'pending',
+      status: initialStatus as any,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as Booking;

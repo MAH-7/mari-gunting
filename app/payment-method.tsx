@@ -46,15 +46,27 @@ const paymentOptions: PaymentOption[] = [
 
 export default function PaymentMethodScreen() {
   const params = useLocalSearchParams<{
+    // Booking type
+    type?: string;                  // NEW: 'on-demand' | 'scheduled-shop'
+    bookingType?: string;           // Legacy support
+    
     // Booking data
     barberId: string;
     barberName: string;
     barberAvatar?: string;
     serviceIds: string;
     services: string;
-    addressId: string;
-    address: string;
-    distance: string;
+    addressId?: string;             // Optional for barbershop
+    address?: string;               // Optional for barbershop
+    distance?: string;              // Optional for barbershop
+    
+    // Barbershop-specific
+    shopId?: string;
+    shopName?: string;
+    shopAddress?: string;
+    shopPhone?: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
     
     // Pricing
     subtotal: string;
@@ -123,18 +135,19 @@ export default function PaymentMethodScreen() {
           
           console.log('✅ Barber fetched:', barber.name);
           
-          // Create booking
-          const createBookingResponse = await api.createBooking({
+          // Determine booking type
+          const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
+          
+          // Create booking with type-specific fields
+          const bookingPayload: any = {
+            type: bookingType as any,  // NEW: Include booking type
             barberId: params.barberId,
             barberName: params.barberName,
             barberAvatar: params.barberAvatar,
-            barber: barber, // Include full barber object
+            barber: barber,
             customerId: 'user123', // TODO: Get from auth context
             services: services,
             serviceName: params.serviceName,
-            addressId: params.addressId,
-            address: address,
-            distance: parseFloat(params.distance || '0'),
             price: parseFloat(params.subtotal || '0'),
             travelCost: parseFloat(params.travelCost || '0'),
             platformFee: parseFloat(params.platformFee || '0'),
@@ -144,8 +157,26 @@ export default function PaymentMethodScreen() {
             duration: parseInt(params.totalDuration || '0'),
             paymentMethod: 'cash',
             status: 'pending',
-            scheduledAt: new Date().toISOString(),
-          });
+          };
+          
+          // Add type-specific fields
+          if (bookingType === 'scheduled-shop') {
+            // Barbershop booking
+            bookingPayload.shopId = params.shopId;
+            bookingPayload.shopName = params.shopName;
+            bookingPayload.shopAddress = params.shopAddress;
+            bookingPayload.shopPhone = params.shopPhone;
+            bookingPayload.scheduledDate = params.scheduledDate;
+            bookingPayload.scheduledTime = params.scheduledTime;
+          } else {
+            // Freelance/on-demand booking
+            bookingPayload.addressId = params.addressId;
+            bookingPayload.address = address;
+            bookingPayload.distance = parseFloat(params.distance || '0');
+            bookingPayload.scheduledAt = new Date().toISOString();
+          }
+          
+          const createBookingResponse = await api.createBooking(bookingPayload);
           
           setIsProcessing(false);
           

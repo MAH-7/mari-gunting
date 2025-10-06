@@ -1228,6 +1228,7 @@ export const mockBarbershopStaff: BarbershopStaff[] = [
 export const mockBookings: Booking[] = [
   {
     id: 'bk1',
+    type: 'on-demand',                              // NEW: Freelance booking type
     customerId: mockCustomer.id,
     customer: mockCustomer,
     barberId: 'b1',
@@ -1257,6 +1258,7 @@ export const mockBookings: Booking[] = [
   },
   {
     id: 'bk2',
+    type: 'on-demand',                              // NEW: Freelance booking type
     customerId: mockCustomer.id,
     customer: mockCustomer,
     barberId: 'b2',
@@ -1282,6 +1284,7 @@ export const mockBookings: Booking[] = [
   },
   {
     id: 'bk3',
+    type: 'on-demand',                              // NEW: Freelance booking type
     customerId: mockCustomer.id,
     customer: mockCustomer,
     barberId: 'b1',
