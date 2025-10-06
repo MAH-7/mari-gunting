@@ -12,14 +12,18 @@ import { BookingStatus, BookingType } from '@/types';
 import { useState, useMemo } from 'react';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import SuccessModal from '@/components/SuccessModal';
+import PointsEarnedModal from '@/components/PointsEarnedModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import * as Calendar from 'expo-calendar';
+import { useBookingCompletion } from '@/hooks/useBookingCompletion';
 
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showPointsModal, setShowPointsModal] = useState(false);
+  const [pointsEarned, setPointsEarned] = useState(0);
 
   const { data: bookingResponse, isLoading } = useQuery({
     queryKey: ['booking', id],
@@ -46,6 +50,15 @@ export default function BookingDetailScreen() {
   // Determine booking type
   const bookingType: BookingType = booking?.type || (booking?.shopId ? 'scheduled-shop' : 'on-demand');
   const isBarbershop = bookingType === 'scheduled-shop';
+  
+  // Handle points awarding on completion
+  useBookingCompletion({
+    booking,
+    onPointsAwarded: (points) => {
+      setPointsEarned(points);
+      setShowPointsModal(true);
+    },
+  });
 
   // STATUS TIMELINE CONFIGURATIONS (Phase 1.5)
   const getStatusSteps = () => {
@@ -250,7 +263,7 @@ export default function BookingDetailScreen() {
   };
 
   const handleRateBarber = () => {
-    Alert.alert('Coming Soon', 'Rating feature will be available soon');
+    Alert.alert('Rate Barber', 'Rating feature coming soon!');
   };
 
   if (isLoading) {
@@ -713,6 +726,13 @@ export default function BookingDetailScreen() {
         isLoading={cancelMutation.isPending}
       />
 
+      {/* Points Earned Modal */}
+      <PointsEarnedModal
+        visible={showPointsModal}
+        points={pointsEarned}
+        onClose={() => setShowPointsModal(false)}
+      />
+      
       {/* Success Modal */}
       <SuccessModal
         visible={showSuccessModal}
@@ -1196,6 +1216,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
+    gap: 12,
   },
   cancelBookingButton: {
     flexDirection: 'row',

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api } from '@/services/api';
 import SuccessModal from '@/components/SuccessModal';
+import { useStore } from '@/store/useStore';
+import type { Voucher } from '@/store/useStore';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -85,8 +87,47 @@ export default function PaymentMethodScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [bookingId, setBookingId] = useState<string>('');
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  
+  // Get vouchers from store
+  const myVouchers = useStore((state) => state.myVouchers);
+  const useVoucher = useStore((state) => state.useVoucher);
 
-  const totalAmount = parseFloat(params.amount || '0');
+  const subtotal = parseFloat(params.subtotal || '0');
+  const travelCost = parseFloat(params.travelCost || '0');
+  const platformFee = parseFloat(params.platformFee || '0');
+  
+  // Calculate discount from selected voucher
+  const calculateDiscount = (): number => {
+    if (!selectedVoucher) return 0;
+    
+    // Check minimum spend requirement
+    if (selectedVoucher.minSpend && subtotal < selectedVoucher.minSpend) {
+      return 0;
+    }
+    
+    if (selectedVoucher.discountAmount) {
+      return selectedVoucher.discountAmount;
+    }
+    
+    if (selectedVoucher.discountPercent) {
+      return (subtotal * selectedVoucher.discountPercent) / 100;
+    }
+    
+    return 0;
+  };
+  
+  const discount = calculateDiscount();
+  const totalAmount = subtotal + travelCost + platformFee - discount;
+  
+  // Filter usable vouchers (not expired, not used, meets minimum spend)
+  const usableVouchers = myVouchers.filter(v => {
+    if (v.status === 'used') return false;
+    if (v.minSpend && subtotal < v.minSpend) return false;
+    // Could add expiry check here
+    return true;
+  });
 
   const handleConfirmPayment = async () => {
     if (!selectedMethod) {
@@ -185,6 +226,14 @@ export default function PaymentMethodScreen() {
           if (createdBookingId) {
             console.log('✅ Booking created with ID:', createdBookingId);
             
+            // Mark voucher as used if one was selected
+            if (selectedVoucher) {
+              useVoucher(selectedVoucher.id, createdBookingId);
+            }
+            
+            // NOTE: Points will be awarded when service is completed, not now
+            // This prevents customers from earning points if they cancel
+            
             // Store booking ID and show success modal
             setBookingId(createdBookingId);
             setShowSuccessModal(true);
@@ -269,8 +318,66 @@ export default function PaymentMethodScreen() {
       >
         {/* Amount Section */}
         <View style={styles.amountSection}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalAmount}>RM {totalAmount.toFixed(2)}</Text>
+          {/* Subtotal breakdown */}
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Subtotal</Text>
+            <Text style={styles.priceValue}>RM {subtotal.toFixed(2)}</Text>
+          </View>
+          {travelCost > 0 && (
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Travel Cost</Text>
+              <Text style={styles.priceValue}>RM {travelCost.toFixed(2)}</Text>
+            </View>
+          )}
+          {platformFee > 0 && (
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Platform Fee</Text>
+              <Text style={styles.priceValue}>RM {platformFee.toFixed(2)}</Text>
+            </View>
+          )}
+          
+          {/* Voucher section */}
+          {selectedVoucher && discount > 0 ? (
+            <View style={[styles.priceRow, styles.discountRow]}>
+              <View style={styles.discountLeft}>
+                <Ionicons name="pricetag" size={14} color="#00B14F" />
+                <Text style={styles.discountLabel}>Voucher Discount</Text>
+              </View>
+              <Text style={styles.discountValue}>-RM {discount.toFixed(2)}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.voucherButton}
+              onPress={() => setShowVoucherModal(true)}
+            >
+              <View style={styles.voucherButtonLeft}>
+                <Ionicons name="ticket-outline" size={20} color="#00B14F" />
+                <Text style={styles.voucherButtonText}>
+                  {usableVouchers.length > 0 ? 'Select Voucher' : 'No Vouchers Available'}
+                </Text>
+              </View>
+              {usableVouchers.length > 0 && (
+                <View style={styles.voucherBadge}>
+                  <Text style={styles.voucherBadgeText}>{usableVouchers.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+          
+          <View style={styles.divider} />
+          
+          {/* Total */}
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalAmount}>RM {totalAmount.toFixed(2)}</Text>
+          </View>
+          
+          {discount > 0 && (
+            <View style={styles.savingsRow}>
+              <Ionicons name="checkmark-circle" size={14} color="#00B14F" />
+              <Text style={styles.savingsText}>You save RM {discount.toFixed(2)}!</Text>
+            </View>
+          )}
         </View>
 
         {/* Payment Methods */}
@@ -344,6 +451,82 @@ export default function PaymentMethodScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Voucher Selection Modal */}
+      <Modal
+        visible={showVoucherModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowVoucherModal(false)}
+      >
+        <SafeAreaView style={styles.voucherModalContainer}>
+          <View style={styles.voucherModalHeader}>
+            <Text style={styles.voucherModalTitle}>Select Voucher</Text>
+            <TouchableOpacity onPress={() => setShowVoucherModal(false)}>
+              <Ionicons name="close" size={24} color="#1C1C1E" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.voucherList}>
+            {selectedVoucher && (
+              <TouchableOpacity
+                style={styles.removeVoucherButton}
+                onPress={() => {
+                  setSelectedVoucher(null);
+                  setShowVoucherModal(false);
+                }}
+              >
+                <Ionicons name="close-circle" size={20} color="#EF4444" />
+                <Text style={styles.removeVoucherText}>Remove Voucher</Text>
+              </TouchableOpacity>
+            )}
+            
+            {usableVouchers.length > 0 ? (
+              usableVouchers.map((voucher) => {
+                const isSelected = selectedVoucher?.id === voucher.id;
+                const voucherDiscount = voucher.discountAmount || 
+                  (voucher.discountPercent ? (subtotal * voucher.discountPercent) / 100 : 0);
+                
+                return (
+                  <TouchableOpacity
+                    key={voucher.id}
+                    style={[styles.voucherModalCard, isSelected && styles.voucherModalCardSelected]}
+                    onPress={() => {
+                      setSelectedVoucher(voucher);
+                      setShowVoucherModal(false);
+                    }}
+                  >
+                    <View style={styles.voucherModalCardLeft}>
+                      <View style={styles.voucherModalBadge}>
+                        <Ionicons name="pricetag" size={16} color="#00B14F" />
+                      </View>
+                      <View style={styles.voucherModalInfo}>
+                        <Text style={styles.voucherModalCardTitle}>{voucher.title}</Text>
+                        <Text style={styles.voucherModalCardDesc}>{voucher.description}</Text>
+                        <Text style={styles.voucherModalCardExpiry}>Exp: {voucher.expires}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.voucherModalCardRight}>
+                      <Text style={styles.voucherModalDiscount}>-RM {voucherDiscount.toFixed(2)}</Text>
+                      {isSelected && (
+                        <View style={styles.selectedBadge}>
+                          <Ionicons name="checkmark-circle" size={20} color="#00B14F" />
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={styles.emptyVouchers}>
+                <Ionicons name="ticket-outline" size={64} color="#D1D5DB" />
+                <Text style={styles.emptyVouchersTitle}>No Vouchers Available</Text>
+                <Text style={styles.emptyVouchersText}>Earn points and redeem vouchers to save on bookings</Text>
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+      
       {/* Success Modal */}
       <SuccessModal
         visible={showSuccessModal}
@@ -534,5 +717,222 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: -0.4,
+  },
+  // Price breakdown styles
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  priceLabel: {
+    fontSize: 15,
+    color: '#6B7280',
+    fontWeight: '400',
+  },
+  priceValue: {
+    fontSize: 15,
+    color: '#1C1C1E',
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    marginVertical: 16,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  // Voucher button
+  voucherButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    padding: 14,
+    borderRadius: 12,
+    marginVertical: 12,
+    borderWidth: 1.5,
+    borderColor: '#00B14F',
+    borderStyle: 'dashed',
+  },
+  voucherButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  voucherButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#00B14F',
+  },
+  voucherBadge: {
+    backgroundColor: '#00B14F',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  voucherBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  // Discount row
+  discountRow: {
+    backgroundColor: '#F0FDF4',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  discountLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  discountLabel: {
+    fontSize: 15,
+    color: '#00B14F',
+    fontWeight: '600',
+  },
+  discountValue: {
+    fontSize: 15,
+    color: '#00B14F',
+    fontWeight: '700',
+  },
+  savingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  savingsText: {
+    fontSize: 13,
+    color: '#00B14F',
+    fontWeight: '600',
+  },
+  // Voucher modal styles
+  voucherModalContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  voucherModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E5EA',
+  },
+  voucherModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1C1C1E',
+  },
+  voucherList: {
+    flex: 1,
+    padding: 16,
+  },
+  removeVoucherButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  removeVoucherText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#EF4444',
+  },
+  voucherModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  voucherModalCardSelected: {
+    borderColor: '#00B14F',
+    backgroundColor: '#F0FDF4',
+  },
+  voucherModalCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  voucherModalBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voucherModalInfo: {
+    flex: 1,
+  },
+  voucherModalCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginBottom: 2,
+  },
+  voucherModalCardDesc: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  voucherModalCardExpiry: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  voucherModalCardRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  voucherModalDiscount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#00B14F',
+  },
+  selectedBadge: {
+    marginTop: 4,
+  },
+  emptyVouchers: {
+    alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+  },
+  emptyVouchersTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyVouchersText: {
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

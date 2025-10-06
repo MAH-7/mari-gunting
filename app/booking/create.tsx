@@ -17,8 +17,6 @@ export default function CreateBookingScreen() {
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [serviceNotes, setServiceNotes] = useState<string>('');
-  const [promoCode, setPromoCode] = useState<string>('');
-  const [promoDiscount, setPromoDiscount] = useState<number>(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const { data: barberResponse } = useQuery({
@@ -69,26 +67,8 @@ export default function CreateBookingScreen() {
   // Calculate ETA (estimate: 5 min base + 2 min per km)
   const estimatedETA = Math.round(5 + (distance * 2));
   
-  // Calculate total with promo discount
-  const totalBeforeDiscount = Math.round((subtotal + travelCost + platformFee) * 100) / 100;
-  const total = Math.round((totalBeforeDiscount - promoDiscount) * 100) / 100;
-
-  const handleApplyPromo = () => {
-    // Simple promo code validation (in production, call API)
-    const validPromoCodes: Record<string, number> = {
-      'FIRST10': 10, // RM 10 off
-      'SAVE5': 5,    // RM 5 off
-      'NEWUSER': 15, // RM 15 off
-    };
-    
-    const upperCode = promoCode.trim().toUpperCase();
-    if (validPromoCodes[upperCode]) {
-      setPromoDiscount(validPromoCodes[upperCode]);
-      Alert.alert('Success', `Promo code applied! You saved RM ${validPromoCodes[upperCode]}`);
-    } else if (upperCode) {
-      Alert.alert('Invalid Code', 'The promo code you entered is not valid');
-    }
-  };
+  // Calculate total
+  const total = Math.round((subtotal + travelCost + platformFee) * 100) / 100;
   
   const handleBookNow = () => {
     if (selectedServiceIds.length === 0) {
@@ -125,8 +105,6 @@ export default function CreateBookingScreen() {
         address: JSON.stringify(addresses.find(a => a.id === selectedAddress)),
         distance: distance.toString(),
         serviceNotes: serviceNotes,
-        promoCode: promoCode,
-        promoDiscount: promoDiscount.toString(),
         
         // Pricing
         subtotal: subtotal.toString(),
@@ -414,38 +392,6 @@ export default function CreateBookingScreen() {
           <Text style={styles.notesCounter}>{serviceNotes.length}/200</Text>
         </View>
         
-        {/* Promo Code */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Promo Code</Text>
-          <View style={styles.promoContainer}>
-            <View style={styles.promoInputContainer}>
-              <Ionicons name="pricetag" size={20} color="#6B7280" />
-              <TextInput
-                style={styles.promoInput}
-                placeholder="Enter promo code"
-                placeholderTextColor="#9CA3AF"
-                value={promoCode}
-                onChangeText={setPromoCode}
-                autoCapitalize="characters"
-                maxLength={20}
-              />
-            </View>
-            <TouchableOpacity 
-              style={styles.applyButton}
-              onPress={handleApplyPromo}
-              activeOpacity={ACTIVE_OPACITY.PRIMARY}
-            >
-              <Text style={styles.applyButtonText}>Apply</Text>
-            </TouchableOpacity>
-          </View>
-          {promoDiscount > 0 && (
-            <View style={styles.promoSuccess}>
-              <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
-              <Text style={styles.promoSuccessText}>Promo applied! You saved RM {promoDiscount}</Text>
-            </View>
-          )}
-        </View>
-        
         {/* Price Breakdown */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Price Details</Text>
@@ -462,12 +408,6 @@ export default function CreateBookingScreen() {
               <Text style={styles.priceLabel}>Platform Fee</Text>
               <Text style={styles.priceValue}>{formatPrice(platformFee)}</Text>
             </View>
-            {promoDiscount > 0 && (
-              <View style={styles.priceRow}>
-                <Text style={styles.discountLabel}>Promo Discount</Text>
-                <Text style={styles.discountValue}>-{formatPrice(promoDiscount)}</Text>
-              </View>
-            )}
             <View style={styles.priceDivider} />
             <View style={styles.priceRow}>
               <Text style={styles.totalLabel}>Total</Text>
@@ -907,53 +847,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 6,
   },
-  promoContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  promoInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  promoInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1C1C1E',
-    paddingVertical: 12,
-  },
-  applyButton: {
-    backgroundColor: '#00B14F',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    justifyContent: 'center',
-  },
-  applyButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  promoSuccess: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    backgroundColor: '#F0FDF4',
-    padding: 10,
-    borderRadius: 8,
-  },
-  promoSuccessText: {
-    fontSize: 13,
-    color: '#047857',
-    fontWeight: '600',
-  },
   priceBreakdown: {
     gap: 12,
   },
@@ -983,16 +876,6 @@ const styles = StyleSheet.create({
   },
   totalValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#00B14F',
-  },
-  discountLabel: {
-    fontSize: 15,
-    color: '#00B14F',
-    fontWeight: '600',
-  },
-  discountValue: {
-    fontSize: 15,
     fontWeight: '700',
     color: '#00B14F',
   },

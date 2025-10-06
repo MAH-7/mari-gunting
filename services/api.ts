@@ -7,6 +7,34 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // In-memory storage for created bookings (for testing)
 const createdBookings: Map<string, Booking> = new Map();
 
+// Helper function to simulate booking completion (FOR TESTING ONLY)
+// COMMENTED OUT FOR PRODUCTION - Uncomment for testing rewards system
+// export const simulateBookingCompletion = (bookingId: string): boolean => {
+//   console.log('🧪 Attempting to complete booking:', bookingId);
+//   
+//   const booking = createdBookings.get(bookingId);
+//   if (booking) {
+//     // Create a new booking object with updated status
+//     const updatedBooking = {
+//       ...booking,
+//       status: 'completed' as any,
+//       completedAt: new Date().toISOString(),
+//       updatedAt: new Date().toISOString(),
+//     };
+//     
+//     // Update in memory
+//     createdBookings.set(bookingId, updatedBooking);
+//     
+//     console.log('✅ Booking marked as completed:', bookingId);
+//     console.log('✅ Updated booking status:', updatedBooking.status);
+//     return true;
+//   }
+//   
+//   console.log('❌ Booking not found in createdBookings map');
+//   console.log('📋 Available bookings:', Array.from(createdBookings.keys()));
+//   return false;
+// };
+
 // Mock API endpoints - These will be replaced with real API calls later
 export const api = {
   // Barbers

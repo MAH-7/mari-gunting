@@ -7,6 +7,45 @@ import * as Haptics from 'expo-haptics';
 import { useStore } from '@/store/useStore';
 import type { Voucher, Activity } from '@/store/useStore';
 
+// Utility function to parse voucher expiry date
+const parseExpiryDate = (expiryStr: string): Date => {
+  // Format: '31 Dec 2025' or 'DD MMM YYYY'
+  const months: { [key: string]: number } = {
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+  };
+  
+  const parts = expiryStr.split(' ');
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = months[parts[1]];
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day, 23, 59, 59); // End of day
+  }
+  
+  return new Date(); // Fallback
+};
+
+// Utility function to get days until expiry
+const getDaysUntilExpiry = (expiryStr: string): number => {
+  const expiryDate = parseExpiryDate(expiryStr);
+  const now = new Date();
+  const diffTime = expiryDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+// Utility function to check if voucher is expired
+const isVoucherExpired = (expiryStr: string): boolean => {
+  return getDaysUntilExpiry(expiryStr) < 0;
+};
+
+// Utility function to check if voucher is expiring soon (within 7 days)
+const isExpiringSoon = (expiryStr: string): boolean => {
+  const days = getDaysUntilExpiry(expiryStr);
+  return days >= 0 && days <= 7;
+};
+
 const availableVouchers: Voucher[] = [
   {
     id: 1,
@@ -23,7 +62,7 @@ const availableVouchers: Voucher[] = [
     title: 'Free Hair Wash',
     description: 'With any haircut service',
     points: 300,
-    expires: '31 Dec 2025',
+    expires: '15 Oct 2025', // Expiring soon for demo
     type: 'free',
   },
   {
@@ -159,57 +198,83 @@ export default function RewardsScreen() {
   };
 
   const redeemedVoucherIds = myVouchers.map(v => v.id);
-  const availableForRedemption = availableVouchers.filter(v => !redeemedVoucherIds.includes(v.id));
-
-  const renderVoucherCard = (voucher: Voucher, isRedeemed: boolean = false) => (
-    <View
-      key={voucher.id}
-      style={[styles.voucherCard, isRedeemed && styles.voucherCardUsed]}
-    >
-      <View style={styles.voucherLeft}>
-        <View style={[styles.typeBadge, voucher.type === 'discount' ? styles.typeBadgeOrange : styles.typeBadgeBlue]}>
-          <Text style={[styles.typeBadgeText, voucher.type === 'discount' ? styles.typeBadgeTextOrange : styles.typeBadgeTextBlue]}>
-            {voucher.type === 'discount' ? 'DISCOUNT' : 'FREE'}
-          </Text>
-        </View>
-        
-        <Text style={styles.voucherTitle}>{voucher.title}</Text>
-        <Text style={styles.voucherDescription}>{voucher.description}</Text>
-        
-        <View style={styles.voucherFooter}>
-          <View style={styles.pointsRow}>
-            <Ionicons name="pricetag" size={14} color="#00B14F" />
-            <Text style={styles.pointsText}>{voucher.points} points</Text>
-          </View>
-          <Text style={styles.expiryText}>Exp: {voucher.expires}</Text>
-        </View>
-      </View>
-
-      <View style={[styles.voucherRight, isRedeemed && styles.voucherRightUsed]}>
-        {isRedeemed ? (
-          <View style={styles.usedLabel}>
-            <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-            <Text style={styles.usedText}>Redeemed</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            disabled={userPoints < voucher.points}
-            onPress={() => handleRedeemPress(voucher)}
-            style={styles.redeemButton}
-          >
-            <Ionicons
-              name="gift"
-              size={28}
-              color={userPoints < voucher.points ? '#FFFFFF80' : '#FFFFFF'}
-            />
-            <Text style={[styles.redeemText, userPoints < voucher.points && styles.redeemTextLocked]}>
-              {userPoints < voucher.points ? 'Locked' : 'Redeem'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
+  const availableForRedemption = availableVouchers.filter(v => 
+    !redeemedVoucherIds.includes(v.id) && !isVoucherExpired(v.expires)
   );
+  
+  // Filter my vouchers to show only non-expired ones
+  const activeMyVouchers = myVouchers.filter(v => !isVoucherExpired(v.expires));
+
+  const renderVoucherCard = (voucher: Voucher, isRedeemed: boolean = false) => {
+    const daysLeft = getDaysUntilExpiry(voucher.expires);
+    const expiringSoon = isExpiringSoon(voucher.expires);
+    const isUsed = voucher.status === 'used';
+    
+    return (
+      <View
+        key={voucher.id}
+        style={[styles.voucherCard, (isRedeemed || isUsed) && styles.voucherCardUsed]}
+      >
+        <View style={styles.voucherLeft}>
+          <View style={styles.badgesRow}>
+            <View style={[styles.typeBadge, voucher.type === 'discount' ? styles.typeBadgeOrange : styles.typeBadgeBlue]}>
+              <Text style={[styles.typeBadgeText, voucher.type === 'discount' ? styles.typeBadgeTextOrange : styles.typeBadgeTextBlue]}>
+                {voucher.type === 'discount' ? 'DISCOUNT' : 'FREE'}
+              </Text>
+            </View>
+            
+            {/* Expiry warning badge */}
+            {expiringSoon && (
+              <View style={styles.expiryWarningBadge}>
+                <Ionicons name="time" size={10} color="#EF4444" />
+                <Text style={styles.expiryWarningText}>{daysLeft}d left</Text>
+              </View>
+            )}
+          </View>
+          
+          <Text style={styles.voucherTitle}>{voucher.title}</Text>
+          <Text style={styles.voucherDescription}>{voucher.description}</Text>
+          
+          <View style={styles.voucherFooter}>
+            <View style={styles.pointsRow}>
+              <Ionicons name="pricetag" size={14} color="#00B14F" />
+              <Text style={styles.pointsText}>{voucher.points} points</Text>
+            </View>
+            <Text style={[styles.expiryText, expiringSoon && styles.expiryTextWarning]}>Exp: {voucher.expires}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.voucherRight, (isRedeemed || isUsed) && styles.voucherRightUsed]}>
+          {isUsed ? (
+            <View style={styles.usedLabel}>
+              <Ionicons name="checkmark-done" size={24} color="#FFFFFF" />
+              <Text style={styles.usedText}>Used</Text>
+            </View>
+          ) : isRedeemed ? (
+            <View style={styles.usedLabel}>
+              <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+              <Text style={styles.usedText}>Redeemed</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              disabled={userPoints < voucher.points}
+              onPress={() => handleRedeemPress(voucher)}
+              style={styles.redeemButton}
+            >
+              <Ionicons
+                name="gift"
+                size={28}
+                color={userPoints < voucher.points ? '#FFFFFF80' : '#FFFFFF'}
+              />
+              <Text style={[styles.redeemText, userPoints < voucher.points && styles.redeemTextLocked]}>
+                {userPoints < voucher.points ? 'Locked' : 'Redeem'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -567,12 +632,30 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
   typeBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    marginBottom: 8,
+  },
+  expiryWarningBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  expiryWarningText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#EF4444',
   },
   typeBadgeOrange: {
     backgroundColor: '#FEF3C7',
@@ -619,6 +702,10 @@ const styles = StyleSheet.create({
   expiryText: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  expiryTextWarning: {
+    color: '#EF4444',
+    fontWeight: '600',
   },
   voucherRight: {
     width: 96,

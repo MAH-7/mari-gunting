@@ -14,6 +14,9 @@ export type Voucher = {
   discountPercent?: number;
   minSpend?: number;
   redeemedAt?: string;
+  usedAt?: string;
+  usedForBooking?: string; // booking ID where voucher was used
+  status?: 'redeemed' | 'used' | 'expired'; // tracking voucher lifecycle
 };
 
 export type Activity = {
@@ -37,6 +40,7 @@ interface AppState {
   
   myVouchers: Voucher[];
   addVoucher: (voucher: Voucher) => void;
+  useVoucher: (voucherId: number, bookingId: string) => void;
   
   activity: Activity[];
   addActivity: (activity: Activity) => void;
@@ -88,6 +92,14 @@ export const useStore = create<AppState>()(persist(
     addPoints: (points) => set((state) => ({ userPoints: state.userPoints + points })),
     
     addVoucher: (voucher) => set((state) => ({ myVouchers: [voucher, ...state.myVouchers] })),
+    
+    useVoucher: (voucherId, bookingId) => set((state) => ({
+      myVouchers: state.myVouchers.map(v => 
+        v.id === voucherId 
+          ? { ...v, usedAt: new Date().toISOString(), usedForBooking: bookingId, status: 'used' as const }
+          : v
+      ),
+    })),
     
     addActivity: (activity) => set((state) => ({ activity: [activity, ...state.activity] })),
   
