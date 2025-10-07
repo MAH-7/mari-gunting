@@ -405,14 +405,14 @@ We have:
 - ✅ Beautiful, professional UI
 - ✅ Ready for production (frontend)
 
-**The provider app is really coming together!** 💪
+**The partner app is really coming together!** 💪
 
 ---
 
 ## 📝 **Testing Notes**
 
 To test the Jobs screen:
-1. Navigate to provider app (via test button)
+1. Navigate to partner app (via test button)
 2. Tap "Jobs" tab
 3. Try different filters
 4. Use search bar

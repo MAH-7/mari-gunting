@@ -124,7 +124,7 @@ Should Mari Gunting be:
 - ✅ Targeted keywords (e.g., "customer booking" vs "barber management")
 - ✅ Clearer app descriptions
 - ✅ More focused screenshots
-- ✅ Separate ratings (5-star customer app, even if provider app has issues)
+- ✅ Separate ratings (5-star customer app, even if partner app has issues)
 
 #### 3. **Marketing & Branding**
 - ✅ Distinct marketing campaigns
@@ -285,8 +285,8 @@ If you decide to separate (recommended):
    - Profile
    - Rewards
 
-### Phase 4: Provider App (Week 4)
-1. Create provider app
+### Phase 4: Partner App (Week 4)
+1. Create partner app
 2. Import shared package
 3. Add provider-specific screens:
    - Dashboard (bookings, earnings)
@@ -429,7 +429,7 @@ Month 6: Transition users to new apps
 1. [ ] Set up monorepo structure
 2. [ ] Extract shared package
 3. [ ] Build customer app
-4. [ ] Build provider app
+4. [ ] Build partner app
 5. [ ] Submit both to app stores
 
 ### Hybrid Approach (Recommended):

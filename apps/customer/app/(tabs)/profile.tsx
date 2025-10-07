@@ -248,14 +248,14 @@ export default function ProfileScreen() {
             </View>
           ))}
 
-          {/* TEST BUTTON - View Provider App */}
+          {/* TEST BUTTON - View Partner App */}
           <TouchableOpacity 
-            style={styles.testProviderButton} 
+            style={styles.testPartnerButton} 
             activeOpacity={0.8}
-            onPress={() => router.push('/provider/(tabs)/dashboard')}
+            onPress={() => router.push('/partner/(tabs)/dashboard')}
           >
             <Ionicons name="flask" size={20} color="#3B82F6" />
-            <Text style={styles.testProviderButtonText}>🧪 Test Provider App</Text>
+            <Text style={styles.testPartnerButtonText}>🧪 Test Partner App</Text>
           </TouchableOpacity>
 
           {/* Logout Button */}
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
   },
-  testProviderButton: {
+  testPartnerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     gap: 10,
   },
-  testProviderButtonText: {
+  testPartnerButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#3B82F6',

@@ -1,4 +1,4 @@
-# Mari Gunting - Provider App
+# Mari Gunting - Partner App
 
 **Status:** In Development  
 **Started:** January 2025
@@ -7,14 +7,14 @@
 
 ## 📱 **Overview**
 
-The provider app is for barbers (freelance) and barbershop owners to manage their business on the Mari Gunting platform.
+The partner app is for barbers (freelance) and barbershop owners to manage their business on the Mari Gunting platform.
 
 ---
 
 ## 🗂️ **Structure**
 
 ```
-app-provider/
+app-partner/
 ├── _layout.tsx              # Root layout
 └── (tabs)/                  # Main navigation
     ├── _layout.tsx          # Tab navigation
@@ -70,7 +70,7 @@ Uses shared design system from `/shared/constants`:
 - Customer details
 
 ### Tab 6: Profile
-- Provider profile
+- Partner profile
 - Edit profile
 - Services & pricing
 - Settings & logout
@@ -92,16 +92,16 @@ Uses shared design system from `/shared/constants`:
 - [ ] Recent activity
 
 ### Week 3-8: Feature Development
-- See `/docs/PROVIDER_APP_BUILD_PLAN.md` for full timeline
+- See `/docs/PARTNER_APP_BUILD_PLAN.md` for full timeline
 
 ---
 
 ## 🧪 **Testing**
 
-To test the provider app:
+To test the partner app:
 
 1. Update current user role to 'barber' in the store
-2. Navigate to provider routes
+2. Navigate to partner routes
 3. Test navigation between tabs
 
 ---

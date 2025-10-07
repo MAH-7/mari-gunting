@@ -106,7 +106,7 @@ Mari Gunting (Current)
 │   ├── booking/[id].tsx ✅
 │   └── payment-method.tsx ✅
 │
-└── 💈 Provider App (DOESN'T EXIST) ❌
+└── 💈 Partner App (DOESN'T EXIST) ❌
     └── (Nothing built yet)
 ```
 
@@ -124,7 +124,7 @@ Mari Gunting (Current)
 4. ❌ **Then... they see the CUSTOMER interface!**
 5. ❌ No way to manage bookings as a provider
 6. ❌ No way to accept/reject jobs
-7. ❌ Basically unusable for providers
+7. ❌ Basically unusable for partners
 
 ### What This Means
 
@@ -165,7 +165,7 @@ Remove the barber option from `select-role.tsx` until you build the provider int
 ### Option 2: **Build Provider Interface** (4-8 weeks)
 **Timeline:** 4-8 weeks of full development
 
-Build a complete provider application with all necessary features.
+Build a complete partner application with all necessary features.
 
 **What needs to be built:**
 1. **Provider Dashboard** (1 week)
@@ -201,7 +201,7 @@ Build a complete provider application with all necessary features.
    - Location tracking
    
 7. **Navigation & Infrastructure** (1 week)
-   - Tab navigation for providers
+   - Tab navigation for partners
    - Role-based routing
    - State management
 
@@ -293,7 +293,7 @@ Here's the step-by-step:
 - Recruit beta providers
 
 ### Month 4-5: Provider Development
-- Build provider dashboard
+- Build partner dashboard
 - Build booking management
 - Test with beta providers
 - Iterate based on feedback

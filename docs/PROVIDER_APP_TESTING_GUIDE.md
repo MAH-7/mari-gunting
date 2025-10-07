@@ -1,4 +1,4 @@
-# 🧪 Provider App Testing Guide (Weeks 1-3)
+# 🧪 Partner App Testing Guide (Weeks 1-3)
 
 **Date:** October 2025  
 **Scope:** Dashboard + Jobs Management  
@@ -17,16 +17,16 @@ Before you start testing:
 
 ---
 
-## 🚀 **Getting to Provider App**
+## 🚀 **Getting to Partner App**
 
 ### Step 1: Navigate to Test Button
 1. Open the app
 2. Go to **Profile** tab (bottom navigation)
 3. Scroll down to find the test button
-4. Look for: **"🧪 Test Provider App"** button (blue, dashed border)
+4. Look for: **"🧪 Test Partner App"** button (blue, dashed border)
 
-### Step 2: Enter Provider App
-1. Tap the **"🧪 Test Provider App"** button
+### Step 2: Enter Partner App
+1. Tap the **"🧪 Test Partner App"** button
 2. You should navigate to the Provider app
 3. You'll land on the **Dashboard** screen
 
@@ -480,7 +480,7 @@ For each job card, check:
 - [ ] Pull-to-refresh works
 
 ### Navigation
-- [ ] Can navigate to provider app from customer profile
+- [ ] Can navigate to partner app from customer profile
 - [ ] All provider tabs respond
 - [ ] Can switch between tabs
 - [ ] Dashboard and Jobs fully functional

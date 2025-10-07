@@ -1,4 +1,4 @@
-# ✅ Week 1 COMPLETE - Provider App Foundation
+# ✅ Week 1 COMPLETE - Partner App Foundation
 
 **Completed:** January 2025  
 **Time Spent:** ~3 hours  
@@ -123,7 +123,7 @@ mari-gunting/
 
 ## 📚 **Documentation Created**
 
-1. `/docs/PROVIDER_APP_BUILD_PLAN.md` - Full 8-week plan
+1. `/docs/PARTNER_APP_BUILD_PLAN.md` - Full 8-week plan
 2. `/docs/WEEK_1_PROGRESS.md` - Week 1 tracking
 3. `/app-provider/README.md` - Provider app docs
 4. `/docs/WEEK_1_COMPLETE.md` - This file
@@ -160,7 +160,7 @@ mari-gunting/
    - Wait → Take time to review/test current setup
 
 2. **Want to test navigation first?**
-   - We can add code to switch to provider app
+   - We can add code to switch to partner app
    - Test all 6 tabs work correctly
 
 3. **Any changes to Week 1 setup?**

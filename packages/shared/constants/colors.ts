@@ -1,5 +1,5 @@
 // Shared color constants for Mari Gunting
-// Used by both Customer and Provider apps
+// Used by both Customer and Partner apps
 
 export const COLORS = {
   // Primary Brand Colors

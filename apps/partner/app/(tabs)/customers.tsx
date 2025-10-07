@@ -2,12 +2,12 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 
-export default function ProviderScheduleScreen() {
+export default function PartnerCustomersScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.content}>
-        <Text style={styles.title}>Schedule</Text>
-        <Text style={styles.subtitle}>Schedule & calendar coming soon...</Text>
+        <Text style={styles.title}>Customers</Text>
+        <Text style={styles.subtitle}>Customer management coming soon...</Text>
       </View>
     </SafeAreaView>
   );

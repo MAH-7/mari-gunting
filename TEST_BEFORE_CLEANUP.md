@@ -32,13 +32,13 @@ npm start
 
 ---
 
-## 📱 Test 2: Provider App (Your Phone)
+## 📱 Test 2: Partner App (Your Phone)
 
 ### Start the app:
 **Open a NEW terminal** (don't close customer app terminal)
 
 ```bash
-cd /Users/bos/Desktop/ProjectSideIncome/mari-gunting/apps/provider
+cd /Users/bos/Desktop/ProjectSideIncome/mari-gunting/apps/partner
 npm start
 ```
 
@@ -75,7 +75,7 @@ Run through this checklist:
 - [ ] Can navigate tabs
 - [ ] No import/module errors
 
-### Provider App:
+### Partner App:
 - [ ] App opens directly (not through customer app)
 - [ ] Dashboard shows stats
 - [ ] Jobs list works
@@ -107,7 +107,7 @@ npm start -c
 ### Symlink not working:
 ```bash
 # Check symlinks exist:
-cd apps/customer (or apps/provider)
+cd apps/customer (or apps/partner)
 ls -la | grep "^l"
 
 # You should see links to shared, types, services, etc.
@@ -130,4 +130,4 @@ Then I'll prepare the cleanup script! 🧹
 - Keep both terminals open
 - Test on 2 devices simultaneously if possible
 - Make sure shared data works (bookings should be visible in both)
-- The provider app should feel completely independent now!
+- The partner app should feel completely independent now!

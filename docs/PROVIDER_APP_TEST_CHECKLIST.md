@@ -1,4 +1,4 @@
-# Provider App - Testing Checklist
+# Partner App - Testing Checklist
 
 **Date:** January 2025  
 **Testing:** Week 1 Setup
@@ -14,11 +14,11 @@ Your app is already running on port 8081
 1. Open your app (customer side)
 2. Go to Profile tab (bottom right)
 3. Scroll down
-4. Find the blue "🧪 Test Provider App" button
+4. Find the blue "🧪 Test Partner App" button
 5. Tap it!
 
-### Step 3: Test Provider App
-You should now see the provider app!
+### Step 3: Test Partner App
+You should now see the partner app!
 
 ---
 

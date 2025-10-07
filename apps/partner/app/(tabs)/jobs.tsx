@@ -17,7 +17,7 @@ type ChecklistItem = {
   checked: boolean;
 };
 
-export default function ProviderJobsScreen() {
+export default function PartnerJobsScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,8 +38,8 @@ export default function ProviderJobsScreen() {
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
 
-  // Filter jobs by provider and apply status overrides
-  const providerJobs = useMemo(() => {
+  // Filter jobs by partner and apply status overrides
+  const partnerJobs = useMemo(() => {
     if (!currentUser) return [];
     return mockBookings
       .filter(b => b.barberId === currentUser.id)
@@ -51,7 +51,7 @@ export default function ProviderJobsScreen() {
 
   // Apply filters and search
   const filteredJobs = useMemo(() => {
-    let jobs = providerJobs;
+    let jobs = partnerJobs;
 
     // Filter by status
     if (filterStatus === 'pending') {
@@ -73,19 +73,19 @@ export default function ProviderJobsScreen() {
 
     // Sort by date (newest first)
     return jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [providerJobs, filterStatus, searchQuery]);
+  }, [partnerJobs, filterStatus, searchQuery]);
 
   // Calculate filter counts
   const filterCounts = useMemo(() => ({
-    all: providerJobs.length,
-    pending: providerJobs.filter(j => j.status === 'pending').length,
-    active: providerJobs.filter(j => ['accepted', 'on-the-way', 'in-progress'].includes(j.status)).length,
-    completed: providerJobs.filter(j => ['completed', 'cancelled'].includes(j.status)).length,
-  }), [providerJobs]);
+    all: partnerJobs.length,
+    pending: partnerJobs.filter(j => j.status === 'pending').length,
+    active: partnerJobs.filter(j => ['accepted', 'on-the-way', 'in-progress'].includes(j.status)).length,
+    completed: partnerJobs.filter(j => ['completed', 'cancelled'].includes(j.status)).length,
+  }), [partnerJobs]);
 
   // Calculate analytics for completed jobs
   const completedJobsAnalytics = useMemo(() => {
-    const completed = providerJobs.filter(j => j.status === 'completed');
+    const completed = partnerJobs.filter(j => j.status === 'completed');
     const totalEarnings = completed.reduce((sum, job) => sum + job.totalPrice, 0);
     const totalJobs = completed.length;
     const averageEarning = totalJobs > 0 ? totalEarnings / totalJobs : 0;
@@ -107,7 +107,7 @@ export default function ProviderJobsScreen() {
       monthlyJobs,
       completedJobs: completed,
     };
-  }, [providerJobs]);
+  }, [partnerJobs]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -221,8 +221,6 @@ export default function ProviderJobsScreen() {
       return;
     }
     // Open completion modal
-    console.log('Opening completion modal for job:', job.id);
-    // Keep selectedJob but show completion modal
     setShowCompletionModal(true);
   };
   
@@ -300,10 +298,7 @@ export default function ProviderJobsScreen() {
   
   const pickImage = async (type: 'before' | 'after') => {
     try {
-      console.log('Requesting media library permissions...');
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      console.log('Permission result:', permissionResult);
       
       if (permissionResult.granted === false) {
         Alert.alert(
@@ -314,7 +309,6 @@ export default function ProviderJobsScreen() {
         return;
       }
 
-      console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
@@ -323,21 +317,15 @@ export default function ProviderJobsScreen() {
         allowsMultipleSelection: false,
       });
 
-      console.log('Image picker result:', result);
-
       if (!result.canceled && result.assets && result.assets[0]) {
         const photoUri = result.assets[0].uri;
-        console.log('Selected photo URI:', photoUri);
         if (type === 'before') {
           setBeforePhotos(prev => [...prev, photoUri]);
         } else {
           setAfterPhotos(prev => [...prev, photoUri]);
         }
-      } else {
-        console.log('Image selection cancelled or no assets');
       }
     } catch (error) {
-      console.error('Image picker error:', error);
       Alert.alert(
         'Error', 
         `Failed to pick image: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
@@ -347,10 +335,7 @@ export default function ProviderJobsScreen() {
   
   const takePhoto = async (type: 'before' | 'after') => {
     try {
-      console.log('Requesting camera permissions...');
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      
-      console.log('Camera permission result:', permissionResult);
       
       if (permissionResult.granted === false) {
         Alert.alert(
@@ -361,18 +346,14 @@ export default function ProviderJobsScreen() {
         return;
       }
 
-      console.log('Launching camera...');
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
       });
 
-      console.log('Camera result:', result);
-
       if (!result.canceled && result.assets && result.assets[0]) {
         const photoUri = result.assets[0].uri;
-        console.log('Captured photo URI:', photoUri);
         if (type === 'before') {
           setBeforePhotos(prev => [...prev, photoUri]);
         } else {
@@ -380,7 +361,6 @@ export default function ProviderJobsScreen() {
         }
       }
     } catch (error) {
-      console.error('Camera error:', error);
       Alert.alert(
         'Error', 
         `Failed to take photo: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
@@ -634,7 +614,7 @@ export default function ProviderJobsScreen() {
             </Text>
             
             {/* Test Data Button */}
-            {!searchQuery && providerJobs.length === 0 && (
+            {!searchQuery && partnerJobs.length === 0 && (
               <TouchableOpacity
                 style={styles.testDataButton}
                 onPress={() => {

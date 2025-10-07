@@ -64,10 +64,10 @@
    - See "Logged in as Barber!" alert
    - Tap OK
 
-2. **Navigate to Provider App:**
+2. **Navigate to Partner App:**
    - Tap Profile tab
-   - Tap "🧪 Test Provider App" button
-   - You're in Provider App!
+   - Tap "🧪 Test Partner App" button
+   - You're in Partner App!
 
 3. **View Jobs:**
    - Tap Jobs tab

@@ -1,0 +1,64 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
+      ],
+      "description": "Access project files and directories"
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git",
+        "--repository",
+        "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
+      ],
+      "description": "Git operations and history"
+    }
+  },
+  "contextFiles": [
+    "PROJECT_CONTEXT.md",
+    "DEVELOPMENT_STATUS.md",
+    "ARCHITECTURE_GUIDE.md",
+    "COMMON_TASKS.md",
+    "README.md",
+    "START_HERE.md",
+    "PROJECT_SUMMARY.md",
+    "STRUCTURE.md",
+    "README_MONOREPO.md"
+  ],
+  "projectInfo": {
+    "name": "Mari Gunting",
+    "type": "React Native Monorepo",
+    "description": "On-demand barber marketplace with Customer and Partner apps",
+    "status": "50% complete",
+    "apps": {
+      "customer": {
+        "path": "apps/customer",
+        "status": "100% complete",
+        "screens": 25
+      },
+      "partner": {
+        "path": "apps/partner",
+        "status": "50% complete",
+        "currentFocus": "Schedule Management (Week 5)"
+      }
+    },
+    "sharedCode": "packages/shared",
+    "testLogins": {
+      "customer": "11-111 1111",
+      "partner": "22-222 2222"
+    }
+  },
+  "keyPaths": {
+    "mockData": "packages/shared/services/mockData.ts",
+    "types": "packages/shared/types/index.ts",
+    "api": "packages/shared/services/api.ts",
+    "store": "packages/shared/store/useStore.ts",
+    "utils": "packages/shared/utils/format.ts"
+  }
+}

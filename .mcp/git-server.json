@@ -1,0 +1,10 @@
+{
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-git",
+    "--repository",
+    "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
+  ],
+  "env": {}
+}

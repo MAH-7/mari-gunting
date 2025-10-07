@@ -8,7 +8,7 @@ Welcome to the Mari Gunting monorepo! This project now contains **two separate a
 - For customers looking for barber services
 - Book appointments, track bookings, leave reviews
 
-### 2. **Provider App** (`apps/provider`)  
+### 2. **Partner App** (`apps/partner`)  
 - For barbers and barbershops
 - Manage jobs, track earnings, schedule management
 
@@ -26,9 +26,9 @@ Then press:
 - `a` for Android emulator  
 - Scan QR code for physical device
 
-### Run Provider App
+### Run Partner App
 ```bash
-cd apps/provider
+cd apps/partner
 npm start
 ```
 Then press:
@@ -41,8 +41,8 @@ Then press:
 # Terminal 1 - Customer App
 cd apps/customer && npm start
 
-# Terminal 2 - Provider App  
-cd apps/provider && npm start
+# Terminal 2 - Partner App  
+cd apps/partner && npm start
 ```
 
 ---
@@ -57,8 +57,8 @@ mari-gunting/
 │   │   ├── components/     ← Customer-specific components
 │   │   └── package.json
 │   │
-│   └── provider/           ← Provider App
-│       ├── app/            ← Provider screens  
+│   └── provider/           ← Partner App
+│       ├── app/            ← Partner screens  
 │       └── package.json
 │
 ├── packages/
@@ -86,7 +86,7 @@ Login with: `11-111 1111`
 
 ### Your Phone (Provider)
 ```bash
-cd apps/provider
+cd apps/partner
 npm start
 # Scan QR code with Expo Go
 ```
@@ -104,8 +104,8 @@ npm install
 # Install customer app dependencies
 cd apps/customer && npm install
 
-# Install provider app dependencies
-cd apps/provider && npm install
+# Install partner app dependencies
+cd apps/partner && npm install
 ```
 
 ### After Pulling Updates
@@ -115,7 +115,7 @@ npm install
 
 # Then in each app
 cd apps/customer && npm install
-cd apps/provider && npm install
+cd apps/partner && npm install
 ```
 
 ---
@@ -130,7 +130,7 @@ cd apps/provider && npm install
 - Leave reviews
 - Manage profile
 
-### Provider App ✅ (50% complete)
+### Partner App ✅ (50% complete)
 - Dashboard with stats
 - Jobs management (accept, track, complete)
 - Progress tracking with timeline
@@ -157,7 +157,7 @@ cd apps/provider && npm install
 ### "Module not found" error
 ```bash
 # Clear cache and reinstall
-cd apps/customer (or apps/provider)
+cd apps/customer (or apps/partner)
 rm -rf node_modules
 npm install
 npm start -- --clear
@@ -166,7 +166,7 @@ npm start -- --clear
 ### Apps not loading
 ```bash
 # Reset Expo cache
-cd apps/customer (or apps/provider)
+cd apps/customer (or apps/partner)
 expo start -c
 ```
 
@@ -180,7 +180,7 @@ expo start -c
 ## 🎉 Ready to Develop!
 
 1. **Customer App**: Open one terminal → `cd apps/customer && npm start`
-2. **Provider App**: Open another terminal → `cd apps/provider && npm start`  
+2. **Partner App**: Open another terminal → `cd apps/partner && npm start`  
 3. Test both apps on different devices!
 
 Enjoy coding! 🚀

@@ -1,4 +1,4 @@
-# 🚀 Quick Test Reference - Provider App
+# 🚀 Quick Test Reference - Partner App
 
 **3-Minute Quick Check** ⚡
 
@@ -8,7 +8,7 @@
 1. Open app
 2. Go to **Profile** tab
 3. Scroll down
-4. Tap **"🧪 Test Provider App"** (blue button)
+4. Tap **"🧪 Test Partner App"** (blue button)
 
 ---
 
@@ -103,6 +103,6 @@
 ---
 
 **Total Test Time:** ~3-5 minutes  
-**Full Test Guide:** See `PROVIDER_APP_TESTING_GUIDE.md`
+**Full Test Guide:** See `PARTNER_APP_TESTING_GUIDE.md`
 
 🎉 **Happy Testing!**

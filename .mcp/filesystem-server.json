@@ -1,0 +1,9 @@
+{
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
+  ],
+  "env": {}
+}

@@ -246,7 +246,7 @@ We have:
 - ✅ Ready for production (frontend)
 - ✅ Smooth user experience
 
-**The provider app is taking shape! Great work!** 💪
+**The partner app is taking shape! Great work!** 💪
 
 ---
 
@@ -254,8 +254,8 @@ We have:
 
 To test the dashboard:
 1. Navigate to customer profile
-2. Tap "🧪 Test Provider App" button
-3. You'll see the provider dashboard
+2. Tap "🧪 Test Partner App" button
+3. You'll see the partner dashboard
 4. Try toggling online/offline
 5. Check the stats (calculated from mock data)
 6. Tap quick action buttons to navigate

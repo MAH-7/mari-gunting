@@ -8,10 +8,10 @@
   ],
   "scripts": {
     "customer": "cd apps/customer && npm start",
-    "provider": "cd apps/provider && npm start",
-    "install:all": "npm install && npm run install:customer && npm run install:provider && npm run install:shared",
+    "partner": "cd apps/partner && npm start",
+    "install:all": "npm install && npm run install:customer && npm run install:partner && npm run install:shared",
     "install:customer": "cd apps/customer && npm install",
-    "install:provider": "cd apps/provider && npm install",
+    "install:partner": "cd apps/partner && npm install",
     "install:shared": "cd packages/shared && npm install"
   },
   "devDependencies": {

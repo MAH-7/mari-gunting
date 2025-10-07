@@ -67,7 +67,7 @@
 **Question:** Do you want to build provider UI now or later?
 
 **If YES (build now):** Need to create:
-- [ ] Provider dashboard
+- [ ] Partner dashboard
 - [ ] Incoming bookings screen
 - [ ] Booking management
 - [ ] Earnings screen
@@ -77,7 +77,7 @@
 **If NO (build later):**
 - [x] Just focus on customer UI
 - [x] Backend will handle provider side
-- [x] Build provider app in Month 3-4
+- [x] Build partner app in Month 3-4
 
 **Recommended:** Build later (after validating customer demand)
 

@@ -8,28 +8,30 @@ import { useStore } from '@/store/useStore';
 import { mockBookings } from '@/services/mockData';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
 
-export default function ProviderDashboardScreen() {
+export default function PartnerDashboardScreen() {
   const currentUser = useStore((state) => state.currentUser);
+  const setCurrentUser = useStore((state) => state.setCurrentUser);
   const [isOnline, setIsOnline] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Debug: Log current user
-  console.log('Provider Dashboard - Current User:', currentUser);
+  const handleLogout = () => {
+    setCurrentUser(null);
+    router.replace('/login');
+  };
 
-  // Calculate stats from mock bookings (filter by current provider)
+  // Calculate stats from mock bookings (filter by current partner)
   const stats = useMemo(() => {
     if (!currentUser) {
-      console.log('No current user found in dashboard');
       return { todayEarnings: 0, activeJobs: 0, completedToday: 0 };
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const providerBookings = mockBookings.filter(b => b.barberId === currentUser.id);
+    const partnerBookings = mockBookings.filter(b => b.barberId === currentUser.id);
     
-    const todayBookings = providerBookings.filter(b => b.scheduledDate === today);
+    const todayBookings = partnerBookings.filter(b => b.scheduledDate === today);
     const completedToday = todayBookings.filter(b => b.status === 'completed');
     const todayEarnings = completedToday.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    const activeJobs = providerBookings.filter(b => 
+    const activeJobs = partnerBookings.filter(b =>
       ['pending', 'accepted', 'on-the-way', 'in-progress'].includes(b.status)
     ).length;
 
@@ -76,10 +78,17 @@ export default function ProviderDashboardScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerLeft}>
             <Text style={styles.greeting}>Hello, {currentUser.name?.split(' ')[0]} 👋</Text>
             <Text style={styles.subtitle}>Welcome back to your dashboard</Text>
           </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={24} color={COLORS.error} />
+          </TouchableOpacity>
         </View>
 
         {/* Availability Toggle */}
@@ -136,7 +145,7 @@ export default function ProviderDashboardScreen() {
             <TouchableOpacity 
               style={styles.actionButton}
               activeOpacity={0.7}
-              onPress={() => router.push('/provider/(tabs)/jobs')}
+              onPress={() => router.push('/(tabs)/jobs')}
             >
               <View style={[styles.actionIconContainer, { backgroundColor: '#EFF6FF' }]}>
                 <Ionicons name="briefcase-outline" size={24} color={COLORS.info} />
@@ -147,7 +156,7 @@ export default function ProviderDashboardScreen() {
             <TouchableOpacity 
               style={styles.actionButton}
               activeOpacity={0.7}
-              onPress={() => router.push('/provider/(tabs)/schedule')}
+              onPress={() => router.push('/(tabs)/schedule')}
             >
               <View style={[styles.actionIconContainer, { backgroundColor: '#F3E8FF' }]}>
                 <Ionicons name="calendar-outline" size={24} color="#8B5CF6" />
@@ -158,7 +167,7 @@ export default function ProviderDashboardScreen() {
             <TouchableOpacity 
               style={styles.actionButton}
               activeOpacity={0.7}
-              onPress={() => router.push('/provider/(tabs)/earnings')}
+              onPress={() => router.push('/(tabs)/earnings')}
             >
               <View style={[styles.actionIconContainer, { backgroundColor: COLORS.primaryLight }]}>
                 <Ionicons name="wallet-outline" size={24} color={COLORS.primary} />
@@ -169,7 +178,7 @@ export default function ProviderDashboardScreen() {
             <TouchableOpacity 
               style={styles.actionButton}
               activeOpacity={0.7}
-              onPress={() => router.push('/provider/(tabs)/customers')}
+              onPress={() => router.push('/(tabs)/customers')}
             >
               <View style={[styles.actionIconContainer, { backgroundColor: '#FEF3C7' }]}>
                 <Ionicons name="people-outline" size={24} color={COLORS.warning} />
@@ -183,7 +192,7 @@ export default function ProviderDashboardScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity onPress={() => router.push('/provider/(tabs)/jobs')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/jobs')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -266,6 +275,9 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
   },
+  headerLeft: {
+    flex: 1,
+  },
   greeting: {
     ...TYPOGRAPHY.heading.h2,
     color: COLORS.text.primary,
@@ -274,6 +286,19 @@ const styles = StyleSheet.create({
   subtitle: {
     ...TYPOGRAPHY.body.regular,
     color: COLORS.text.secondary,
+  },
+  logoutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.background.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   availabilityCard: {
     flexDirection: 'row',

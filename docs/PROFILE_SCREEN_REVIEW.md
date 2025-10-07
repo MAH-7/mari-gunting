@@ -18,7 +18,7 @@
 
 **Impact:** HIGH - Users could switch to barber and see broken interface
 
-**Recommendation:** **REMOVE** or disable until provider app is built
+**Recommendation:** **REMOVE** or disable until partner app is built
 
 ---
 

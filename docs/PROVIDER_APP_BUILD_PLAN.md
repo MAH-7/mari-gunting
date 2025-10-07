@@ -1,4 +1,4 @@
-# Provider App Build Plan
+# Partner App Build Plan
 
 **Date:** January 2025  
 **Goal:** Build complete provider frontend before backend  
@@ -75,7 +75,7 @@ mari-gunting/
 ---
 
 ### **Week 2: Dashboard & Core UI**
-**Goal:** Build provider dashboard (main screen)
+**Goal:** Build partner dashboard (main screen)
 
 **Tasks:**
 - [ ] Dashboard layout (stats cards)
@@ -260,7 +260,7 @@ export const TYPOGRAPHY = {
 
 ---
 
-## 📱 **Provider App Screens (Complete List)**
+## 📱 **Partner App Screens (Complete List)**
 
 ### Tab 1: Dashboard (Home)
 1. **Dashboard Home**

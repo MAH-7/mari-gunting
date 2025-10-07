@@ -10,11 +10,11 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } fr
 
 type TimePeriod = 'today' | 'week' | 'month' | 'all';
 
-export default function ProviderEarningsScreen() {
+export default function PartnerEarningsScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
 
-  // Filter completed jobs for this provider
+  // Filter completed jobs for this partner
   const completedJobs = useMemo(() => {
     if (!currentUser) return [];
     

@@ -1,6 +1,6 @@
-# Testing Provider App - Quick Guide
+# Testing Partner App - Quick Guide
 
-**Goal:** Test the provider app navigation and screens
+**Goal:** Test the partner app navigation and screens
 
 ---
 
@@ -11,7 +11,7 @@
 npx expo start
 ```
 
-### Step 2: In your browser, navigate directly to provider app
+### Step 2: In your browser, navigate directly to partner app
 In the Expo Dev Tools or browser, type this URL:
 ```
 exp://192.168.x.x:8081/--/app-provider/(tabs)/dashboard
@@ -23,7 +23,7 @@ Or press `r` in terminal to reload and manually navigate.
 
 ## 🧪 **Option 2: Add Test Button (Recommended)**
 
-I'll add a test button to your customer profile screen that navigates to provider app.
+I'll add a test button to your customer profile screen that navigates to partner app.
 
 ### Location: `app/(tabs)/profile.tsx`
 
@@ -49,7 +49,7 @@ if (currentUser) {
 
 ## ✅ **What to Test**
 
-Once in provider app:
+Once in partner app:
 
 ### Navigation Test:
 - [ ] Can you see 6 tabs at bottom?
@@ -76,7 +76,7 @@ Once in provider app:
 
 ## 🐛 **Common Issues**
 
-### Issue 1: Can't find provider app
+### Issue 1: Can't find partner app
 **Solution:** Make sure you're navigating to `/app-provider/(tabs)/dashboard`
 
 ### Issue 2: Import errors

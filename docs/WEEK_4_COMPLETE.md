@@ -8,7 +8,7 @@
 
 ## 🎯 Overview
 
-Week 4 focused on building advanced job management features for providers, transforming the basic jobs screen into a comprehensive, production-ready job management system with real-time tracking, communication tools, and professional completion flows.
+Week 4 focused on building advanced job management features for partners, transforming the basic jobs screen into a comprehensive, production-ready job management system with real-time tracking, communication tools, and professional completion flows.
 
 ---
 
@@ -358,7 +358,7 @@ The provider job management system is now a comprehensive, production-ready feat
 - Smart validation
 - Excellent UX
 
-This represents a significant milestone in the Mari Gunting provider app, delivering a feature set that matches or exceeds industry standards for service provider applications.
+This represents a significant milestone in the Mari Gunting partner app, delivering a feature set that matches or exceeds industry standards for service partner applications.
 
 **Ready for Week 5!** 🚀
 

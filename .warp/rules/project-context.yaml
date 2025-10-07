@@ -1,0 +1,124 @@
+# Mari Gunting - Project Context Rules
+# These rules complement production-frontend-first.json with project-specific context
+# Both rule files work together: production-frontend-first.json = HOW to code, this file = WHAT you're coding
+
+name: mari-gunting-project-context
+description: Project-specific context for Mari Gunting (works alongside production-frontend-first.json)
+
+rules:
+  # Project Identity
+  - name: project_overview
+    description: Mari Gunting is a two-sided marketplace for on-demand barber services
+    content: |
+      - Project name: Mari Gunting
+      - Type: React Native mobile app (iOS & Android)
+      - Architecture: Monorepo with 2 apps (Customer & Partner)
+      - Tech stack: Expo, TypeScript, Zustand, React Query, NativeWind
+      - Current status: 50% complete
+      - Location: /Users/bos/Desktop/ProjectSideIncome/mari-gunting
+
+  # Project Structure
+  - name: monorepo_structure
+    description: Project uses monorepo pattern with shared packages
+    content: |
+      - apps/customer/ - Customer-facing app (100% complete, 25 screens)
+      - apps/partner/ - Partner/barber app (50% complete)
+      - packages/shared/ - Shared code (types, services, utils)
+      - All apps share same mock data and business logic
+      - npm workspaces for dependency management
+
+  # Key Files
+  - name: important_files
+    description: Critical files for understanding the project
+    content: |
+      Always check these files for context:
+      - PROJECT_CONTEXT.md - Main overview
+      - DEVELOPMENT_STATUS.md - Current progress
+      - ARCHITECTURE_GUIDE.md - System design
+      - COMMON_TASKS.md - Commands reference
+      - packages/shared/types/index.ts - All TypeScript types
+      - packages/shared/services/mockData.ts - Mock data
+      - packages/shared/services/api.ts - API layer
+
+  # Development Commands
+  - name: common_commands
+    description: Frequently used development commands
+    content: |
+      Run Customer app: cd apps/customer && npm start
+      Run Partner app: cd apps/partner && npm start
+      Clear cache: npm start -- --clear
+      Type check: npx tsc --noEmit
+      Test logins: Customer (11-111 1111), Partner (22-222 2222)
+
+  # Current Focus
+  - name: current_work
+    description: What's being worked on now
+    content: |
+      - Customer app: ✅ Complete (25 screens, all features done)
+      - Partner app: ⏳ 50% complete
+      - Next task: Schedule Management (Week 5)
+      - Remaining: Earnings (Week 6), Customers (Week 7), Profile (Week 8)
+      - Backend: Not started (Phase 3)
+
+  # Coding Conventions
+  - name: code_standards
+    description: Project coding conventions
+    content: |
+      - TypeScript: Strict mode, 100% typed, no 'any'
+      - Components: Functional with hooks
+      - Styling: NativeWind (Tailwind CSS classes)
+      - State: React Query (server) + Zustand (client)
+      - Navigation: Expo Router (file-based)
+      - Files: PascalCase for components, camelCase for utils
+      - All shared code in packages/shared/
+
+  # Data Flow
+  - name: data_architecture
+    description: How data flows through the app
+    content: |
+      UI → React Query → API Service → Mock Data
+      - Mock data simulates backend (500-1000ms delays)
+      - Ready to swap with real API (only 1 file to change)
+      - Types shared between apps via packages/shared/types/
+      - State: Zustand for UI, React Query for data
+
+  # Troubleshooting
+  - name: common_issues
+    description: Common problems and solutions
+    content: |
+      - Module not found: npm start -- --clear
+      - App won't start: killall -9 node && npm start -- --clear
+      - Outdated deps: rm -rf node_modules && npm install
+      - Wrong directory: Always check you're in apps/customer or apps/partner
+      - Context lost: Read PROJECT_CONTEXT.md for quick refresh
+
+  # When Context is Lost
+  - name: context_recovery
+    description: Quick facts to remember when context is full
+    content: |
+      Remember these key facts:
+      1. Project: Mari Gunting (barber marketplace)
+      2. Structure: Monorepo, 2 apps (Customer 100%, Partner 50%)
+      3. Tech: React Native, Expo, TypeScript, Mock data
+      4. Location: /Users/bos/Desktop/ProjectSideIncome/mari-gunting
+      5. Shared code: packages/shared/ (types, services, utils)
+      6. Test logins: 11-111 1111 (customer), 22-222 2222 (partner)
+      7. Next task: Partner Schedule Management (Week 5)
+      8. Check PROJECT_CONTEXT.md for full context
+
+  # User Preferences
+  - name: user_workflow
+    description: User's preferred development workflow
+    content: |
+      - User is "bos" on MacOS
+      - Working on mari-gunting project at 50% completion
+      - Prefers step-by-step guidance when adding features
+      - Wants AI to remember project context across sessions
+      - Uses Warp terminal for development
+      - Testing: Customer app on MacBook simulator, Partner on phone
+
+metadata:
+  project: mari-gunting
+  version: "2.0"
+  last_updated: "2025-10-07"
+  mcp_enabled: true

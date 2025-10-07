@@ -1,4 +1,4 @@
-# Week 1 Progress - Provider App Setup
+# Week 1 Progress - Partner App Setup
 
 **Started:** January 2025  
 **Goal:** Set up folder structure, shared components, and navigation  
@@ -51,7 +51,7 @@
 1. [x] Create remaining placeholder screens (schedule, earnings, customers, profile)
 2. [x] Create tsconfig paths for `@/shared` imports (already configured)
 3. [x] Create provider root layout
-4. [x] Create README for provider app
+4. [x] Create README for partner app
 
 ### This Week:
 1. [ ] Move common types to `/shared/types`

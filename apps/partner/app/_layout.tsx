@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 
-export default function ProviderRootLayout() {
+export default function PartnerRootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />

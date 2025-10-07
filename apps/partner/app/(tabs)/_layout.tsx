@@ -18,7 +18,7 @@ function TabBarIcon({ name, focused }: { name: IconName; focused: boolean }) {
   );
 }
 
-export default function ProviderTabLayout() {
+export default function PartnerTabLayout() {
   return (
     <Tabs
       screenOptions={{
