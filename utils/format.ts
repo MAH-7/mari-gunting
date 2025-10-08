@@ -101,17 +101,107 @@ export const formatDuration = (minutes: number): string => {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 };
 
-// Phone number formatting
+// Phone number formatting for Malaysian and Indonesian numbers
 export const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return '';
+  
   // Remove all non-digit characters
   const cleaned = phone.replace(/\D/g, '');
   
-  // Format Indonesian phone number
-  if (cleaned.startsWith('62')) {
-    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 5)}-${cleaned.slice(5, 9)}-${cleaned.slice(9)}`;
+  // Format Malaysian phone number (+60)
+  if (cleaned.startsWith('60')) {
+    // +60 12-345 6789 (mobile)
+    if (cleaned.length === 11 || cleaned.length === 12) {
+      return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)}-${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
+    }
+    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2)}`;
   }
   
+  // Format Indonesian phone number (+62)
+  if (cleaned.startsWith('62')) {
+    // +62 812-3456-7890 (mobile)
+    if (cleaned.length >= 11) {
+      return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 5)}-${cleaned.slice(5, 9)}-${cleaned.slice(9)}`;
+    }
+    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2)}`;
+  }
+  
+  // Format local Malaysian mobile number (without country code)
+  // 012-345 6789
+  if (cleaned.length === 10 && (cleaned.startsWith('01') || cleaned.startsWith('03'))) {
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
+  }
+  
+  // Format local Indonesian mobile number (without country code)
+  // 0812-3456-7890
+  if (cleaned.length >= 10 && cleaned.startsWith('08')) {
+    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
+  }
+  
+  // Return as-is if format not recognized
   return phone;
+};
+
+// Convert phone to WhatsApp format (digits only, with country code)
+export const formatPhoneForWhatsApp = (phone: string): string => {
+  if (!phone) return '';
+  
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // If it already has country code, return it
+  if (cleaned.startsWith('60') || cleaned.startsWith('62')) {
+    return cleaned;
+  }
+  
+  // Add Malaysian country code if starts with 0
+  if (cleaned.startsWith('0')) {
+    return '60' + cleaned.slice(1);
+  }
+  
+  return cleaned;
+};
+
+// Convert phone to tel: format
+export const formatPhoneForCall = (phone: string): string => {
+  if (!phone) return '';
+  
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Ensure it has + prefix for international format
+  if (cleaned.startsWith('60') || cleaned.startsWith('62')) {
+    return `+${cleaned}`;
+  }
+  
+  return cleaned;
+};
+
+// Validate phone number format
+export const isValidPhoneNumber = (phone: string): boolean => {
+  if (!phone) return false;
+  
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Malaysian: +60 (11-12 digits total) or local 10 digits starting with 01
+  if (cleaned.startsWith('60')) {
+    return cleaned.length >= 11 && cleaned.length <= 12;
+  }
+  
+  // Indonesian: +62 (11-13 digits total) or local 10-12 digits starting with 08
+  if (cleaned.startsWith('62')) {
+    return cleaned.length >= 11 && cleaned.length <= 13;
+  }
+  
+  // Local Malaysian
+  if (cleaned.startsWith('01') || cleaned.startsWith('03')) {
+    return cleaned.length === 10;
+  }
+  
+  // Local Indonesian
+  if (cleaned.startsWith('08')) {
+    return cleaned.length >= 10 && cleaned.length <= 12;
+  }
+  
+  return false;
 };
 
 // Truncate text

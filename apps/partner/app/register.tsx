@@ -15,20 +15,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '@/store/useStore';
-import { mockBarbers } from '@/services/mockData';
 
-export default function PartnerLoginScreen() {
+export default function PartnerRegisterScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [countryCode, setCountryCode] = useState('+60');
-  const setCurrentUser = useStore((state) => state.setCurrentUser);
 
   const formatPhoneNumber = (text: string) => {
-    // Remove all non-numeric characters
     const cleaned = text.replace(/\D/g, '');
     
-    // Malaysian format: 12-345 6789 or 11-2345 6789
     if (cleaned.length <= 2) {
       return cleaned;
     } else if (cleaned.length <= 6) {
@@ -44,15 +39,11 @@ export default function PartnerLoginScreen() {
   };
 
   const validatePhoneNumber = (phone: string): boolean => {
-    // Remove formatting characters
     const cleaned = phone.replace(/\D/g, '');
-    
-    // Malaysian mobile numbers: 9-10 digits (without country code)
     return cleaned.length >= 9 && cleaned.length <= 10;
   };
 
-  const handleLogin = async () => {
-    // Validate phone number
+  const handleRegister = async () => {
     if (!validatePhoneNumber(phoneNumber)) {
       Alert.alert(
         'Invalid Phone Number',
@@ -68,31 +59,17 @@ export default function PartnerLoginScreen() {
       // Simulate API call to send OTP
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const cleanedPhone = phoneNumber.replace(/\D/g, '');
-      
-      // For demo: 22-222 2222 = Partner login
-      if (cleanedPhone === '222222222' || cleanedPhone === '2222222222') {
-        // Login as PARTNER
-        const mockPartner = mockBarbers[0]; // Amir Hafiz
-        setCurrentUser(mockPartner as any);
-        router.replace('/(tabs)/dashboard');
-      } else {
-        // Try to find partner by phone
-        const partner = mockBarbers.find(b => b.phone.includes(phoneNumber));
-        if (partner) {
-          setCurrentUser(partner as any);
-          router.replace('/(tabs)/dashboard');
-        } else {
-          Alert.alert(
-            'Partner Not Found',
-            'No partner account found with this phone number.\n\nTest login: 22-222 2222',
-            [{ text: 'OK' }]
-          );
+      // Navigate to account type selection with phone number
+      router.push({
+        pathname: '/select-account-type',
+        params: { 
+          phoneNumber: phoneNumber,
+          isRegistering: 'true'
         }
-      }
+      });
     } catch (error) {
       Alert.alert(
-        'Login Failed',
+        'Registration Failed',
         'Unable to send OTP. Please try again.',
         [{ text: 'OK' }]
       );
@@ -114,6 +91,14 @@ export default function PartnerLoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Back Button */}
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+          </TouchableOpacity>
+
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
@@ -124,10 +109,32 @@ export default function PartnerLoginScreen() {
               />
             </View>
             
-            <Text style={styles.title}>Partner Login</Text>
+            <Text style={styles.title}>Become a Partner</Text>
             <Text style={styles.subtitle}>
-              Sign in to manage your business
+              Join our platform and grow your business
             </Text>
+          </View>
+
+          {/* Benefits Section */}
+          <View style={styles.benefitsSection}>
+            <View style={styles.benefitItem}>
+              <View style={styles.benefitIcon}>
+                <Ionicons name="people" size={20} color="#00B14F" />
+              </View>
+              <Text style={styles.benefitText}>Reach more customers</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <View style={styles.benefitIcon}>
+                <Ionicons name="calendar" size={20} color="#00B14F" />
+              </View>
+              <Text style={styles.benefitText}>Manage bookings easily</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <View style={styles.benefitIcon}>
+                <Ionicons name="trending-up" size={20} color="#00B14F" />
+              </View>
+              <Text style={styles.benefitText}>Grow your revenue</Text>
+            </View>
           </View>
 
           {/* Phone Input Section */}
@@ -145,10 +152,10 @@ export default function PartnerLoginScreen() {
               {/* Phone Number Input */}
               <TextInput
                 style={styles.phoneInput}
-                placeholder="22-222 2222"
+                placeholder="12-345 6789"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="phone-pad"
-                maxLength={13} // Formatted: 12-345 6789
+                maxLength={13}
                 value={phoneNumber}
                 onChangeText={handlePhoneChange}
                 autoFocus
@@ -156,7 +163,7 @@ export default function PartnerLoginScreen() {
               />
             </View>
 
-          {/* Helper Text */}
+            {/* Helper Text */}
             <View style={styles.helperContainer}>
               <Ionicons name="information-circle-outline" size={14} color="#6B7280" />
               <Text style={styles.helperText}>
@@ -171,7 +178,7 @@ export default function PartnerLoginScreen() {
               styles.continueButton,
               isButtonDisabled && styles.continueButtonDisabled,
             ]}
-            onPress={handleLogin}
+            onPress={handleRegister}
             disabled={isButtonDisabled}
             activeOpacity={0.8}
           >
@@ -182,15 +189,15 @@ export default function PartnerLoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Register Link */}
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>
-              Don't have an account?{' '}
+          {/* Login Link */}
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>
+              Already have an account?{' '}
               <Text 
-                style={styles.registerLink}
-                onPress={() => router.push('/register')}
+                style={styles.loginLink}
+                onPress={() => router.push('/login')}
               >
-                Register
+                Login
               </Text>
             </Text>
           </View>
@@ -221,21 +228,28 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 8,
     paddingBottom: 40,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
-    marginTop: 20,
+    marginBottom: 32,
   },
   logoContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
     alignItems: 'center',
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
   },
   title: {
     fontSize: 28,
@@ -249,6 +263,31 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  benefitsSection: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 32,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  benefitIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  benefitText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
   },
   formSection: {
     marginBottom: 32,
@@ -315,6 +354,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     minHeight: 56,
+    marginBottom: 16,
   },
   continueButtonDisabled: {
     backgroundColor: '#D1D5DB',
@@ -327,28 +367,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
-  registerContainer: {
+  loginContainer: {
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  registerText: {
+  loginText: {
     fontSize: 14,
     color: '#6B7280',
   },
-  registerLink: {
+  loginLink: {
     fontSize: 14,
     color: '#00B14F',
     fontWeight: '600',
   },
   termsContainer: {
-    marginTop: 12,
+    marginTop: 4,
     paddingHorizontal: 32,
   },
   termsText: {
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 20,
+    textAlign: 'center',
   },
   termsLink: {
     fontSize: 13,

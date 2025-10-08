@@ -1234,8 +1234,8 @@ export const mockBookings: Booking[] = [
     barberId: 'b1',
     barber: mockBarbers[0],
     services: [mockServices[0], mockServices[2]], // RM 35 + RM 25 = RM 60
-    scheduledDate: '2025-10-05',
-    scheduledTime: '14:00',
+    scheduledDate: '2025-10-07',
+    scheduledTime: '08:00',
     status: 'completed',
     address: mockAddresses[0],
     distance: 3.5,
@@ -1290,7 +1290,7 @@ export const mockBookings: Booking[] = [
     barberId: 'b1',
     barber: mockBarbers[0],
     services: [mockServices[0]], // RM 35
-    scheduledDate: '2025-10-06',
+    scheduledDate: '2025-10-07',
     scheduledTime: '16:00',
     status: 'pending',
     address: mockAddresses[0],
@@ -1327,7 +1327,7 @@ export const mockBookings: Booking[] = [
     barberId: 'b1',
     barber: mockBarbers[0],
     services: [mockServices[1], mockServices[2]], // Premium Haircut & Wash + Beard Trim
-    scheduledDate: '2025-10-06',
+    scheduledDate: '2025-10-07',
     scheduledTime: '11:00',
     status: 'accepted',
     address: mockAddresses[1],
@@ -1364,7 +1364,7 @@ export const mockBookings: Booking[] = [
     barberId: 'b1',
     barber: mockBarbers[0],
     services: [mockServices[0]], // Classic Haircut
-    scheduledDate: '2025-10-06',
+    scheduledDate: '2025-10-07',
     scheduledTime: '09:30',
     status: 'accepted',
     address: mockAddresses[0],
@@ -1438,7 +1438,7 @@ export const mockBookings: Booking[] = [
     barberId: 'b1',
     barber: mockBarbers[0],
     services: [mockServices[0], mockServices[2]], // Classic Haircut + Beard Trim
-    scheduledDate: '2025-10-04',
+    scheduledDate: '2025-10-06',
     scheduledTime: '13:00',
     status: 'completed',
     address: mockAddresses[1],
@@ -1477,8 +1477,8 @@ export const mockBookings: Booking[] = [
     barberId: 'b1',
     barber: mockBarbers[0],
     services: [mockServices[1]], // Premium Haircut & Wash
-    scheduledDate: '2025-10-03',
-    scheduledTime: '15:00',
+    scheduledDate: '2025-10-07',
+    scheduledTime: '06:00',
     status: 'completed',
     address: mockAddresses[0],
     distance: 2.5,

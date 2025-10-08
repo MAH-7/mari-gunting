@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Customer, Barber, Service, Address, Booking } from '@/types';
+import { CompleteOnboardingData, OnboardingProgress } from '@/types/onboarding';
 
 export type Voucher = {
   id: number;
@@ -31,6 +32,13 @@ interface AppState {
   // User
   currentUser: Customer | Barber | null;
   setCurrentUser: (user: Customer | Barber | null) => void;
+  
+  // Onboarding
+  onboardingData: CompleteOnboardingData | null;
+  setOnboardingData: (data: CompleteOnboardingData) => void;
+  updateOnboardingProgress: (progress: Partial<OnboardingProgress>) => void;
+  completeOnboardingStep: (stepId: string) => void;
+  resetOnboarding: () => void;
   
   // Rewards
   userPoints: number;
@@ -70,6 +78,7 @@ export const useStore = create<AppState>()(persist(
   (set) => ({
     // Initial state
     currentUser: null,
+    onboardingData: null,
     userPoints: 1250,
     myVouchers: [],
     activity: [
@@ -86,6 +95,60 @@ export const useStore = create<AppState>()(persist(
     
     // Actions
     setCurrentUser: (user) => set({ currentUser: user }),
+    
+    // Onboarding Actions
+    setOnboardingData: (data) => set({ onboardingData: data }),
+    
+    updateOnboardingProgress: (progressUpdate) => 
+      set((state) => {
+        if (!state.onboardingData) {
+          return {
+            onboardingData: {
+              progress: {
+                status: 'not_started',
+                currentStep: 0,
+                totalSteps: 8,
+                completedSteps: [],
+                lastUpdatedAt: new Date().toISOString(),
+                ...progressUpdate,
+              },
+              consents: {},
+            },
+          };
+        }
+        return {
+          onboardingData: {
+            ...state.onboardingData,
+            progress: {
+              ...state.onboardingData.progress,
+              ...progressUpdate,
+              lastUpdatedAt: new Date().toISOString(),
+            },
+          },
+        };
+      }),
+    
+    completeOnboardingStep: (stepId) =>
+      set((state) => {
+        if (!state.onboardingData) return state;
+        
+        const completedSteps = state.onboardingData.progress.completedSteps;
+        if (completedSteps.includes(stepId)) return state;
+        
+        return {
+          onboardingData: {
+            ...state.onboardingData,
+            progress: {
+              ...state.onboardingData.progress,
+              completedSteps: [...completedSteps, stepId],
+              currentStep: state.onboardingData.progress.currentStep + 1,
+              lastUpdatedAt: new Date().toISOString(),
+            },
+          },
+        };
+      }),
+    
+    resetOnboarding: () => set({ onboardingData: null }),
     
     setUserPoints: (points) => set({ userPoints: points }),
     deductPoints: (points) => set((state) => ({ userPoints: state.userPoints - points })),
@@ -132,6 +195,7 @@ export const useStore = create<AppState>()(persist(
     storage: createJSONStorage(() => AsyncStorage),
     partialize: (state) => ({
       currentUser: state.currentUser,
+      onboardingData: state.onboardingData,
       userPoints: state.userPoints,
       myVouchers: state.myVouchers,
       activity: state.activity,
