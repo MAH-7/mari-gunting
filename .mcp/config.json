@@ -18,6 +18,27 @@
         "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
       ],
       "description": "Git operations and history"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "working_directory": "/Users/bos/Desktop/ProjectSideIncome/mari-gunting",
+      "description": "Break down complex problems into step-by-step reasoning (Mari Gunting project only)"
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_NAMESPACE": "mari-gunting"
+      },
+      "working_directory": "/Users/bos/Desktop/ProjectSideIncome/mari-gunting",
+      "description": "Persistent memory for storing and retrieving context across sessions (Mari Gunting project only)"
     }
   },
   "contextFiles": [

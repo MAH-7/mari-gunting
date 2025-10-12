@@ -1,20 +1,21 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/services/api';
 import { useStore } from '@/store/useStore';
 import { formatCurrency, formatShortDate, formatTime } from '@/utils/format';
 import { Booking, BookingStatus } from '@/types';
 import BookingFilterModal, { BookingFilterOptions } from '@/components/BookingFilterModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
+import { bookingService } from '@mari-gunting/shared/services/bookingService';
 
 export default function BookingsScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed'>('active');
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Applied filters
   const [filters, setFilters] = useState<BookingFilterOptions>({
@@ -22,20 +23,46 @@ export default function BookingsScreen() {
     filterStatus: 'all',
   });
 
-  const { data: bookingsResponse, isLoading } = useQuery({
-    queryKey: ['bookings', currentUser?.id],
-    queryFn: () => api.getBookings({ customerId: currentUser?.id }),
-    enabled: !!currentUser,
+  const { data: bookingsResponse, isLoading, error, refetch } = useQuery({
+    queryKey: ['customer-bookings', currentUser?.id, selectedTab],
+    queryFn: async () => {
+      if (!currentUser?.id) return { success: false, data: [] };
+      
+      // Fetch based on tab selection for better performance
+      const statusFilter = selectedTab === 'active' 
+        ? null // Get all active statuses
+        : null; // Get all completed/cancelled
+      
+      return await bookingService.getCustomerBookings(
+        currentUser.id,
+        statusFilter,
+        100, // limit
+        0    // offset
+      );
+    },
+    enabled: !!currentUser?.id,
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 
-  const bookings = bookingsResponse?.data?.data || [];
+  // Handle pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const bookings = bookingsResponse?.data || [];
 
   const activeBookings = bookings.filter(
-    b => ['pending', 'accepted', 'on-the-way', 'in-progress'].includes(b.status)
+    (b: any) => ['pending', 'accepted', 'confirmed', 'ready', 'on-the-way', 'in-progress'].includes(b.booking_status)
   );
 
   const completedBookings = bookings.filter(
-    b => ['completed', 'cancelled'].includes(b.status)
+    (b: any) => ['completed', 'cancelled'].includes(b.booking_status)
   );
 
   // Apply filters
@@ -43,26 +70,31 @@ export default function BookingsScreen() {
   
   // Filter by status
   if (filters.filterStatus !== 'all') {
-    filteredBookings = filteredBookings.filter(b => b.status === filters.filterStatus);
+    filteredBookings = filteredBookings.filter((b: any) => b.booking_status === filters.filterStatus);
   }
   
   // Sort bookings
-  const sortedBookings = [...filteredBookings].sort((a, b) => {
+  const sortedBookings = [...filteredBookings].sort((a: any, b: any) => {
     if (filters.sortBy === 'date') {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      // Sort by scheduled date/time
+      const aDate = new Date(`${a.scheduled_date}T${a.scheduled_time || '00:00'}`);
+      const bDate = new Date(`${b.scheduled_date}T${b.scheduled_time || '00:00'}`);
+      return bDate.getTime() - aDate.getTime();
     } else if (filters.sortBy === 'price') {
-      return (b.totalPrice || 0) - (a.totalPrice || 0);
+      return (b.total_price || 0) - (a.total_price || 0);
     } else {
       // Sort by status - logical progression order
       const statusOrder: Record<BookingStatus, number> = {
         'in-progress': 1,
         'on-the-way': 2,
-        'accepted': 3,
-        'pending': 4,
-        'completed': 5,
-        'cancelled': 6,
+        'ready': 3,
+        'confirmed': 4,
+        'accepted': 5,
+        'pending': 6,
+        'completed': 7,
+        'cancelled': 8,
       };
-      return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+      return (statusOrder[a.booking_status as BookingStatus] || 99) - (statusOrder[b.booking_status as BookingStatus] || 99);
     }
   });
   
@@ -141,6 +173,14 @@ export default function BookingsScreen() {
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#00B14F"
+            colors={['#00B14F']}
+          />
+        }
       >
         {isLoading ? (
           // Skeleton Loading Cards
@@ -206,6 +246,14 @@ export default function BookingsScreen() {
               </View>
             ))}
           </>
+        ) : error ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+            <Text style={styles.emptyTitle}>Failed to load bookings</Text>
+            <Text style={styles.emptySubtext}>
+              Please check your connection and try again
+            </Text>
+          </View>
         ) : displayBookings.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons 
@@ -241,7 +289,30 @@ export default function BookingsScreen() {
   );
 }
 
-function BookingCard({ booking }: { booking: Booking }) {
+function BookingCard({ booking }: { booking: any }) {
+  // Map database booking to UI format
+  const mappedBooking: Booking = {
+    id: booking.booking_id,
+    status: booking.booking_status,
+    totalPrice: booking.total_price,
+    scheduledDate: booking.scheduled_date,
+    scheduledTime: booking.scheduled_time,
+    createdAt: booking.created_at,
+    barber: booking.barber_name ? {
+      id: booking.barber_id,
+      name: booking.barber_name,
+      avatar: booking.barber_avatar || 'https://via.placeholder.com/150',
+      rating: booking.barber_rating || 0,
+      completedJobs: booking.barber_completed_jobs || 0,
+    } : undefined,
+    services: booking.services || [],
+    address: booking.customer_address ? {
+      fullAddress: `${booking.customer_address.line1}, ${booking.customer_address.city}`,
+      ...booking.customer_address,
+    } : undefined,
+    review: booking.review_id ? { id: booking.review_id } : undefined,
+  };
+
   const getStatusConfig = (status: BookingStatus) => {
     const configs = {
       pending: { 
@@ -256,9 +327,23 @@ function BookingCard({ booking }: { booking: Booking }) {
         bg: '#DBEAFE', 
         label: 'Accepted',
         iconName: 'checkmark-circle' as const,
+        progress: 40
+      },
+      confirmed: { 
+        color: '#06B6D4', 
+        bg: '#CFFAFE', 
+        label: 'Confirmed',
+        iconName: 'checkmark-done-circle' as const,
         progress: 50
       },
-      'on-the-way': { 
+      ready: { 
+        color: '#14B8A6', 
+        bg: '#CCFBF1', 
+        label: 'Ready',
+        iconName: 'checkmark-done' as const,
+        progress: 60
+      },
+      'on-the-way': {
         color: '#8B5CF6', 
         bg: '#EDE9FE', 
         label: 'On The Way',
@@ -290,12 +375,12 @@ function BookingCard({ booking }: { booking: Booking }) {
     return configs[status] || configs.pending;
   };
 
-  const statusConfig = getStatusConfig(booking.status);
+  const statusConfig = getStatusConfig(mappedBooking.status);
 
   return (
     <TouchableOpacity
       style={styles.bookingCard}
-      onPress={() => router.push(`/booking/${booking.id}` as any)}
+      onPress={() => router.push(`/booking/${mappedBooking.id}` as any)}
       activeOpacity={0.95}
     >
       {/* Status Bar */}
@@ -306,11 +391,11 @@ function BookingCard({ booking }: { booking: Booking }) {
             {statusConfig.label}
           </Text>
         </View>
-        <Text style={styles.bookingId}>#{booking.id.slice(-4).toUpperCase()}</Text>
+        <Text style={styles.bookingId}>#{mappedBooking.id.slice(-4).toUpperCase()}</Text>
       </View>
 
       {/* Progress Indicator */}
-      {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+      {mappedBooking.status !== 'cancelled' && mappedBooking.status !== 'completed' && (
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
             <View 
@@ -329,35 +414,39 @@ function BookingCard({ booking }: { booking: Booking }) {
       {/* Content */}
       <View style={styles.cardContent}>
         {/* Barber Row */}
-        <View style={styles.barberRow}>
-          <Image
-            source={{ uri: booking.barber.avatar }}
-            style={styles.barberAvatar}
-          />
-          <View style={styles.barberInfo}>
-            <Text style={styles.barberName}>{booking.barber.name}</Text>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color="#FBBF24" style={styles.starIcon} />
-              <Text style={styles.ratingText}>{booking.barber.rating.toFixed(1)}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.jobsText}>{booking.barber.completedJobs} jobs</Text>
+        {mappedBooking.barber && (
+          <View style={styles.barberRow}>
+            <Image
+              source={{ uri: mappedBooking.barber.avatar }}
+              style={styles.barberAvatar}
+            />
+            <View style={styles.barberInfo}>
+              <Text style={styles.barberName}>{mappedBooking.barber.name}</Text>
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={14} color="#FBBF24" style={styles.starIcon} />
+                <Text style={styles.ratingText}>{mappedBooking.barber.rating.toFixed(1)}</Text>
+                <View style={styles.divider} />
+                <Text style={styles.jobsText}>{mappedBooking.barber.completedJobs} jobs</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Services */}
-        <View style={styles.servicesSection}>
-          <Text style={styles.sectionLabel}>Services</Text>
-          {booking.services.map((service, index) => (
-            <View key={service.id} style={styles.serviceRow}>
-              <View style={styles.serviceLeft}>
-                <View style={styles.serviceDot} />
-                <Text style={styles.serviceName}>{service.name}</Text>
+        {mappedBooking.services && mappedBooking.services.length > 0 && (
+          <View style={styles.servicesSection}>
+            <Text style={styles.sectionLabel}>Services</Text>
+            {mappedBooking.services.map((service: any, index: number) => (
+              <View key={index} style={styles.serviceRow}>
+                <View style={styles.serviceLeft}>
+                  <View style={styles.serviceDot} />
+                  <Text style={styles.serviceName}>{service.name}</Text>
+                </View>
+                <Text style={styles.servicePrice}>{formatCurrency(service.price)}</Text>
               </View>
-              <Text style={styles.servicePrice}>{formatCurrency(service.price)}</Text>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
         {/* Date & Location */}
         <View style={styles.detailsSection}>
@@ -366,7 +455,9 @@ function BookingCard({ booking }: { booking: Booking }) {
               <Ionicons name="calendar" size={16} color="#6B7280" />
             </View>
             <Text style={styles.detailText}>
-              {formatShortDate(booking.scheduledDate)} at {formatTime(booking.scheduledTime)}
+              {mappedBooking.scheduledDate && mappedBooking.scheduledTime ? 
+                `${formatShortDate(mappedBooking.scheduledDate)} at ${formatTime(mappedBooking.scheduledTime)}` : 
+                'Date not set'}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -374,7 +465,7 @@ function BookingCard({ booking }: { booking: Booking }) {
               <Ionicons name="location" size={16} color="#6B7280" />
             </View>
             <Text style={styles.detailText} numberOfLines={1}>
-              {booking.address.fullAddress}
+              {mappedBooking.address?.fullAddress || 'Address not set'}
             </Text>
           </View>
         </View>
@@ -383,14 +474,14 @@ function BookingCard({ booking }: { booking: Booking }) {
         <View style={styles.footer}>
           <View style={styles.totalSection}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatCurrency(booking.totalPrice)}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(mappedBooking.totalPrice || 0)}</Text>
           </View>
-          {(booking.status === 'pending' || booking.status === 'accepted') && (
+          {(mappedBooking.status === 'pending' || mappedBooking.status === 'accepted') && (
             <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
               <Text style={styles.actionButtonText}>Cancel</Text>
             </TouchableOpacity>
           )}
-          {booking.status === 'completed' && !booking.review && (
+          {mappedBooking.status === 'completed' && !mappedBooking.review && (
             <TouchableOpacity 
               style={[styles.actionButton, styles.actionButtonPrimary]} 
               activeOpacity={0.8}

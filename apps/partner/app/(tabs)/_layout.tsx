@@ -85,11 +85,11 @@ export default function PartnerTabLayout() {
           }}
         />
         <Tabs.Screen
-          name="schedule"
+          name="reviews"
           options={{
-            title: 'Schedule',
+            title: 'Reviews',
             tabBarIcon: ({ focused }) => (
-              <TabBarIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} />
+              <TabBarIcon name={focused ? 'star' : 'star-outline'} focused={focused} />
             ),
           }}
         />
@@ -117,6 +117,7 @@ export default function PartnerTabLayout() {
         <Tabs.Screen name="staff" options={{ href: null }} />
         <Tabs.Screen name="shop" options={{ href: null }} />
         <Tabs.Screen name="reports" options={{ href: null }} />
+        <Tabs.Screen name="schedule" options={{ href: null }} />
       </Tabs>
     );
   }
@@ -173,6 +174,7 @@ export default function PartnerTabLayout() {
       <Tabs.Screen name="dashboard" options={{ href: null }} />
       <Tabs.Screen name="jobs" options={{ href: null }} />
       <Tabs.Screen name="schedule" options={{ href: null }} />
+      <Tabs.Screen name="reviews" options={{ href: null }} />
       <Tabs.Screen name="earnings" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>

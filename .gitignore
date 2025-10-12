@@ -31,7 +31,26 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+.env.development
+.env.staging
+.env.production
+apps/customer/.env
+apps/customer/.env.*
+apps/partner/.env
+apps/partner/.env.*
+
+# API Keys and Secrets (double protection)
+**/secrets/
+**/*secret*
+**/*credential*
+*.pem
+*.key
+*.p12
+*.p8
+*.keystore
+*.jks
 
 # typescript
 *.tsbuildinfo

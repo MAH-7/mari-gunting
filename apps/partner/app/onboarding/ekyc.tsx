@@ -1,11 +1,13 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@/store/useStore';
+import VerificationStatusBanner from '@/components/VerificationStatusBanner';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 type DocumentType = 'nricFront' | 'nricBack' | 'selfie';
 
@@ -19,10 +21,21 @@ export default function EKYCScreen() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [verificationStatus, setVerificationStatus] = useState<'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed'>('in_progress');
 
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
   const completeOnboardingStep = useStore((state) => state.completeOnboardingStep);
   const onboardingData = useStore((state) => state.onboardingData);
+
+  // Check if eKYC was already submitted
+  useEffect(() => {
+    if (onboardingData?.ekyc?.verificationStatus) {
+      setVerificationStatus(onboardingData.ekyc.verificationStatus);
+      // Pre-fill if editing
+      if (onboardingData.ekyc.fullName) setFullName(onboardingData.ekyc.fullName);
+      if (onboardingData.ekyc.nricNumber) setNricNumber(onboardingData.ekyc.nricNumber);
+    }
+  }, [onboardingData]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -176,8 +189,47 @@ export default function EKYCScreen() {
 
       completeOnboardingStep('ekyc');
 
-      // Navigate to pending screen
-      router.push('/onboarding/ekyc-pending');
+      // Update verification status in database to 'pending'
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const accountType = onboardingData?.progress.accountType;
+          
+          if (accountType === 'barbershop') {
+            const { error } = await supabase
+              .from('barbershops')
+              .update({ verification_status: 'pending' })
+              .eq('owner_id', user.id);
+            
+            if (error) {
+              console.error('❌ Failed to update barbershop status:', error);
+            } else {
+              console.log('✅ Barbershop verification status updated to pending');
+            }
+          } else {
+            const { error } = await supabase
+              .from('barbers')
+              .update({ verification_status: 'pending' })
+              .eq('user_id', user.id);
+            
+            if (error) {
+              console.error('❌ Failed to update barber status:', error);
+            } else {
+              console.log('✅ Barber verification status updated to pending');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error updating verification status:', error);
+      }
+
+      // Navigate to next step based on account type
+      const accountType = onboardingData?.progress.accountType;
+      if (accountType === 'barbershop') {
+        router.push('/onboarding/business');
+      } else {
+        router.push('/onboarding/payout');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to submit verification. Please try again.');
     } finally {
@@ -195,6 +247,16 @@ export default function EKYCScreen() {
             We need to verify your identity for security purposes
           </Text>
         </View>
+
+        {/* Verification Status Banner */}
+        <VerificationStatusBanner 
+          status={verificationStatus}
+          message={
+            verificationStatus === 'submitted' 
+              ? 'Your documents are being reviewed. You can continue with the next steps.'
+              : undefined
+          }
+        />
 
         {/* Form */}
         <View style={styles.form}>

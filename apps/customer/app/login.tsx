@@ -15,14 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '@/store/useStore';
-import { mockCustomer } from '@/services/mockData';
+import { authService } from '@mari-gunting/shared/services/authService';
 
 export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [countryCode, setCountryCode] = useState('+60');
-  const setCurrentUser = useStore((state) => state.setCurrentUser);
 
   const formatPhoneNumber = (text: string) => {
     // Remove all non-numeric characters
@@ -66,58 +64,31 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate API call to send OTP
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Format phone number
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      const fullPhone = `${countryCode}${cleanPhone}`;
 
-      const cleanedPhone = phoneNumber.replace(/\D/g, '');
-      
-      // TODO: Replace with actual API call
-      // const response = await api.sendOtp({ 
-      //   phoneNumber: `${countryCode}${phoneNumber.replace(/\D/g, '')}` 
-      // });
+      // Send OTP via Supabase/Twilio WhatsApp
+      const response = await authService.sendOTP({ phoneNumber: fullPhone });
 
-      // For demo/testing: Use phone number to determine login type
-      // 11-111 1111 = Customer (mock)
-      // 22-222 2222 = Barber (mock)
-      // 99-999 9999 = New user (role selection)
-      // Any other = Customer (default)
-      
-      if (cleanedPhone === '111111111' || cleanedPhone === '1111111111') {
-        // Login as CUSTOMER
-        setCurrentUser(mockCustomer);
-        router.replace('/(tabs)');
-      } else if (cleanedPhone === '222222222' || cleanedPhone === '2222222222') {
-        // Login as BARBER
-        const mockBarber = {
-          ...mockCustomer,
-          id: 'b1',
-          name: 'Amir Hafiz',
-          email: 'amir.hafiz@email.com',
-          phone: '+60 22-222 2222',
-          role: 'barber' as const,
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-        };
-        setCurrentUser(mockBarber as any);
+      if (!response.success) {
         Alert.alert(
-          'Barber Login',
-          'Logged in as Barber! (Barber app coming soon)',
-          [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+          'Failed to Send OTP',
+          response.error || 'Please try again',
+          [{ text: 'OK' }]
         );
-      } else if (cleanedPhone === '999999999' || cleanedPhone === '9999999999') {
-        // NEW USER - Show role selection
-        router.push({ 
-          pathname: '/select-role', 
-          params: { phoneNumber: `${countryCode}${phoneNumber}` } 
-        } as any);
-      } else {
-        // Default: Login as customer
-        setCurrentUser(mockCustomer);
-        router.replace('/(tabs)');
+        return;
       }
-    } catch (error) {
+
+      // Navigate to OTP verification
+      router.push({
+        pathname: '/verify-otp',
+        params: { phoneNumber: fullPhone },
+      });
+    } catch (error: any) {
       Alert.alert(
         'Login Failed',
-        'Unable to send OTP. Please try again.',
+        error.message || 'Unable to send OTP. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {

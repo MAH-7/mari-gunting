@@ -11,8 +11,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.marigunting.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience.",
-        "NSLocationAlwaysUsageDescription": "Mari Gunting needs your location to track barber arrival and provide real-time updates."
+        "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to find nearby barbers and provide accurate arrival times.",
+        "NSLocationAlwaysUsageDescription": "Mari Gunting needs your location to track barber arrivals (optional)."
       }
     },
     "android": {
@@ -38,7 +38,11 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience."
+          "locationAlwaysAndWhenInUsePermission": "Allow Mari Gunting to use your location to find nearby barbers and provide accurate arrival times.",
+          "locationAlwaysPermission": "Allow Mari Gunting to use your location to track barber arrivals (optional).",
+          "locationWhenInUsePermission": "Allow Mari Gunting to use your location to find nearby barbers.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
         }
       ]
     ],

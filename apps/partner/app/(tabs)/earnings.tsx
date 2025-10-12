@@ -181,7 +181,7 @@ export default function GrabEarningsScreen() {
               </View>
               <Text style={styles.revenueModelEquals}>=</Text>
               <View style={styles.revenueModelItem}>
-                <Text style={styles.revenueModelValue}>💚</Text>
+                <Ionicons name="checkmark-circle" size={28} color="#00B14F" style={styles.revenueModelIcon} />
                 <Text style={styles.revenueModelLabel}>Your Pay</Text>
               </View>
             </View>
@@ -316,7 +316,10 @@ export default function GrabEarningsScreen() {
             <ScrollView style={styles.infoContent} showsVerticalScrollIndicator={false}>
               {/* Key Facts Banner */}
               <View style={styles.keyFactsBanner}>
-                <Text style={styles.keyFactsTitle}>🎯 Key Facts</Text>
+                <View style={styles.titleWithIcon}>
+                  <Ionicons name="flag" size={18} color={COLORS.text.primary} />
+                  <Text style={styles.keyFactsTitle}>Key Facts</Text>
+                </View>
                 <View style={styles.keyFactsGrid}>
                   <View style={styles.keyFactItem}>
                     <Text style={styles.keyFactValue}>88%</Text>
@@ -398,7 +401,10 @@ export default function GrabEarningsScreen() {
               
               {/* Example Calculations */}
               <View style={styles.infoBox}>
-                <Text style={styles.infoBoxTitle}>💡 Example Calculation</Text>
+                <View style={styles.titleWithIcon}>
+                  <Ionicons name="bulb" size={18} color="#F59E0B" />
+                  <Text style={styles.infoBoxTitle}>Example Calculation</Text>
+                </View>
                 <View style={styles.exampleCalc}>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcLabel}>Service:</Text>
@@ -435,7 +441,10 @@ export default function GrabEarningsScreen() {
 
               {/* Comparison */}
               <View style={styles.comparisonBox}>
-                <Text style={styles.comparisonTitle}>🏆 Better Than Competitors</Text>
+                <View style={styles.titleWithIcon}>
+                  <Ionicons name="trophy" size={18} color="#F59E0B" />
+                  <Text style={styles.comparisonTitle}>Better Than Competitors</Text>
+                </View>
                 <View style={styles.comparisonRow}>
                   <Text style={styles.comparisonPlatform}>Grab / Foodpanda:</Text>
                   <Text style={styles.comparisonRate}>25-30% commission</Text>
@@ -816,14 +825,14 @@ const styles = StyleSheet.create({
   // Trip Card - Grab Style
   tripCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   tripHeader: {
     flexDirection: 'row',
@@ -938,14 +947,14 @@ const styles = StyleSheet.create({
   quickActionBtn: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    padding: 18,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   quickActionIcon: {
     width: 48,
@@ -1339,5 +1348,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#00B14F',
     textAlign: 'center',
+  },
+  revenueModelIcon: {
+    marginBottom: 4,
+  },
+  titleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
   },
 });

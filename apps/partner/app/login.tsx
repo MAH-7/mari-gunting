@@ -15,14 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '@/store/useStore';
-import { mockBarbers } from '@/services/mockData';
+import { authService } from '@mari-gunting/shared/services/authService';
 
 export default function PartnerLoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [countryCode, setCountryCode] = useState('+60');
-  const setCurrentUser = useStore((state) => state.setCurrentUser);
 
   const formatPhoneNumber = (text: string) => {
     // Remove all non-numeric characters
@@ -65,35 +63,34 @@ export default function PartnerLoginScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate API call to send OTP
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Format phone number
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      const fullPhone = `${countryCode}${cleanPhone}`;
 
-      const cleanedPhone = phoneNumber.replace(/\D/g, '');
-      
-      // For demo: 22-222 2222 = Partner login
-      if (cleanedPhone === '222222222' || cleanedPhone === '2222222222') {
-        // Login as PARTNER
-        const mockPartner = mockBarbers[0]; // Amir Hafiz
-        setCurrentUser(mockPartner as any);
-        router.replace('/(tabs)/dashboard');
-      } else {
-        // Try to find partner by phone
-        const partner = mockBarbers.find(b => b.phone.includes(phoneNumber));
-        if (partner) {
-          setCurrentUser(partner as any);
-          router.replace('/(tabs)/dashboard');
-        } else {
-          Alert.alert(
-            'Partner Not Found',
-            'No partner account found with this phone number.\n\nTest login: 22-222 2222',
-            [{ text: 'OK' }]
-          );
-        }
+      // Send OTP via Supabase/Twilio WhatsApp
+      const response = await authService.sendOTP({ phoneNumber: fullPhone });
+
+      if (!response.success) {
+        Alert.alert(
+          'Failed to Send OTP',
+          response.error || 'Please try again',
+          [{ text: 'OK' }]
+        );
+        return;
       }
-    } catch (error) {
+
+      // Navigate to OTP verification with barber role
+      router.push({
+        pathname: '/verify-otp',
+        params: { 
+          phoneNumber: fullPhone,
+          role: 'barber', // Partner app = barber role
+        },
+      });
+    } catch (error: any) {
       Alert.alert(
         'Login Failed',
-        'Unable to send OTP. Please try again.',
+        error.message || 'Unable to send OTP. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {

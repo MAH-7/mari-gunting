@@ -8,9 +8,11 @@
 // Form Components
 export * from './Button';
 export * from './Input';
+export * from './SearchBar';
 
 // Layout Components
 export * from './Card';
+export * from './BarbershopCard';
 
 // Display Components
 export * from './Badge';

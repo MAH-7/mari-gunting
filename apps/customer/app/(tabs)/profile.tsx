@@ -4,12 +4,40 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@/store/useStore';
 import { formatPhoneNumber } from '@/utils/format';
+import { useProfile } from '@/hooks/useProfile';
+import { SkeletonText } from '@/components/Skeleton';
+
+// Helper function to safely get avatar URL
+const getAvatarUrl = (user: any) => {
+  // Check avatar field
+  if (user?.avatar && typeof user.avatar === 'string') {
+    const trimmedAvatar = user.avatar.trim();
+    if (trimmedAvatar !== '' && !trimmedAvatar.includes('placeholder')) {
+      return trimmedAvatar;
+    }
+  }
+  
+  // Check avatar_url field
+  if (user?.avatar_url && typeof user.avatar_url === 'string') {
+    const trimmedAvatarUrl = user.avatar_url.trim();
+    if (trimmedAvatarUrl !== '' && !trimmedAvatarUrl.includes('placeholder')) {
+      return trimmedAvatarUrl;
+    }
+  }
+  
+  // Fallback to placeholder
+  return 'https://via.placeholder.com/100';
+};
 
 export default function ProfileScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const setCurrentUser = useStore((state) => state.setCurrentUser);
+  const logout = useStore((state) => state.logout);
+  const { stats, isLoadingStats } = useProfile();
 
   const handleSwitchRole = () => {
+    if (!currentUser) return;
+    
     if (currentUser.role === 'customer') {
       // Customer wants to become Barber - needs KYC verification
       Alert.alert(
@@ -73,9 +101,17 @@ export default function ProfileScreen() {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: () => {
-            setCurrentUser(null);
-            router.replace('/login');
+          onPress: async () => {
+            try {
+              // Clear all user data and storage
+              await logout();
+              
+              // Navigate to login
+              router.replace('/login');
+            } catch (error) {
+              console.error('Error during logout:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
           },
         },
       ]
@@ -92,6 +128,40 @@ export default function ProfileScreen() {
       </SafeAreaView>
     );
   }
+
+  const handleMenuItemPress = (itemId: string) => {
+    switch (itemId) {
+      case 'addresses':
+        router.push('/profile/addresses');
+        break;
+      case 'payment':
+        Alert.alert('Coming Soon', 'Payment methods feature is coming soon!');
+        break;
+      case 'favorites':
+        Alert.alert('Coming Soon', 'Favorites feature is coming soon!');
+        break;
+      case 'help':
+        Alert.alert('Coming Soon', 'Help center is coming soon!');
+        break;
+      case 'contact':
+        Alert.alert('Contact Us', 'Email: support@marigunting.com\nPhone: +60 123 456 789');
+        break;
+      case 'about':
+        Alert.alert('About Mari Gunting', 'Version 1.0.0\n\nMari Gunting - Your trusted barber booking platform.');
+        break;
+      case 'settings':
+        Alert.alert('Coming Soon', 'Settings page is coming soon!');
+        break;
+      case 'privacy':
+        Alert.alert('Coming Soon', 'Privacy policy page is coming soon!');
+        break;
+      case 'terms':
+        Alert.alert('Coming Soon', 'Terms of service page is coming soon!');
+        break;
+      default:
+        console.log('Unknown menu item:', itemId);
+    }
+  };
 
   const menuSections = [
     {
@@ -129,12 +199,15 @@ export default function ProfileScreen() {
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
               <Image
-                source={{ uri: currentUser.avatar }}
+                source={{ uri: getAvatarUrl(currentUser) }}
                 style={styles.avatar}
               />
-              <View style={styles.editBadge}>
+              <TouchableOpacity 
+                style={styles.editBadge}
+                onPress={() => router.push('/profile/edit')}
+              >
                 <Ionicons name="pencil" size={14} color="#00B14F" />
-              </View>
+              </TouchableOpacity>
             </View>
             <Text style={styles.userName}>{currentUser.name}</Text>
             <View style={styles.roleBadge}>
@@ -162,59 +235,46 @@ export default function ProfileScreen() {
         {/* Stats Section */}
         {currentUser.role === 'customer' && (
           <View style={styles.statsSection}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>Total Bookings</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>9</Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>4.8</Text>
-              <Text style={styles.statLabel}>Avg Rating</Text>
-            </View>
+            {isLoadingStats ? (
+              <>
+                <View style={styles.statCard}>
+                  <SkeletonText width={60} height={28} />
+                  <SkeletonText width={80} height={13} style={{ marginTop: 4 }} />
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statCard}>
+                  <SkeletonText width={60} height={28} />
+                  <SkeletonText width={80} height={13} style={{ marginTop: 4 }} />
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statCard}>
+                  <SkeletonText width={60} height={28} />
+                  <SkeletonText width={80} height={13} style={{ marginTop: 4 }} />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.total}</Text>
+                  <Text style={styles.statLabel}>Total Bookings</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.completed}</Text>
+                  <Text style={styles.statLabel}>Completed</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.avgRating}</Text>
+                  <Text style={styles.statLabel}>Avg Rating</Text>
+                </View>
+              </>
+            )}
           </View>
         )}
 
-        {/* Role Switcher Section */}
+        {/* Menu Sections */}
         <View style={styles.contentSection}>
-          <View style={styles.menuSection}>
-            <Text style={styles.sectionTitle}>Account Type</Text>
-            <View style={styles.menuCard}>
-              <TouchableOpacity
-                style={styles.roleSwitchItem}
-                activeOpacity={0.7}
-                onPress={handleSwitchRole}
-              >
-                <View style={styles.roleSwitchLeft}>
-                  <View style={styles.roleSwitchIconContainer}>
-                    <Ionicons 
-                      name={currentUser.role === 'customer' ? 'person' : 'cut'} 
-                      size={28} 
-                      color="#00B14F" 
-                    />
-                  </View>
-                  <View style={styles.roleSwitchContent}>
-                    <Text style={styles.roleSwitchLabel}>Current Role</Text>
-                    <Text style={styles.roleSwitchValue}>
-                      {currentUser.role === 'customer' ? 'Customer' : 'Barber'}
-                    </Text>
-                    <Text style={styles.roleSwitchHint}>
-                      Switch to {currentUser.role === 'customer' ? 'Barber' : 'Customer'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.roleSwitchBadge}>
-                  <Text style={styles.roleSwitchBadgeText}>Switch</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Menu Sections */}
           {menuSections.map((section, sectionIndex) => (
             <View key={section.title} style={styles.menuSection}>
               <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -227,6 +287,7 @@ export default function ProfileScreen() {
                       itemIndex !== section.items.length - 1 && styles.menuItemBorder
                     ]}
                     activeOpacity={0.7}
+                    onPress={() => handleMenuItemPress(item.id)}
                   >
                     <View style={styles.menuItemLeft}>
                       <View style={[styles.menuIconContainer, { backgroundColor: `${item.color}15` }]}>
@@ -247,16 +308,6 @@ export default function ProfileScreen() {
               </View>
             </View>
           ))}
-
-          {/* TEST BUTTON - View Partner App */}
-          <TouchableOpacity 
-            style={styles.testPartnerButton} 
-            activeOpacity={0.8}
-            onPress={() => router.push('/partner/(tabs)/dashboard')}
-          >
-            <Ionicons name="flask" size={20} color="#3B82F6" />
-            <Text style={styles.testPartnerButtonText}>🧪 Test Partner App</Text>
-          </TouchableOpacity>
 
           {/* Logout Button */}
           <TouchableOpacity 

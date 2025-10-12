@@ -17,5 +17,24 @@
       "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
     ],
     "env": {}
+  },
+  "sequential-thinking": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-sequential-thinking"
+    ],
+    "working_directory": "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
+  },
+  "memory": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-memory"
+    ],
+    "env": {
+      "MEMORY_NAMESPACE": "mari-gunting"
+    },
+    "working_directory": "/Users/bos/Desktop/ProjectSideIncome/mari-gunting"
   }
 }

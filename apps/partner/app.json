@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.marigunting.app",
+      "deploymentTarget": "15.1",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience.",
         "NSLocationAlwaysUsageDescription": "Mari Gunting needs your location to track barber arrival and provide real-time updates."

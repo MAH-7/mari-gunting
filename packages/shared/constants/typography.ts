@@ -33,6 +33,11 @@ export const TYPOGRAPHY = {
       fontWeight: '400' as const,
       lineHeight: 24,
     },
+    medium: {
+      fontSize: 14,
+      fontWeight: '500' as const,
+      lineHeight: 20,
+    },
     regular: {
       fontSize: 14,
       fontWeight: '400' as const,

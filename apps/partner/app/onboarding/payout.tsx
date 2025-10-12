@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@/store/useStore';
+import VerificationStatusBanner from '@/components/VerificationStatusBanner';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 const MALAYSIAN_BANKS = [
   { code: 'maybank', name: 'Maybank' },
@@ -33,10 +35,17 @@ export default function PayoutScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showBankDropdown, setShowBankDropdown] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed'>('in_progress');
 
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
   const completeOnboardingStep = useStore((state) => state.completeOnboardingStep);
   const onboardingData = useStore((state) => state.onboardingData);
+
+  useEffect(() => {
+    if (onboardingData?.payout?.verificationStatus) {
+      setVerificationStatus(onboardingData.payout.verificationStatus);
+    }
+  }, [onboardingData]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -90,16 +99,74 @@ export default function PayoutScreen() {
         },
       };
 
+      // Update local store with payout data
       useStore.setState({ onboardingData: updatedData });
-
-      updateOnboardingProgress({
-        status: 'payout_submitted',
-        currentStep: 6,
-      });
-
       completeOnboardingStep('payout');
 
-      router.push('/onboarding/payout-pending');
+      // CRITICAL: Update verification status in database to 'pending' so app knows onboarding is submitted
+      // This is the source of truth for determining if user should see onboarding or pending-approval
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('No authenticated user found');
+        }
+
+        const accountType = onboardingData?.progress.accountType;
+        console.log('🔐 Submitting onboarding for user:', user.id, 'Account type:', accountType);
+        
+        if (accountType === 'barbershop') {
+          const { error, data } = await supabase
+            .from('barbershops')
+            .update({ 
+              verification_status: 'pending',
+              updated_at: new Date().toISOString()
+            })
+            .eq('owner_id', user.id)
+            .select();
+          
+          if (error) {
+            console.error('❌ Failed to update barbershop status:', error);
+            throw error;
+          }
+          
+          console.log('✅ Barbershop verification status updated:', data);
+        } else {
+          const { error, data } = await supabase
+            .from('barbers')
+            .update({ 
+              verification_status: 'pending',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+            .select();
+          
+          if (error) {
+            console.error('❌ Failed to update barber status:', error);
+            throw error;
+          }
+          
+          console.log('✅ Barber verification status updated:', data);
+        }
+        
+        // Update local store to mark onboarding as submitted
+        updateOnboardingProgress({
+          status: 'submitted',
+          currentStep: 6,
+        });
+        
+      } catch (error) {
+        console.error('❌ CRITICAL: Error updating verification status:', error);
+        Alert.alert(
+          'Submission Error',
+          'Failed to submit your application. Please check your connection and try again.',
+          [{ text: 'OK' }]
+        );
+        return; // Don't navigate if submission failed
+      }
+
+      // For now, go directly to pending-approval since services/availability/portfolio screens don't exist yet
+      // TODO: Add remaining onboarding screens (services, availability, portfolio, review)
+      router.push('/pending-approval');
     } catch (error) {
       Alert.alert('Error', 'Failed to submit payout details. Please try again.');
     } finally {
@@ -119,6 +186,15 @@ export default function PayoutScreen() {
             Add your bank account to receive earnings
           </Text>
         </View>
+
+        <VerificationStatusBanner 
+          status={verificationStatus}
+          message={
+            verificationStatus === 'submitted' 
+              ? 'Test deposit sent. Your bank account is being verified.'
+              : undefined
+          }
+        />
 
         <View style={styles.form}>
           {/* Account Holder Name */}
