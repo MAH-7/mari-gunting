@@ -149,46 +149,41 @@ export const authService = {
       
       let profileData;
       
-      // In dev mode, use edge function to bypass RLS (no session created)
+      // In dev mode, insert directly to database (RLS won't block mock user IDs)
       if (IS_DEV_MODE) {
-        console.log('🔧 DEV MODE: Using edge function to bypass RLS');
+        console.log('🔧 DEV MODE: Inserting profile directly to database');
         
-        const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-        if (!anonKey) {
-          return {
-            success: false,
-            error: 'Configuration error',
-          };
-        }
-
-        const response = await fetch(REGISTER_FUNCTION_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${anonKey}`,
-            'apikey': anonKey,
-          },
-          body: JSON.stringify({
-            phoneNumber: params.phoneNumber,
-            fullName: params.fullName,
+        // Direct insert - RLS should allow for dev mock IDs
+        const { data, error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            phone_number: params.phoneNumber,
+            full_name: params.fullName,
             email: params.email,
+            avatar_url: params.avatarUrl,
             role: params.role,
-            avatarUrl: params.avatarUrl,
-            authUserId: userId,
-          }),
-        });
+          })
+          .select()
+          .single();
 
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          console.error('❌ Profile creation error:', result.error);
+        if (profileError) {
+          console.error('❌ DEV MODE: Profile creation error:', profileError);
+          
+          // If RLS blocks it, provide helpful error
+          if (profileError.code === '42501') {
+            console.error('❌ RLS is blocking profile insert. You need to:');
+            console.error('   1. Deploy edge function: supabase functions deploy register-user');
+            console.error('   2. Or adjust RLS policies to allow dev mode inserts');
+          }
+          
           return {
             success: false,
-            error: result.error || 'Failed to create user profile',
+            error: `Failed to create profile: ${profileError.message}`,
           };
         }
 
-        profileData = result.data;
+        profileData = data;
       } else {
         // Production mode: Direct insert (session should exist)
         const { data, error: profileError } = await supabase
