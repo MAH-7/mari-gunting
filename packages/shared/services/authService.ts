@@ -100,40 +100,47 @@ export const authService = {
         
         userId = currentUser.id;
       } else {
-        console.log('ℹ️ No authenticated user, creating new auth user');
-        
-        // 1. Create auth user with phone number
-        const tempPassword = generateTemporaryPassword();
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          phone: params.phoneNumber,
-          password: tempPassword,
-          options: {
-            data: {
-              full_name: params.fullName,
-              email: params.email,
-              role: params.role,
+        // DEV MODE: Skip Supabase auth, use mock user ID
+        if (IS_DEV_MODE) {
+          console.log('✅ DEV MODE: Skipping auth user creation, using mock ID');
+          userId = `dev-user-${params.phoneNumber.replace(/\D/g, '')}`;
+          newlyCreated = true;
+        } else {
+          // PRODUCTION: Create real auth user
+          console.log('ℹ️ No authenticated user, creating new auth user');
+          
+          const tempPassword = generateTemporaryPassword();
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            phone: params.phoneNumber,
+            password: tempPassword,
+            options: {
+              data: {
+                full_name: params.fullName,
+                email: params.email,
+                role: params.role,
+              },
             },
-          },
-        });
+          });
 
-        if (authError) {
-          console.error('❌ Auth registration error:', authError);
-          return {
-            success: false,
-            error: authError.message,
-          };
-        }
+          if (authError) {
+            console.error('❌ Auth registration error:', authError);
+            return {
+              success: false,
+              error: authError.message,
+            };
+          }
 
-        if (!authData.user) {
-          return {
-            success: false,
-            error: 'Failed to create user account',
-          };
+          if (!authData.user) {
+            return {
+              success: false,
+              error: 'Failed to create user account',
+            };
+          }
+          
+          userId = authData.user.id;
+          newlyCreated = true;
+          console.log('✅ Created new auth user:', userId);
         }
-        
-        userId = authData.user.id;
-        newlyCreated = true;
-        console.log('✅ Created new auth user:', userId);
       }
       
       // 2. Create user profile
