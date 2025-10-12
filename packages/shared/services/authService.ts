@@ -100,10 +100,12 @@ export const authService = {
         
         userId = currentUser.id;
       } else {
-        // DEV MODE: Skip Supabase auth, use mock user ID
+        // DEV MODE: Skip Supabase auth, use deterministic UUID
         if (IS_DEV_MODE) {
-          console.log('✅ DEV MODE: Skipping auth user creation, using mock ID');
-          userId = `dev-user-${params.phoneNumber.replace(/\D/g, '')}`;
+          console.log('✅ DEV MODE: Skipping auth user creation, using deterministic UUID');
+          // Generate a deterministic UUID from phone number
+          userId = generateDevUUID(params.phoneNumber);
+          console.log('🆔 Generated dev UUID:', userId);
           newlyCreated = true;
         } else {
           // PRODUCTION: Create real auth user
@@ -368,8 +370,8 @@ export const authService = {
             authUserId = existingProfileByPhone.id;
           } else {
             console.log('ℹ️ DEV MODE: No profile found, will need registration');
-            // Generate a consistent mock auth user ID for dev mode
-            authUserId = `dev-user-${phoneNumber.replace(/\D/g, '')}`;
+            // Generate a deterministic UUID for dev mode
+            authUserId = generateDevUUID(phoneNumber);
           }
         }
         
@@ -693,4 +695,27 @@ export const authService = {
  */
 function generateTemporaryPassword(): string {
   return Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+}
+
+/**
+ * Generate a deterministic UUID from phone number for dev mode
+ * Always returns the same UUID for the same phone number
+ */
+function generateDevUUID(phoneNumber: string): string {
+  // Extract digits only
+  const digits = phoneNumber.replace(/\D/g, '');
+  
+  // Pad to ensure we have enough digits
+  const paddedDigits = digits.padEnd(32, '0');
+  
+  // Format as UUID (8-4-4-4-12)
+  const uuid = [
+    paddedDigits.substring(0, 8),
+    paddedDigits.substring(8, 12),
+    paddedDigits.substring(12, 16),
+    paddedDigits.substring(16, 20),
+    paddedDigits.substring(20, 32),
+  ].join('-');
+  
+  return uuid;
 }
