@@ -351,10 +351,10 @@ export const authService = {
         }
         
         if (!authUserId) {
-          // Try to sign in with existing auth user first
-          console.log('ℹ️ Attempting to sign in with existing auth user...');
+          // DEV MODE: Skip Supabase auth entirely, just use profile IDs
+          console.log('ℹ️ DEV MODE: Skipping Supabase auth, checking profile directly...');
           
-          // First, check if user exists by trying to get profile
+          // Check if user profile exists
           const { data: existingProfileByPhone } = await supabase
             .from('profiles')
             .select('id')
@@ -362,101 +362,13 @@ export const authService = {
             .maybeSingle();
           
           if (existingProfileByPhone?.id) {
-            console.log('ℹ️ Found existing user, attempting to restore session');
-            // User exists in database, try to create a session
-            // In dev mode, we'll use Supabase's session management
-            const tempPassword = `temp_${phoneNumber}_${TEST_OTP}`;
-            
-            // Try to sign in
-            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-              phone: phoneNumber,
-              password: tempPassword,
-            });
-            
-            if (signInData?.user) {
-              console.log('✅ Signed in existing user:', signInData.user.id);
-              authUserId = signInData.user.id;
-            } else {
-              console.log('ℹ️ Sign in failed, will use profile ID directly');
-              authUserId = existingProfileByPhone.id;
-            }
+            console.log('✅ DEV MODE: Found existing profile:', existingProfileByPhone.id);
+            authUserId = existingProfileByPhone.id;
           } else {
-            // Create a new auth user with a temporary password
-            // This is safe in dev mode only
-            const tempPassword = `temp_${Date.now()}_${Math.random().toString(36)}`;
-            
-            console.log('ℹ️ Creating new auth user...');
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-              phone: phoneNumber,
-              password: tempPassword,
-            });
-            
-            if (signUpError && !signUpError.message.includes('already registered')) {
-              console.error('❌ DEV MODE: Failed to create auth user:', signUpError);
-              return {
-                success: false,
-                error: 'Failed to authenticate in dev mode',
-              };
-            }
-            
-            if (signUpError?.message.includes('already registered')) {
-              console.log('ℹ️ User already registered in auth, checking profile...');
-              // User exists in auth but we don't have their profile
-              // This shouldn't happen, but let's handle it gracefully
-              const { data: { user: existingAuthUser }, error: getUserError } = await supabase.auth.getUser();
-              
-              if (getUserError) {
-                console.error('❌ Failed to get existing auth user:', getUserError);
-              }
-              
-              if (existingAuthUser) {
-                console.log('✅ Got existing auth user:', existingAuthUser.id);
-                authUserId = existingAuthUser.id;
-              } else {
-                console.error('❌ No auth user found despite "already registered" error');
-              }
-            } else if (signUpData?.user) {
-              authUserId = signUpData.user.id;
-              console.log('✅ New auth user created:', authUserId);
-              
-              // In dev mode, we don't need a real session since we're bypassing auth
-              // In production, session would be created by OTP verification
-              if (!signUpData.session && !IS_DEV_MODE) {
-                console.log('⚠️ No session created by signUp, signing in explicitly...');
-                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                  phone: phoneNumber,
-                  password: tempPassword,
-                });
-                
-                if (signInError) {
-                  console.error('❌ Failed to sign in after signup:', signInError);
-                  return {
-                    success: false,
-                    error: 'Failed to establish authenticated session',
-                  };
-                }
-                
-                if (!signInData.session) {
-                  console.error('❌ No session created after sign in');
-                  return {
-                    success: false,
-                    error: 'Failed to establish authenticated session',
-                  };
-                }
-                
-                console.log('✅ Authenticated session established:', signInData.session.access_token.substring(0, 20) + '...');
-              } else if (IS_DEV_MODE) {
-                console.log('ℹ️ DEV MODE: Skipping session creation, will use mock session');
-              }
-            }
+            console.log('ℹ️ DEV MODE: No profile found, will need registration');
+            // Generate a consistent mock auth user ID for dev mode
+            authUserId = `dev-user-${phoneNumber.replace(/\D/g, '')}`;
           }
-        }
-        
-        if (!authUserId) {
-          return {
-            success: false,
-            error: 'Failed to create authenticated session',
-          };
         }
         
         console.log('ℹ️ Auth user ID:', authUserId);
