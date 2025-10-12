@@ -17,14 +17,26 @@
 // BEFORE: Silent failures, weak error handling
 await supabase.from('barbers').update({ verification_status: 'pending' })
 
-// AFTER: Fail-fast with user feedback
+// AFTER: Fail-fast with user feedback + dev mode support
+// Get user ID - supports both production (Supabase auth) and dev mode (Zustand store)
+let userId: string | null = null;
+try {
+  const { data: { user } } = await supabase.auth.getUser();
+  userId = user?.id || null;
+} catch (authError) {
+  console.log('⚠️ Supabase auth not available, using store user (dev mode)');
+}
+if (!userId && currentUser?.id) {
+  userId = currentUser.id; // Fall back to store user
+}
+
 const { error, data } = await supabase
   .from('barbers')
   .update({ 
     verification_status: 'pending',
     updated_at: new Date().toISOString() 
   })
-  .eq('user_id', user.id)
+  .eq('user_id', userId)
   .select(); // Verify the update succeeded
 
 if (error) {
@@ -39,6 +51,7 @@ if (error) {
 - ✅ Prevents navigation if database update fails
 - ✅ Added `updated_at` timestamp for audit trail
 - ✅ Better logging with context tags
+- ✅ **Dev Mode Support:** Works with both Supabase auth and Zustand store user
 
 ### 2. **Improved App Routing** (`index.tsx`)
 

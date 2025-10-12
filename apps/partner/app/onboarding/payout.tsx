@@ -40,6 +40,7 @@ export default function PayoutScreen() {
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
   const completeOnboardingStep = useStore((state) => state.completeOnboardingStep);
   const onboardingData = useStore((state) => state.onboardingData);
+  const currentUser = useStore((state) => state.currentUser);
 
   useEffect(() => {
     if (onboardingData?.payout?.verificationStatus) {
@@ -106,13 +107,28 @@ export default function PayoutScreen() {
       // CRITICAL: Update verification status in database to 'pending' so app knows onboarding is submitted
       // This is the source of truth for determining if user should see onboarding or pending-approval
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('No authenticated user found');
+        // Get user ID - try Supabase auth first, fall back to currentUser from store (dev mode)
+        let userId: string | null = null;
+        
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          userId = user?.id || null;
+        } catch (authError) {
+          console.log('⚠️ Supabase auth not available, using store user (dev mode)');
+        }
+        
+        // Fall back to currentUser from store (dev mode)
+        if (!userId && currentUser?.id) {
+          userId = currentUser.id;
+          console.log('✅ Using currentUser from store:', userId);
+        }
+        
+        if (!userId) {
+          throw new Error('No user ID available - please ensure user is logged in');
         }
 
         const accountType = onboardingData?.progress.accountType;
-        console.log('🔐 Submitting onboarding for user:', user.id, 'Account type:', accountType);
+        console.log('🔐 Submitting onboarding for user:', userId, 'Account type:', accountType);
         
         if (accountType === 'barbershop') {
           const { error, data } = await supabase
@@ -121,7 +137,7 @@ export default function PayoutScreen() {
               verification_status: 'pending',
               updated_at: new Date().toISOString()
             })
-            .eq('owner_id', user.id)
+            .eq('owner_id', userId)
             .select();
           
           if (error) {
@@ -137,7 +153,7 @@ export default function PayoutScreen() {
               verification_status: 'pending',
               updated_at: new Date().toISOString()
             })
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .select();
           
           if (error) {
