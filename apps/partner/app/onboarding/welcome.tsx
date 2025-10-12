@@ -9,15 +9,22 @@ export default function WelcomeScreen() {
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
 
   const handleGetStarted = () => {
+    console.log('🚀 Get Started clicked');
+    
     // Initialize onboarding
     updateOnboardingProgress({
       status: 'phone_verified',
-      currentStep: 0,
+      currentStep: 1,
       totalSteps: 8,
-      completedSteps: [],
+      completedSteps: ['account_type'],
     });
     
-    router.push('/onboarding/account-type');
+    console.log('✅ Onboarding progress updated');
+    console.log('➡️ Navigating to /onboarding/ekyc');
+    
+    // Account type already selected before onboarding
+    // Go directly to eKYC verification
+    router.push('/onboarding/ekyc');
   };
 
   return (
@@ -35,7 +42,7 @@ export default function WelcomeScreen() {
 
         {/* Hero Section */}
         <View style={styles.heroSection}>
-          <Text style={styles.title}>Welcome to Partner Onboarding! 🎉</Text>
+          <Text style={styles.title}>Welcome to Partner Onboarding!</Text>
           <Text style={styles.subtitle}>
             Let's get you set up to start earning. This process takes about 10-15 minutes.
           </Text>

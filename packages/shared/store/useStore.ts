@@ -32,6 +32,7 @@ interface AppState {
   // User
   currentUser: Customer | Barber | null;
   setCurrentUser: (user: Customer | Barber | null) => void;
+  logout: () => Promise<void>;
   
   // Onboarding
   onboardingData: CompleteOnboardingData | null;
@@ -95,6 +96,25 @@ export const useStore = create<AppState>()(persist(
     
     // Actions
     setCurrentUser: (user) => set({ currentUser: user }),
+    
+    logout: async () => {
+      // Clear all user-related state
+      set({
+        currentUser: null,
+        onboardingData: null,
+        selectedBarber: null,
+        selectedServices: [],
+        selectedAddress: null,
+        currentBooking: null,
+      });
+      
+      // Clear persisted storage
+      try {
+        await AsyncStorage.removeItem('mari-gunting-storage');
+      } catch (error) {
+        console.error('Error clearing storage:', error);
+      }
+    },
     
     // Onboarding Actions
     setOnboardingData: (data) => set({ onboardingData: data }),

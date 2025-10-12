@@ -6,8 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/services/api';
-import { formatCurrency, formatPrice, formatShortDate, formatTime } from '@/utils/format';
+import { formatCurrency, formatPrice, formatShortDate, formatTime, formatDate } from '@/utils/format';
+import { bookingService } from '@mari-gunting/shared/services/bookingService';
+import { useStore } from '@/store/useStore';
 import { BookingStatus, BookingType } from '@/types';
 import { useState, useMemo } from 'react';
 import ConfirmationModal from '@/components/ConfirmationModal';
@@ -19,6 +20,7 @@ import { useBookingCompletion } from '@/hooks/useBookingCompletion';
 
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const currentUser = useStore((state) => state.currentUser);
   const queryClient = useQueryClient();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -26,22 +28,28 @@ export default function BookingDetailScreen() {
   const [pointsEarned, setPointsEarned] = useState(0);
 
   const { data: bookingResponse, isLoading } = useQuery({
-    queryKey: ['booking', id],
-    queryFn: () => api.getBookingById(id),
+    queryKey: ['booking-details', id],
+    queryFn: () => bookingService.getBookingById(id!),
     enabled: !!id,
+    refetchInterval: 30000, // Refetch every 30 seconds for status updates
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (reason: string) => api.cancelBooking(id, reason),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['booking', id] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    mutationFn: (reason: string) => 
+      bookingService.cancelBooking(id!, currentUser?.id!, reason),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['booking-details', id] });
+      queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
       setShowCancelModal(false);
-      setShowSuccessModal(true);
+      Alert.alert(
+        'Booking Cancelled',
+        result.data?.message || 'Your booking has been cancelled.',
+        [{ text: 'OK', onPress: () => setShowSuccessModal(true) }]
+      );
     },
-    onError: () => {
+    onError: (error: any) => {
       setShowCancelModal(false);
-      Alert.alert('Error', 'Failed to cancel booking. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to cancel booking. Please try again.');
     },
   });
 

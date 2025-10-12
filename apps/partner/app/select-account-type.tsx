@@ -1,24 +1,116 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { partnerAccountService } from '@mari-gunting/shared/services/partnerAccountService';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 export default function SelectAccountTypeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const userId = params.userId as string | undefined;
+  
   const [selectedType, setSelectedType] = useState<'freelance' | 'barbershop' | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleContinue = async () => {
-    if (!selectedType) return;
+    if (!selectedType || isLoading) return;
     
-    // Save account type
-    await AsyncStorage.setItem('partnerAccountType', selectedType);
-    
-    // Navigate to onboarding flow
-    router.push('/onboarding/welcome');
+    // Show confirmation dialog
+    Alert.alert(
+      'Confirm Account Type',
+      `You've selected ${selectedType === 'freelance' ? 'Freelance Barber' : 'Barbershop Owner'}. This cannot be changed later.\n\nAre you sure you want to continue?`,
+      [
+        {
+          text: 'Go Back',
+          style: 'cancel',
+          onPress: () => console.log('Account type selection cancelled'),
+        },
+        {
+          text: 'Yes, Continue',
+          style: 'default',
+          onPress: () => proceedWithAccountSetup(),
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  const proceedWithAccountSetup = async () => {
+    setIsLoading(true);
+
+    try {
+      // Check if we have user ID (passed from registration)
+      if (!userId) {
+        console.error('❌ No user ID provided');
+        
+        // Try to get from auth as fallback
+        console.log('🔍 Trying to get user from auth session...');
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          Alert.alert(
+            'Session Error',
+            'User session not found. Please complete registration again.',
+            [
+              { text: 'OK', onPress: () => router.replace('/register') }
+            ]
+          );
+          setIsLoading(false);
+          return;
+        }
+        
+        // Use user ID from auth
+        console.log('✅ Got user from auth:', user.id);
+      }
+      
+      const currentUserId = userId || (await supabase.auth.getUser()).data.user?.id;
+      
+      if (!currentUserId) {
+        Alert.alert('Error', 'Failed to get user ID. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Setup account based on selected type
+      console.log(`🔧 Setting up ${selectedType} account for user:`, currentUserId);
+      
+      const response = await partnerAccountService.setupAccount(
+        currentUserId,
+        selectedType
+      );
+
+      if (!response.success) {
+        Alert.alert(
+          'Setup Failed',
+          response.error || 'Failed to setup account. Please try again.'
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('✅ Account setup successful:', response);
+
+      // Save account type to AsyncStorage
+      await AsyncStorage.setItem('partnerAccountType', selectedType);
+      
+      // Navigate to onboarding to complete profile setup
+      // Use replace() to prevent user from swiping back to account selection
+      // After onboarding, partner will be directed to pending approval
+      router.replace('/onboarding/welcome');
+    } catch (error: any) {
+      console.error('❌ Account setup error:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'An unexpected error occurred. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -141,28 +233,37 @@ export default function SelectAccountTypeScreen() {
         <TouchableOpacity
           style={[
             styles.continueButton,
-            !selectedType && styles.continueButtonDisabled
+            (!selectedType || isLoading) && styles.continueButtonDisabled
           ]}
           onPress={handleContinue}
-          disabled={!selectedType}
+          disabled={!selectedType || isLoading}
           activeOpacity={0.8}
         >
-          <Text style={[
-            styles.continueButtonText,
-            !selectedType && styles.continueButtonTextDisabled
-          ]}>
-            Continue
-          </Text>
-          <Ionicons 
-            name="arrow-forward" 
-            size={20} 
-            color={!selectedType ? COLORS.text.tertiary : COLORS.text.inverse} 
-          />
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={[
+                styles.continueButtonText,
+                !selectedType && styles.continueButtonTextDisabled
+              ]}>
+                Continue
+              </Text>
+              <Ionicons 
+                name="arrow-forward" 
+                size={20} 
+                color={!selectedType ? COLORS.text.tertiary : COLORS.text.inverse} 
+              />
+            </>
+          )}
         </TouchableOpacity>
         
-        <Text style={styles.footerNote}>
-          You can't change this later, so choose carefully
-        </Text>
+        <View style={styles.warningBox}>
+          <Ionicons name="alert-circle" size={20} color={COLORS.warning} />
+          <Text style={styles.footerNote}>
+            <Text style={styles.footerNoteBold}>Important:</Text> You cannot change your account type after confirming
+          </Text>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -275,9 +376,25 @@ const styles = StyleSheet.create({
   continueButtonTextDisabled: {
     color: COLORS.text.tertiary,
   },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.warningLight || '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.warning || '#F59E0B',
+  },
   footerNote: {
     ...TYPOGRAPHY.body.small,
-    color: COLORS.text.tertiary,
-    textAlign: 'center',
+    color: COLORS.text.secondary,
+    flex: 1,
+    lineHeight: 18,
+  },
+  footerNoteBold: {
+    fontWeight: '700',
+    color: COLORS.text.primary,
   },
 });

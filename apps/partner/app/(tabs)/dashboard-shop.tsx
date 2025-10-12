@@ -5,6 +5,7 @@ import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStore } from '@/store/useStore';
+import VerificationProgressWidget from '@/components/VerificationProgressWidget';
 
 export default function DashboardShopScreen() {
   const router = useRouter();
@@ -93,6 +94,9 @@ export default function DashboardShopScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Verification Progress Widget */}
+        <VerificationProgressWidget />
 
         {/* Shop Info Card */}
         <View style={styles.card}>

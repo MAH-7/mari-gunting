@@ -19,7 +19,7 @@ export default function BarbersScreen() {
   const { data: barbersResponse, isLoading } = useQuery({
     queryKey: ['barbers', radius],
     queryFn: () => api.getBarbers({
-      radius: radius * 1000,
+      isOnline: true,
     }),
   });
 

@@ -17,10 +17,23 @@ import { api } from '@/services/api';
 import { useStore } from "@/store/useStore";
 import { formatCurrency, formatDistance } from "@/utils/format";
 import { Barber } from "@/types";
+import { useLocationPermission } from '@/hooks/useLocationPermission';
+import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BANNER_PADDING = 20;
 const BANNER_WIDTH = SCREEN_WIDTH - (BANNER_PADDING * 2);
+
+// Helper to safely get avatar URL
+const getAvatarUrl = (url: string | null | undefined, fallback: string) => {
+  if (url && typeof url === 'string') {
+    const trimmed = url.trim();
+    if (trimmed !== '' && !trimmed.includes('placeholder')) {
+      return trimmed;
+    }
+  }
+  return fallback;
+};
 
 export default function HomeScreen() {
   const currentUser = useStore((state) => state.currentUser);
@@ -30,6 +43,15 @@ export default function HomeScreen() {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const bannerRef = useRef<FlatList>(null);
+
+  // Location permission state
+  const {
+    status: locationStatus,
+    requestPermission,
+    shouldShowPermissionPrompt,
+  } = useLocationPermission();
+
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   const { data: barbersResponse, isLoading } = useQuery({
     queryKey: ["barbers", selectedFilter],
@@ -95,6 +117,46 @@ export default function HomeScreen() {
     setIsPaused(false);
   };
 
+  // Show location permission modal after 2 seconds
+  useEffect(() => {
+    const checkAndShowLocationPrompt = async () => {
+      const shouldShow = await shouldShowPermissionPrompt();
+      if (shouldShow) {
+        // Delay to avoid showing immediately
+        setTimeout(() => {
+          setShowLocationModal(true);
+        }, 2000); // Show after 2 seconds
+      }
+    };
+
+    checkAndShowLocationPrompt();
+  }, [shouldShowPermissionPrompt]);
+
+  // Handle location permission request
+  const handleRequestLocationPermission = async () => {
+    setShowLocationModal(false);
+    const granted = await requestPermission();
+    
+    if (granted) {
+      console.log('✅ Location enabled - can now show nearby barbers');
+      // TODO: Optionally refresh barbers list with location
+    }
+  };
+
+  // Handle manual location entry
+  const handleManualLocation = () => {
+    setShowLocationModal(false);
+    // Navigate to addresses screen for manual location entry
+    router.push('/profile/addresses');
+    console.log('📍 User navigating to addresses for manual location entry');
+  };
+
+  // Handle dismiss modal
+  const handleDismissLocationModal = () => {
+    setShowLocationModal(false);
+    console.log('⏭️ User dismissed location prompt');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.screen}>
@@ -104,12 +166,14 @@ export default function HomeScreen() {
           <View style={styles.topBar}>
             <TouchableOpacity style={styles.profileRow} activeOpacity={0.9}>
               <Image 
-                source={{ uri: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }} 
+                source={{ uri: getAvatarUrl(currentUser?.avatar || currentUser?.avatar_url, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200') }} 
                 style={styles.profilePhoto} 
               />
-              <View>
+              <View style={styles.nameContainer}>
                 <Text style={styles.greeting}>Good day,</Text>
-                <Text style={styles.profileName}>{currentUser?.name || 'Guest'}</Text>
+                <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
+                  {currentUser?.name?.split(' ')[0] || 'Guest'}
+                </Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.pointsPill} activeOpacity={0.9}>
@@ -191,6 +255,14 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal
+        visible={showLocationModal}
+        onRequestPermission={handleRequestLocationPermission}
+        onManualLocation={handleManualLocation}
+        onDismiss={handleDismissLocationModal}
+      />
     </SafeAreaView>
   );
 }
@@ -204,7 +276,7 @@ function BarberCard({ barber }: { barber: Barber }) {
     >
       {/* Image with Badge Overlay */}
       <View style={styles.imageContainer}>
-        <Image source={{ uri: barber.avatar }} style={styles.barberImage} />
+        <Image source={{ uri: getAvatarUrl(barber.avatar, 'https://via.placeholder.com/150') }} style={styles.barberImage} />
         {barber.isOnline && (
           <View style={styles.liveBadge}>
             <View style={styles.livePulse} />
@@ -287,6 +359,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 12, // Space for points badge
   },
   profilePhoto: {
     width: 48,
@@ -296,6 +369,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
+  },
+  nameContainer: {
+    flex: 1,
+    justifyContent: 'center',
   },
   greeting: {
     color: 'rgba(255,255,255,0.85)',

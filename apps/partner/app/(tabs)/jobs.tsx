@@ -546,7 +546,10 @@ export default function PartnerJobsScreen() {
         {/* Analytics Section - Show when viewing completed jobs */}
         {filterStatus === 'completed' && completedJobsAnalytics.totalJobs > 0 && (
           <View style={styles.analyticsSection}>
-            <Text style={styles.analyticsSectionTitle}>📊 Performance Overview</Text>
+            <View style={styles.analyticsTitleRow}>
+              <Ionicons name="bar-chart" size={20} color={COLORS.text.primary} />
+              <Text style={styles.analyticsSectionTitle}>Performance Overview</Text>
+            </View>
             
             {/* Stats Cards */}
             <View style={styles.analyticsGrid}>
@@ -1163,7 +1166,7 @@ export default function PartnerJobsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F5F5F5',
   },
   loadingContainer: {
     flex: 1,
@@ -1179,29 +1182,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#FFF',
   },
   headerTitle: {
-    ...TYPOGRAPHY.heading.h2,
-    color: COLORS.text.primary,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000',
   },
   filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.background.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F5F5F5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#FFF',
     marginHorizontal: 20,
+    marginTop: 16,
     marginBottom: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
     height: 48,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchIcon: {
     marginRight: 12,
@@ -1225,11 +1237,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#FFF',
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   filterTabActive: {
     backgroundColor: COLORS.primary,
+    shadowOpacity: 0.15,
   },
   filterTabText: {
     ...TYPOGRAPHY.body.regular,
@@ -1263,15 +1281,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   jobCard: {
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
   },
   jobCardHeader: {
     flexDirection: 'row',
@@ -1291,9 +1309,9 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   jobCustomerName: {
-    ...TYPOGRAPHY.body.large,
-    fontWeight: '600',
-    color: COLORS.text.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
     marginBottom: 4,
   },
   jobDate: {
@@ -1301,14 +1319,15 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
   jobStatusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   jobStatusText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'capitalize',
+    letterSpacing: 0.3,
   },
   jobCardBody: {
     marginBottom: 12,
@@ -1333,8 +1352,8 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.background.tertiary,
   },
   jobPrice: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: COLORS.primary,
   },
   emptyState: {
@@ -1888,10 +1907,15 @@ const styles = StyleSheet.create({
   analyticsSection: {
     marginBottom: 20,
   },
+  analyticsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
   analyticsSectionTitle: {
     ...TYPOGRAPHY.heading.h3,
     color: COLORS.text.primary,
-    marginBottom: 16,
     fontWeight: '700',
   },
   analyticsGrid: {

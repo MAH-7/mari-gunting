@@ -1,28 +1,224 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity,
+  Switch,
+  Alert, 
+  Dimensions 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, TYPOGRAPHY } from '@/shared/constants';
-import { mockBarbers, mockServices } from '@/shared/services/mockData';
+import { COLORS } from '@/shared/constants';
+import { mockBarbers } from '@/shared/services/mockData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStore } from '@/store/useStore';
+
+const { width } = Dimensions.get('window');
 
 export default function PartnerProfileScreen() {
   const router = useRouter();
   const setCurrentUser = useStore((state) => state.setCurrentUser);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-
-  // Using first barber as profile data
   const profile = mockBarbers[0];
-  const services = mockServices.slice(0, 4);
+  
+  const [isOnline, setIsOnline] = useState(profile.isOnline);
 
-  const stats = [
-    { label: 'Jobs', value: profile.completedJobs },
-    { label: 'Rating', value: profile.rating.toFixed(1) },
-    { label: 'Reviews', value: profile.totalReviews },
+  // This week's stats
+  const weekStats = {
+    earnings: 'RM 1,240',
+    jobs: 12,
+    rating: 4.9,
+  };
+
+  // Menu sections
+  const menuSections = [
+    {
+      title: 'ACCOUNT',
+      items: [
+        { 
+          icon: 'person-outline', 
+          label: 'Personal Information', 
+          screen: '/profile/edit',
+          iconBg: '#E3F2FD',
+          iconColor: '#2196F3',
+        },
+        { 
+          icon: 'card-outline', 
+          label: 'Bank & Payout Settings', 
+          action: 'bank',
+          iconBg: '#E8F5E9',
+          iconColor: '#4CAF50',
+        },
+        { 
+          icon: 'shield-checkmark-outline', 
+          label: 'Verification & Documents', 
+          action: 'verification',
+          badge: profile.isVerified ? 'Verified' : 'Pending',
+          badgeColor: profile.isVerified ? '#4CAF50' : '#FF9800',
+          iconBg: '#FFF3E0',
+          iconColor: '#FF9800',
+        },
+        { 
+          icon: 'receipt-outline', 
+          label: 'Tax Information', 
+          action: 'tax',
+          iconBg: '#F3E5F5',
+          iconColor: '#9C27B0',
+        },
+      ],
+    },
+    {
+      title: 'MY BUSINESS',
+      items: [
+        { 
+          icon: 'cut-outline', 
+          label: 'Manage Services & Pricing', 
+          screen: '/services',
+          iconBg: '#E8F5E9',
+          iconColor: '#00B87C',
+        },
+        { 
+          icon: 'calendar-outline', 
+          label: 'Availability & Schedule', 
+          screen: '/schedule',
+          iconBg: '#FFF3E0',
+          iconColor: '#FF9800',
+        },
+        { 
+          icon: 'images-outline', 
+          label: 'Portfolio Management', 
+          screen: '/portfolio',
+          badge: `${profile.photos.length}`,
+          iconBg: '#F3E5F5',
+          iconColor: '#9C27B0',
+        },
+        { 
+          icon: 'star-outline', 
+          label: 'Ratings & Reviews', 
+          action: 'reviews',
+          badge: profile.rating.toFixed(1),
+          iconBg: '#FFF8E1',
+          iconColor: '#FFC107',
+        },
+        { 
+          icon: 'analytics-outline', 
+          label: 'Performance Insights', 
+          action: 'insights',
+          iconBg: '#E3F2FD',
+          iconColor: '#2196F3',
+        },
+      ],
+    },
+    {
+      title: 'SETTINGS',
+      items: [
+        { 
+          icon: 'notifications-outline', 
+          label: 'Notifications', 
+          action: 'notifications',
+          iconBg: '#E3F2FD',
+          iconColor: '#2196F3',
+        },
+        { 
+          icon: 'globe-outline', 
+          label: 'Language & Region', 
+          action: 'language',
+          value: 'English',
+          iconBg: '#E8F5E9',
+          iconColor: '#4CAF50',
+        },
+        { 
+          icon: 'settings-outline', 
+          label: 'App Preferences', 
+          action: 'preferences',
+          iconBg: '#F5F5F5',
+          iconColor: '#757575',
+        },
+      ],
+    },
+    {
+      title: 'HELP & SUPPORT',
+      items: [
+        { 
+          icon: 'help-circle-outline', 
+          label: 'Help Center', 
+          action: 'help',
+          iconBg: '#E8F5E9',
+          iconColor: '#4CAF50',
+        },
+        { 
+          icon: 'chatbubble-ellipses-outline', 
+          label: 'Contact Support', 
+          action: 'contact',
+          iconBg: '#E3F2FD',
+          iconColor: '#2196F3',
+        },
+        { 
+          icon: 'document-text-outline', 
+          label: 'FAQs', 
+          action: 'faqs',
+          iconBg: '#FFF3E0',
+          iconColor: '#FF9800',
+        },
+        { 
+          icon: 'bug-outline', 
+          label: 'Report a Problem', 
+          action: 'report',
+          iconBg: '#FFEBEE',
+          iconColor: '#F44336',
+        },
+      ],
+    },
+    {
+      title: 'LEGAL',
+      items: [
+        { 
+          icon: 'document-outline', 
+          label: 'Terms of Service', 
+          action: 'terms',
+          iconBg: '#F5F5F5',
+          iconColor: '#757575',
+        },
+        { 
+          icon: 'lock-closed-outline', 
+          label: 'Privacy Policy', 
+          action: 'privacy',
+          iconBg: '#F5F5F5',
+          iconColor: '#757575',
+        },
+        { 
+          icon: 'information-circle-outline', 
+          label: 'About Mari-Gunting', 
+          action: 'about',
+          iconBg: '#F5F5F5',
+          iconColor: '#757575',
+        },
+      ],
+    },
   ];
+
+  const handleMenuPress = (item: any) => {
+    if (item.screen) {
+      router.push(item.screen);
+    } else if (item.action) {
+      Alert.alert(item.label, `${item.label} feature`);
+    }
+  };
+
+  const handleToggleOnline = (value: boolean) => {
+    setIsOnline(value);
+    Alert.alert(
+      value ? 'Going Online' : 'Going Offline',
+      value ? 'You will now receive booking requests' : 'You will not receive booking requests'
+    );
+  };
+
+  const handleViewPublicProfile = () => {
+    Alert.alert('Public Profile', 'This shows how customers see your profile');
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -35,20 +231,12 @@ export default function PartnerProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Clear user from store
               setCurrentUser(null);
-              
-              // Clear AsyncStorage
-              await AsyncStorage.multiRemove([
-                'partnerAccountType',
-                'mari-gunting-storage',
-              ]);
-              
-              // Redirect to login
+              await AsyncStorage.multiRemove(['partnerAccountType', 'mari-gunting-storage']);
               router.replace('/login');
             } catch (error) {
               console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
+              Alert.alert('Error', 'Failed to logout');
             }
           },
         },
@@ -58,198 +246,140 @@ export default function PartnerProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatarLarge}>
-            <Text style={styles.avatarText}>{profile.name.charAt(0)}</Text>
-          </View>
-          <Text style={styles.profileName}>{profile.name}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color={COLORS.warning} />
-            <Text style={styles.ratingText}>
-              {profile.rating.toFixed(1)} ({profile.totalReviews} reviews)
-            </Text>
-          </View>
-          {profile.isVerified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
-              <Text style={styles.verifiedText}>Verified</Text>
+          <View style={styles.profileTopRow}>
+            <View style={styles.avatarSection}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{profile.name.charAt(0)}</Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <View style={styles.nameRow}>
+                  <Text style={styles.profileName}>{profile.name}</Text>
+                  {profile.isVerified && (
+                    <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+                  )}
+                </View>
+                <View style={styles.ratingRow}>
+                  <Ionicons name="star" size={14} color="#FFC107" />
+                  <Text style={styles.ratingText}>{profile.rating.toFixed(1)}</Text>
+                  <Text style={styles.ratingCount}>({profile.totalReviews})</Text>
+                </View>
+              </View>
             </View>
-          )}
-          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/edit')}>
-            <Ionicons name="create-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={styles.primaryButton}
+              onPress={() => router.push('/profile/edit')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={18} color="#FFF" />
+              <Text style={styles.primaryButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.secondaryButton}
+              onPress={handleViewPublicProfile}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="eye-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.secondaryButtonText}>View Public</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Online Toggle */}
+          <View style={styles.onlineToggleRow}>
+            <View style={styles.onlineToggleLeft}>
+              <View style={[styles.onlineDot, isOnline && styles.onlineDotActive]} />
+              <Text style={styles.onlineLabel}>{isOnline ? 'Online' : 'Offline'}</Text>
+            </View>
+            <Switch
+              value={isOnline}
+              onValueChange={handleToggleOnline}
+              trackColor={{ false: '#E0E0E0', true: COLORS.primaryLight }}
+              thumbColor={isOnline ? COLORS.primary : '#F5F5F5'}
+              ios_backgroundColor="#E0E0E0"
+            />
+          </View>
         </View>
 
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          {stats.map((stat, index) => (
-            <View key={index} style={styles.statCard}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+        {/* This Week Stats */}
+        <View style={styles.statsCard}>
+          <View style={styles.statsCardHeader}>
+            <Text style={styles.statsCardTitle}>This Week</Text>
+            <Ionicons name="calendar-outline" size={16} color={COLORS.text.secondary} />
+          </View>
+          <View style={styles.statsGrid}>
+            <View style={styles.statBox}>
+              <Text style={styles.statBoxValue}>{weekStats.earnings}</Text>
+              <Text style={styles.statBoxLabel}>Earnings</Text>
+            </View>
+            <View style={styles.statBoxDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statBoxValue}>{weekStats.jobs}</Text>
+              <Text style={styles.statBoxLabel}>Jobs</Text>
+            </View>
+            <View style={styles.statBoxDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statBoxValue}>{weekStats.rating.toFixed(1)}</Text>
+              <Text style={styles.statBoxLabel}>Rating</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Menu Sections */}
+        <View style={styles.menuContainer}>
+          {menuSections.map((section, sectionIndex) => (
+            <View key={sectionIndex} style={styles.menuSection}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <View style={styles.menuCard}>
+                {section.items.map((item, itemIndex) => (
+                  <View key={itemIndex}>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => handleMenuPress(item)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.menuIcon, { backgroundColor: item.iconBg }]}>
+                        <Ionicons name={item.icon as any} size={20} color={item.iconColor} />
+                      </View>
+                      <Text style={styles.menuLabel}>{item.label}</Text>
+                      <View style={styles.menuRight}>
+                        {item.badge && (
+                          <View style={[styles.badge, item.badgeColor && { backgroundColor: `${item.badgeColor}15` }]}>
+                            <Text style={[styles.badgeText, item.badgeColor && { color: item.badgeColor }]}>
+                              {item.badge}
+                            </Text>
+                          </View>
+                        )}
+                        {item.value && (
+                          <Text style={styles.menuValue}>{item.value}</Text>
+                        )}
+                        <Ionicons name="chevron-forward" size={18} color="#CCC" />
+                      </View>
+                    </TouchableOpacity>
+                    {itemIndex < section.items.length - 1 && <View style={styles.menuDivider} />}
+                  </View>
+                ))}
+              </View>
             </View>
           ))}
         </View>
-
-        {/* About Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <View style={styles.card}>
-            <Text style={styles.bioText}>{profile.bio}</Text>
-          </View>
-        </View>
-
-        {/* Specializations */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Specializations</Text>
-          <View style={styles.card}>
-            <View style={styles.tagsContainer}>
-              {profile.specializations.map((spec, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{spec}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Portfolio */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Portfolio ({profile.photos.length})</Text>
-            <TouchableOpacity onPress={() => router.push('/portfolio')}>
-              <Text style={styles.manageLink}>Manage</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.portfolioScroll}>
-            {profile.photos.map((photo, index) => (
-              <View key={index} style={styles.portfolioItem}>
-                <View style={styles.portfolioPlaceholder}>
-                  <Ionicons name="image-outline" size={32} color={COLORS.text.secondary} />
-                </View>
-              </View>
-            ))}
-            <TouchableOpacity style={[styles.portfolioItem, styles.addPhotoButton]}>
-              <Ionicons name="add" size={32} color={COLORS.primary} />
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
-        {/* Services Offered */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Services ({services.length})</Text>
-            <TouchableOpacity onPress={() => router.push('/services')}>
-              <Text style={styles.manageLink}>Manage</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.card}>
-            {services.map((service, index) => (
-              <View key={service.id}>
-                <View style={styles.serviceItem}>
-                  <View style={styles.serviceInfo}>
-                    <Text style={styles.serviceName}>{service.name}</Text>
-                    <Text style={styles.serviceDuration}>{service.duration} min</Text>
-                  </View>
-                  <Text style={styles.servicePrice}>RM {service.price}</Text>
-                </View>
-                {index < services.length - 1 && <View style={styles.divider} />}
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Business Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Information</Text>
-          <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <Ionicons name="call-outline" size={20} color={COLORS.text.secondary} />
-              <Text style={styles.infoText}>{profile.phone}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="mail-outline" size={20} color={COLORS.text.secondary} />
-              <Text style={styles.infoText}>{profile.email}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={20} color={COLORS.text.secondary} />
-              <Text style={styles.infoText}>{profile.location.address}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="calendar-outline" size={20} color={COLORS.text.secondary} />
-              <Text style={styles.infoText}>Joined {new Date(profile.joinedDate).toLocaleDateString('en-MY', { month: 'long', year: 'numeric' })}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.card}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="notifications-outline" size={20} color={COLORS.text.secondary} />
-                <Text style={styles.settingText}>Notifications</Text>
-              </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: COLORS.border.medium, true: COLORS.primary }}
-                thumbColor={COLORS.background.primary}
-              />
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="moon-outline" size={20} color={COLORS.text.secondary} />
-                <Text style={styles.settingText}>Dark Mode</Text>
-              </View>
-              <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: COLORS.border.medium, true: COLORS.primary }}
-                thumbColor={COLORS.background.primary}
-              />
-            </View>
-            <View style={styles.divider} />
-            <TouchableOpacity style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="globe-outline" size={20} color={COLORS.text.secondary} />
-                <Text style={styles.settingText}>Language</Text>
-              </View>
-              <View style={styles.settingRight}>
-                <Text style={styles.settingValue}>English</Text>
-                <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
-              </View>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="document-text-outline" size={20} color={COLORS.text.secondary} />
-                <Text style={styles.settingText}>Terms & Privacy</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="help-circle-outline" size={20} color={COLORS.text.secondary} />
-                <Text style={styles.settingText}>Help & Support</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.text.secondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
           <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
-        <View style={styles.bottomSpacer} />
+        {/* Version */}
+        <Text style={styles.versionText}>Mari-Gunting Partner v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -258,241 +388,281 @@ export default function PartnerProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F2F4F7',
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  // Profile Header
   profileHeader: {
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: COLORS.background.primary,
-  },
-  avatarLarge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  avatarText: {
-    ...TYPOGRAPHY.heading.h1,
-    color: COLORS.text.inverse,
-    fontSize: 40,
-  },
-  profileName: {
-    ...TYPOGRAPHY.heading.h2,
-    color: COLORS.text.primary,
-    marginBottom: 4,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8,
-  },
-  ratingText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.secondary,
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
     marginBottom: 16,
   },
-  verifiedText: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.success,
-    fontWeight: '600',
+  profileTopRow: {
+    marginBottom: 16,
   },
-  editButton: {
+  avatarSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    marginBottom: 4,
   },
-  editButtonText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.primary,
-    fontWeight: '600',
+  profileName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
-  statsContainer: {
+  ratingRow: {
     flexDirection: 'row',
-    padding: 20,
-    gap: 12,
+    alignItems: 'center',
+    gap: 4,
   },
-  statCard: {
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  ratingCount: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#999',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  primaryButton: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
     borderRadius: 12,
+  },
+  primaryButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  secondaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primaryLight,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  secondaryButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  onlineToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+  },
+  onlineToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  onlineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#CCC',
+  },
+  onlineDotActive: {
+    backgroundColor: COLORS.success,
+  },
+  onlineLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  // Stats Card
+  statsCard: {
+    backgroundColor: '#FFF',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
     padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statsCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  statsCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  statsGrid: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  statValue: {
-    ...TYPOGRAPHY.heading.h2,
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statBoxValue: {
+    fontSize: 20,
+    fontWeight: '800',
     color: COLORS.primary,
     marginBottom: 4,
   },
-  statLabel: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.secondary,
+  statBoxLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#999',
   },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  statBoxDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#F0F0F0',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+  // Menu Container
+  menuContainer: {
+    paddingHorizontal: 16,
+  },
+  menuSection: {
+    marginBottom: 24,
   },
   sectionTitle: {
-    ...TYPOGRAPHY.heading.h3,
-    color: COLORS.text.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8E8E93',
+    letterSpacing: 0.5,
     marginBottom: 12,
+    marginLeft: 4,
   },
-  manageLink: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  card: {
-    backgroundColor: COLORS.background.primary,
-    borderRadius: 12,
-    padding: 16,
-  },
-  bioText: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.text.secondary,
-    lineHeight: 24,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tag: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  menuCard: {
+    backgroundColor: '#FFF',
     borderRadius: 16,
-  },
-  tagText: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  portfolioScroll: {
-    marginLeft: -20,
-    paddingLeft: 20,
-  },
-  portfolioItem: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    marginRight: 12,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  portfolioPlaceholder: {
-    flex: 1,
-    backgroundColor: COLORS.background.tertiary,
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  menuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
-  addPhotoButton: {
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  serviceItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  serviceInfo: {
+  menuLabel: {
     flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
-  serviceName: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.text.primary,
-    marginBottom: 4,
-  },
-  serviceDuration: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.secondary,
-  },
-  servicePrice: {
-    ...TYPOGRAPHY.heading.h3,
-    color: COLORS.primary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border.light,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-  },
-  infoText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.secondary,
-    flex: 1,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  settingText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.primary,
-  },
-  settingRight: {
+  menuRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  settingValue: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.secondary,
+  menuValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#999',
   },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: COLORS.primaryLight,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  menuDivider: {
+    height: 0.5,
+    backgroundColor: '#F0F0F0',
+    marginLeft: 68,
+  },
+  // Logout
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginHorizontal: 20,
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
     paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: COLORS.background.primary,
+    borderRadius: 16,
+    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: COLORS.error,
+    borderColor: '#FFE5E5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   logoutText: {
-    ...TYPOGRAPHY.body.regular,
+    fontSize: 16,
+    fontWeight: '700',
     color: COLORS.error,
-    fontWeight: '600',
   },
-  bottomSpacer: {
-    height: 40,
+  versionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 24,
+    marginBottom: 16,
   },
 });

@@ -1,29 +1,158 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, RefreshControl, Alert, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Dimensions, Animated, Easing, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import * as Haptics from 'expo-haptics';
 import { useStore } from '@/store/useStore';
 import { mockBookings } from '@/services/mockData';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
+import { verificationService, VerificationInfo } from '@mari-gunting/shared/services/verificationService';
+import { supabase } from '@mari-gunting/shared/config/supabase';
+import VerificationProgressWidget from '@/components/VerificationProgressWidget';
+
+// Responsive helper
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = width - 40;
+
+// Format currency helper
+const formatCurrency = (amount: number): string => {
+  return amount.toFixed(2);
+};
+
+// Verification Banner Component
+const VerificationBanner = ({ verificationInfo }: { verificationInfo: VerificationInfo }) => {
+  const getBannerConfig = () => {
+    switch (verificationInfo.status) {
+      case 'pending':
+        return {
+          bgColor: '#FFF3CD',
+          borderColor: '#FFB800',
+          icon: 'time-outline' as const,
+          iconColor: '#FFB800',
+          title: 'Verification Pending',
+          subtitle: verificationInfo.message,
+        };
+      case 'rejected':
+        return {
+          bgColor: '#FFE8E8',
+          borderColor: '#FF3B30',
+          icon: 'close-circle-outline' as const,
+          iconColor: '#FF3B30',
+          title: 'Verification Failed',
+          subtitle: verificationInfo.message,
+        };
+      case 'unverified':
+      default:
+        return {
+          bgColor: '#E8F4FF',
+          borderColor: '#3B82F6',
+          icon: 'alert-circle-outline' as const,
+          iconColor: '#3B82F6',
+          title: 'Complete Your Profile',
+          subtitle: verificationInfo.message,
+        };
+    }
+  };
+
+  const config = getBannerConfig();
+
+  return (
+    <View style={styles.verificationBannerContainer}>
+      <View style={[styles.verificationBanner, { backgroundColor: config.bgColor, borderColor: config.borderColor }]}>
+        <View style={[styles.verificationIcon, { backgroundColor: config.iconColor + '20' }]}>
+          <Ionicons name={config.icon} size={24} color={config.iconColor} />
+        </View>
+        <View style={styles.verificationContent}>
+          <Text style={styles.verificationTitle}>{config.title}</Text>
+          <Text style={styles.verificationSubtitle}>{config.subtitle}</Text>
+          {!verificationInfo.canAcceptBookings && (
+            <Text style={styles.verificationWarning}>⚠️ You cannot accept bookings yet</Text>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Animated Toast
+const Toast = ({ message, type = 'success', visible, onHide }: { message: string; type?: 'success' | 'error'; visible: boolean; onHide: () => void }) => {
+  const translateY = useRef(new Animated.Value(-100)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.sequence([
+        Animated.spring(translateY, { toValue: 0, friction: 8, useNativeDriver: true }),
+        Animated.delay(2000),
+        Animated.timing(translateY, { toValue: -100, duration: 200, useNativeDriver: true }),
+      ]).start(() => onHide());
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View style={[styles.toast, { backgroundColor: type === 'success' ? COLORS.primary : COLORS.error, transform: [{ translateY }] }]}>
+      <Ionicons name={type === 'success' ? 'checkmark-circle' : 'close-circle'} size={22} color="#FFF" />
+      <Text style={styles.toastText}>{message}</Text>
+    </Animated.View>
+  );
+};
 
 export default function PartnerDashboardScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const [isOnline, setIsOnline] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dailyGoal] = useState(200);
-  const [streak] = useState(5);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({ message: '', type: 'success', visible: false });
+  const [acceptingJob, setAcceptingJob] = useState<string | null>(null);
+  const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
+  const [loadingVerification, setLoadingVerification] = useState(true);
+
+  // Animation
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+    ]).start();
+
+    // Load verification status
+    loadVerificationStatus();
+  }, []);
+
+  const loadVerificationStatus = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      setLoadingVerification(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const info = await verificationService.getVerificationStatus(user.id);
+      setVerificationInfo(info);
+    } catch (error) {
+      console.error('Failed to load verification status:', error);
+    } finally {
+      setLoadingVerification(false);
+    }
+  };
 
   const stats = useMemo(() => {
     if (!currentUser)
       return {
         todayEarnings: 0,
-        activeJobs: 0,
+        weekEarnings: 0,
         completedToday: 0,
         pendingCount: 0,
+        activeCount: 0,
         goalProgress: 0,
         avgRating: 0,
+        acceptance: 95,
       };
 
     const today = new Date().toISOString().split('T')[0];
@@ -32,17 +161,20 @@ export default function PartnerDashboardScreen() {
     const todayBookings = partnerBookings.filter((b) => b.scheduledDate === today);
     const completed = todayBookings.filter((b) => b.status === 'completed');
     const todayEarnings = completed.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    const weekEarnings = todayEarnings * 3.5; // Mock week earnings
 
-    const activeJobs = partnerBookings.filter((b) => ['pending', 'accepted', 'on-the-way', 'in-progress'].includes(b.status)).length;
+    const activeCount = partnerBookings.filter((b) => ['accepted', 'on-the-way', 'in-progress'].includes(b.status)).length;
     const pendingCount = partnerBookings.filter((b) => b.status === 'pending').length;
 
     return {
       todayEarnings,
-      activeJobs,
+      weekEarnings,
       completedToday: completed.length,
       pendingCount,
+      activeCount,
       goalProgress: Math.min((todayEarnings / dailyGoal) * 100, 100),
       avgRating: currentUser.rating || 4.8,
+      acceptance: 95,
     };
   }, [currentUser, dailyGoal]);
 
@@ -67,19 +199,46 @@ export default function PartnerDashboardScreen() {
       .slice(0, 2);
   }, [currentUser]);
 
+  // Memoize completed today list
+  const completedToday = useMemo(() => {
+    if (!currentUser) return [];
+    return mockBookings
+      .filter((b) => b.barberId === currentUser.id && b.status === 'completed')
+      .slice(0, 3);
+  }, [currentUser]);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await Promise.all([
+      loadVerificationStatus(),
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
     setRefreshing(false);
   };
 
-  const handleAcceptJob = (jobId: string) => {
-    Alert.alert('Success', 'Job accepted!');
-  };
+  const handleAcceptJob = useCallback(async (jobId: string) => {
+    setAcceptingJob(jobId);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setTimeout(() => {
+      setAcceptingJob(null);
+      setToast({ message: 'Booking accepted!', type: 'success', visible: true });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }, 600);
+  }, []);
 
-  const handleRejectJob = (jobId: string) => {
-    Alert.alert('Job Rejected', 'The booking has been rejected.');
-  };
+  const handleRejectJob = useCallback(async (jobId: string) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setToast({ message: 'Booking declined', type: 'error', visible: true });
+  }, []);
+
+  const toggleOnlineStatus = useCallback(async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setIsOnline((prev) => {
+      const newStatus = !prev;
+      setToast({ message: newStatus ? "You're online" : "You're offline", type: newStatus ? 'success' : 'error', visible: true });
+      return newStatus;
+    });
+  }, []);
 
   if (!currentUser) {
     return (
@@ -92,191 +251,282 @@ export default function PartnerDashboardScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.greeting}>Hello, {currentUser.name?.split(' ')[0]}</Text>
-            <View style={styles.statusRow}>
-              <View style={[styles.statusDot, { backgroundColor: isOnline ? COLORS.success : COLORS.error }]} />
-              <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>
-              <Switch
-                value={isOnline}
-                onValueChange={setIsOnline}
-                trackColor={{ false: COLORS.border?.light || '#D1D5DB', true: COLORS.primary + '30' }}
-                thumbColor={isOnline ? COLORS.primary : COLORS.text.tertiary}
-                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-              />
-            </View>
-          </View>
-          <TouchableOpacity style={styles.notifButton} onPress={() => router.push('/(tabs)/jobs')}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.text.primary} />
-            {stats.pendingCount > 0 && (
-              <View style={styles.notifBadge}>
-                <Text style={styles.notifBadgeText}>{stats.pendingCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Hero - Earnings */}
-        <View style={styles.heroSection}>
-          <TouchableOpacity activeOpacity={0.95} onPress={() => router.push('/(tabs)/earnings')}>
-            <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || COLORS.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
-              <View style={styles.heroTopRow}>
-                <View>
-                  <Text style={styles.heroLabel}>TODAY'S EARNINGS</Text>
-                  <Text style={styles.heroValue}>RM {stats.todayEarnings}</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={() => setToast({ ...toast, visible: false })} />
+      
+      {/* Green Header */}
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.header}>
+        <SafeAreaView edges={['top']}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTop}>
+              <View>
+                <Text style={styles.greeting}>Hi, {currentUser.name?.split(' ')[0] || 'Partner'}!</Text>
+                <View style={styles.statusBadge}>
+                  <View style={[styles.statusDot, { backgroundColor: isOnline ? '#FFF' : '#FFD700' }]} />
+                  <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>
                 </View>
-                {streak > 0 && (
-                  <View style={styles.streakBadge}>
-                    <Text style={styles.streakEmoji}>🔥</Text>
-                    <Text style={styles.streakText}>{streak}d</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.notifIcon}
+                onPress={() => router.push('/(tabs)/jobs')}
+                accessibilityLabel="Notifications"
+              >
+                <Ionicons name="notifications" size={24} color="#FFF" />
+                {stats.pendingCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{stats.pendingCount}</Text>
                   </View>
                 )}
-              </View>
-              <View style={styles.progressBarBg}>
-                <View style={[styles.progressBarFill, { width: `${stats.goalProgress}%` }]} />
-              </View>
-              <View style={styles.heroBottomRow}>
-                <Text style={styles.heroSubText}>{stats.goalProgress.toFixed(0)}% • RM {Math.max(dailyGoal - stats.todayEarnings, 0)} to goal</Text>
-                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.9)" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
 
-          {/* KPIs */}
-          <View style={styles.kpiRow}>
-            <KPI icon="time" color={COLORS.warning} label="Active" value={String(stats.activeJobs)} />
-            <KPI icon="checkmark-circle" color={COLORS.success} label="Done" value={String(stats.completedToday)} />
-            <KPI icon="star" color={COLORS.info} label="Rating" value={stats.avgRating.toFixed(1)} />
+            {/* Earnings Card in Header */}
+            <TouchableOpacity
+              style={styles.earningsCard}
+              activeOpacity={0.9}
+              onPress={() => router.push('/(tabs)/earnings')}
+            >
+              <View style={styles.earningsLeft}>
+                <Text style={styles.earningsLabel}>TODAY'S EARNINGS</Text>
+                <Text style={styles.earningsValue}>RM {formatCurrency(stats.todayEarnings)}</Text>
+                <Text style={styles.earningsSubtext}>{stats.completedToday} trips completed</Text>
+              </View>
+              <View style={styles.earningsRight}>
+                <View style={styles.earningsIcon}>
+                  <Ionicons name="wallet" size={28} color={COLORS.primary} />
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.3)" style={{ marginTop: 4 }} />
+              </View>
+            </TouchableOpacity>
           </View>
+        </SafeAreaView>
+      </LinearGradient>
 
-          {/* Quick Actions */}
-          <View style={styles.quickActionsRow}>
-            <QuickAction label={isOnline ? 'Go Offline' : 'Go Online'} icon={isOnline ? 'pause' : 'play'} onPress={() => setIsOnline(!isOnline)} />
-            <QuickAction label="Jobs" icon="briefcase" onPress={() => router.push('/(tabs)/jobs')} />
-            <QuickAction label="Schedule" icon="calendar" onPress={() => router.push('/(tabs)/schedule')} />
-            <QuickAction label="Earnings" icon="cash" onPress={() => router.push('/(tabs)/earnings')} />
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Verification Progress Widget */}
+        <VerificationProgressWidget />
+        
+        {/* Verification Status Banner (Old - can be removed later) */}
+        {!loadingVerification && verificationInfo && verificationInfo.status !== 'verified' && verificationInfo.status !== 'pending' && (
+          <VerificationBanner verificationInfo={verificationInfo} />
+        )}
+
+        {/* Online/Offline Toggle - Prominent */}
+        <Animated.View style={[styles.toggleSection, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            style={[styles.toggleButton, isOnline ? styles.toggleOnline : styles.toggleOffline]}
+            onPress={toggleOnlineStatus}
+            activeOpacity={0.8}
+          >
+            <View style={styles.toggleContent}>
+              <View style={styles.toggleLeft}>
+                <View style={[styles.toggleDot, { backgroundColor: isOnline ? '#FFF' : '#999' }]} />
+                <Text style={[styles.toggleText, { color: isOnline ? '#FFF' : '#666' }]}>
+                  {isOnline ? "You're Online" : "You're Offline"}
+                </Text>
+              </View>
+              <View style={[styles.toggleSwitch, isOnline && styles.toggleSwitchActive]}>
+                <View style={[styles.toggleThumb, isOnline && styles.toggleThumbActive]} />
+              </View>
+            </View>
+            <Text style={[styles.toggleSubtext, { color: isOnline ? 'rgba(255,255,255,0.8)' : '#999' }]}>
+              {isOnline ? 'Tap to go offline and stop receiving orders' : 'Tap to go online and start receiving orders'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statsRow}>
+            <StatCard
+              icon="trending-up"
+              label="Week Earnings"
+              value={`RM ${formatCurrency(stats.weekEarnings)}`}
+              color={COLORS.primary}
+              onPress={() => router.push('/(tabs)/earnings')}
+            />
+            <StatCard
+              icon="star"
+              label="Rating"
+              value={stats.avgRating.toFixed(1)}
+              color="#FFB800"
+              onPress={() => router.push('/(tabs)/profile')}
+            />
+          </View>
+          <View style={styles.statsRow}>
+            <StatCard
+              icon="checkmark-done"
+              label="Acceptance"
+              value={`${stats.acceptance}%`}
+              color="#00C48C"
+            />
+            <StatCard
+              icon="car"
+              label="Active Orders"
+              value={String(stats.activeCount)}
+              color="#FF6B6B"
+              onPress={() => router.push('/(tabs)/jobs')}
+            />
           </View>
         </View>
 
-        {/* Pending Requests */}
+        {/* New Orders */}
         {pendingRequests.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons name="alert-circle" size={20} color={COLORS.error} />
-                <Text style={styles.sectionTitle}>NEW REQUESTS ({pendingRequests.length})</Text>
-              </View>
-              <View style={styles.sectionPill}>
-                <Text style={styles.sectionPillText}>ACTION NEEDED</Text>
-              </View>
+              <Text style={styles.sectionTitle}>New Orders ({pendingRequests.length})</Text>
+              <Text style={styles.sectionSubtitle}>Accept or decline</Text>
             </View>
 
-            {pendingRequests.map((job) => (
-              <View key={job.id} style={styles.pendingCard}>
-                <View style={styles.pendingHeader}>
-                  <View style={styles.pendingLeft}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{job.customer?.name?.charAt(0) || 'C'}</Text>
+            {pendingRequests.map((job, idx) => (
+              <Animated.View
+                key={job.id}
+                style={[
+                  styles.orderCard,
+                  {
+                    opacity: fadeAnim,
+                    transform: [
+                      {
+                        translateY: slideAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [50, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <View style={styles.orderHeader}>
+                  <View style={styles.orderInfo}>
+                    <View style={styles.orderAvatar}>
+                      <Ionicons name="person" size={24} color={COLORS.primary} />
                     </View>
-                    <View>
-                      <Text style={styles.pendingName}>{job.customer?.name}</Text>
-                      <View style={styles.pendingMetaRow}>
-                        <Ionicons name="location" size={12} color={COLORS.text.tertiary} />
-                        <Text style={styles.pendingMeta}>{job.distance} km</Text>
-                        <Text style={styles.dot}>•</Text>
-                        <Text style={styles.pendingMeta}>{job.scheduledTime}</Text>
+                    <View style={styles.orderDetails}>
+                      <Text style={styles.orderName}>{job.customer?.name}</Text>
+                      <View style={styles.orderMeta}>
+                        <Ionicons name="location" size={14} color="#999" />
+                        <Text style={styles.orderMetaText}>{job.distance} km away</Text>
+                        <Text style={styles.orderDot}>•</Text>
+                        <Text style={styles.orderMetaText}>{job.scheduledTime}</Text>
                       </View>
                     </View>
                   </View>
-                  <Text style={styles.pendingPrice}>RM {job.totalPrice}</Text>
+                  <View style={styles.orderPrice}>
+                    <Text style={styles.orderPriceText}>RM {job.totalPrice}</Text>
+                  </View>
                 </View>
 
-                <View style={styles.pendingActions}>
-                  <TouchableOpacity style={styles.rejectBtn} onPress={() => handleRejectJob(job.id)}>
-                    <Ionicons name="close" size={18} color={COLORS.error} />
+                <View style={styles.orderActions}>
+                  <TouchableOpacity
+                    style={styles.declineBtn}
+                    onPress={() => handleRejectJob(job.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.declineBtnText}>Decline</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAcceptJob(job.id)}>
-                    <Ionicons name="checkmark" size={18} color={COLORS.background.primary} />
-                    <Text style={styles.acceptText}>Accept Job</Text>
+                  <TouchableOpacity
+                    style={[styles.acceptButton, acceptingJob === job.id && styles.acceptButtonLoading]}
+                    onPress={() => handleAcceptJob(job.id)}
+                    disabled={acceptingJob === job.id}
+                    activeOpacity={0.8}
+                  >
+                    {acceptingJob === job.id ? (
+                      <Text style={styles.acceptButtonText}>Accepting...</Text>
+                    ) : (
+                      <Text style={styles.acceptButtonText}>Accept</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
-              </View>
+              </Animated.View>
             ))}
           </View>
         )}
 
-        {/* Next Job */}
+        {/* Active Order */}
         {nextJob && (
           <View style={styles.section}>
-            <Text style={styles.caption}>NEXT JOB</Text>
-            <TouchableOpacity style={styles.nextCard} activeOpacity={0.95}>
-              <View style={styles.nextLeft}>
-                <View style={styles.nextAvatar}>
-                  <Text style={styles.nextAvatarText}>{nextJob.customer?.name?.charAt(0) || 'C'}</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Active Order</Text>
+              <Text style={styles.sectionSubtitle}>On the way</Text>
+            </View>
+            <TouchableOpacity style={styles.activeCard} activeOpacity={0.9}>
+              <View style={styles.activeLeft}>
+                <View style={styles.activePulse}>
+                  <View style={styles.activeIcon}>
+                    <Ionicons name="navigate" size={20} color="#FFF" />
+                  </View>
                 </View>
-                <View style={styles.nextInfo}>
-                  <Text style={styles.nextName}>{nextJob.customer?.name}</Text>
-                  <View style={styles.nextMetaRow}>
-                    <Ionicons name="time-outline" size={14} color={COLORS.primary} />
-                    <Text style={styles.nextMeta}>{nextJob.scheduledTime}</Text>
-                    <Text style={styles.dot}>•</Text>
-                    <Ionicons name="location-outline" size={14} color={COLORS.text.tertiary} />
-                    <Text style={styles.nextMeta}>{nextJob.distance} km</Text>
+                <View>
+                  <Text style={styles.activeName}>{nextJob.customer?.name}</Text>
+                  <View style={styles.activeMeta}>
+                    <Ionicons name="location" size={12} color="#999" />
+                    <Text style={styles.activeMetaText}>{nextJob.distance} km • {nextJob.scheduledTime}</Text>
                   </View>
                 </View>
               </View>
-              <TouchableOpacity style={styles.navBtn}>
-                <Ionicons name="navigate" size={20} color={COLORS.primary} />
+              <TouchableOpacity style={styles.navigateBtn}>
+                <Text style={styles.navigateBtnText}>Navigate</Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
               </TouchableOpacity>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Completed Today */}
-        {stats.completedToday > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.caption}>COMPLETED TODAY</Text>
-              <Text style={styles.earningsPill}>+RM {stats.todayEarnings}</Text>
-            </View>
-
-            <View style={{ gap: 8 }}>
-              {mockBookings
-                .filter((b) => b.barberId === currentUser.id && b.status === 'completed')
-                .slice(0, 3)
-                .map((job) => (
-                  <View key={job.id} style={styles.completedItem}>
-                    <View style={styles.completedIcon}>
-                      <Ionicons name="checkmark" size={14} color={COLORS.background.primary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.completedName}>{job.customer?.name}</Text>
-                      <Text style={styles.completedTime}>{job.scheduledTime}</Text>
-                    </View>
-                    <Text style={styles.completedAmount}>+RM {job.totalPrice}</Text>
-                  </View>
-                ))}
-            </View>
+        {/* Quick Actions Grid */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsGrid}>
+            <ActionCard icon="calendar" label="Schedule" color="#3B82F6" onPress={() => router.push('/(tabs)/schedule')} />
+            <ActionCard icon="briefcase" label="My Orders" color="#8B5CF6" onPress={() => router.push('/(tabs)/jobs')} />
+            <ActionCard icon="person" label="Profile" color="#F59E0B" onPress={() => router.push('/(tabs)/profile')} />
+            <ActionCard icon="help-circle" label="Help" color="#EF4444" onPress={() => {}} />
           </View>
-        )}
+        </View>
 
-        <View style={{ height: 32 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
-function KPI({ icon, color, label, value }: { icon: keyof typeof Ionicons.glyphMap; color: string; label: string; value: string }) {
+// Stat Card Component
+function StatCard({ icon, label, value, color, onPress }: { icon: string; label: string; value: string; color: string; onPress?: () => void }) {
   return (
-    <View style={styles.kpiCard}>
+    <TouchableOpacity
+      style={styles.statCard}
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
+      <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
+        <Ionicons name={icon as any} size={20} color={color} />
+      </View>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// Action Card Component
+function ActionCard({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.actionCard} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.actionIcon, { backgroundColor: color }]}>
+        <Ionicons name={icon as any} size={24} color="#FFF" />
+      </View>
+      <Text style={styles.actionLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function KPI({ icon, color, label, value, accessibilityLabel }: { icon: keyof typeof Ionicons.glyphMap; color: string; label: string; value: string; accessibilityLabel?: string }) {
+  return (
+    <View style={styles.kpiCard} accessibilityLabel={accessibilityLabel || `${label}: ${value}`} accessibilityRole="text">
       <View style={[styles.kpiIcon, { backgroundColor: color + '20' }]}>
         <Ionicons name={icon} size={20} color={color} />
       </View>
@@ -288,7 +538,14 @@ function KPI({ icon, color, label, value }: { icon: keyof typeof Ionicons.glyphM
 
 function QuickAction({ label, icon, onPress }: { label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
   return (
-    <TouchableOpacity style={styles.quickAction} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity
+      style={styles.quickAction}
+      onPress={onPress}
+      activeOpacity={0.9}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityHint={`Navigate to ${label} screen`}
+    >
       <View style={styles.quickActionIcon}>
         <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
@@ -300,7 +557,7 @@ function QuickAction({ label, icon, onPress }: { label: string; icon: keyof type
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F5F5F5',
   },
   center: {
     flex: 1,
@@ -312,360 +569,277 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
 
-  // Header
+  // Green Header (Grab Style)
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: COLORS.background.primary,
+    paddingBottom: 24,
   },
-  headerLeft: {
-    flex: 1,
+  headerContent: {
+    paddingHorizontal: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
   greeting: {
-    ...TYPOGRAPHY.heading.h2,
-    color: COLORS.text.primary,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
     marginBottom: 6,
   },
-  statusRow: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusText: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.secondary,
-    marginRight: 6,
+    fontSize: 12,
     fontWeight: '600',
+    color: '#FFF',
   },
-  notifButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: COLORS.background.secondary,
+  notifIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  notifBadge: {
+  badge: {
     position: 'absolute',
     top: 4,
     right: 4,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: COLORS.error,
+    backgroundColor: '#FF3B30',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  notifBadgeText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.background.primary,
+  badgeText: {
+    fontSize: 10,
     fontWeight: '800',
+    color: '#FFF',
   },
 
-  // Hero
-  heroSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  heroCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    padding: 24,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
-    elevation: 12,
-    marginBottom: 16,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  heroLabel: {
-    ...TYPOGRAPHY.caption,
-    color: 'rgba(255,255,255,0.85)',
-    letterSpacing: 1,
-    marginBottom: 4,
-    fontWeight: '800',
-  },
-  heroValue: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: COLORS.background.primary,
-    letterSpacing: -1.5,
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-  },
-  streakEmoji: { fontSize: 16 },
-  streakText: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.background.primary,
-    fontWeight: '800',
-  },
-  progressBarBg: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.background.primary,
-    borderRadius: 2,
-  },
-  heroBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  heroSubText: {
-    ...TYPOGRAPHY.body.small,
-    color: 'rgba(255,255,255,0.9)',
-  },
-
-  // KPIs
-  kpiRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: COLORS.background.primary,
-    padding: 14,
+  // Earnings Card in Header
+  earningsCard: {
+    backgroundColor: '#FFF',
     borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'space-between',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  kpiIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  earningsLeft: {
+    flex: 1,
+  },
+  earningsLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#999',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  earningsValue: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.primary,
     marginBottom: 4,
   },
-  kpiValue: {
-    ...TYPOGRAPHY.heading.h4,
-    color: COLORS.text.primary,
-    fontWeight: '800',
+  earningsSubtext: {
+    fontSize: 13,
+    color: '#666',
   },
-  kpiLabel: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
-  },
-
-  // Quick Actions
-  quickActionsRow: {
-    marginTop: 12,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickAction: {
-    flex: 1,
-    backgroundColor: COLORS.background.primary,
-    paddingVertical: 12,
-    borderRadius: 14,
+  earningsRight: {
     alignItems: 'center',
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    gap: 4,
   },
-  quickActionIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  earningsIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: COLORS.primary + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickActionText: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.primary,
-    fontWeight: '700',
+  // ScrollView
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
 
-  // Sections
-  section: {
+  // Online/Offline Toggle (Prominent)
+  toggleSection: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: 20,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sectionTitle: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.error,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  sectionPill: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  sectionPillText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.error,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  caption: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.text.secondary,
-    marginBottom: 10,
-    letterSpacing: 0.5,
-    fontWeight: '800',
-  },
-
-  // Pending Card
-  pendingCard: {
-    backgroundColor: COLORS.background.primary,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
+  toggleButton: {
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  pendingHeader: {
+  toggleOnline: {
+    backgroundColor: COLORS.primary,
+  },
+  toggleOffline: {
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  toggleContent: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
+    marginBottom: 8,
   },
-  pendingLeft: {
+  toggleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
     gap: 10,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
+  toggleDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  toggleText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  toggleSwitch: {
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#E0E0E0',
+    padding: 2,
     justifyContent: 'center',
   },
-  avatarText: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.background.primary,
-    fontWeight: '800',
+  toggleSwitchActive: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  pendingName: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.text.primary,
-    fontWeight: '800',
-    marginBottom: 2,
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FFF',
   },
-  pendingMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
   },
-  pendingMeta: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
-  },
-  dot: { ...TYPOGRAPHY.caption, color: COLORS.text.tertiary, marginHorizontal: 2 },
-  pendingPrice: {
-    ...TYPOGRAPHY.heading.h4,
-    color: COLORS.primary,
-    fontWeight: '900',
-  },
-  pendingActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  rejectBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  acceptBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 13,
-    borderRadius: 23,
-    gap: 6,
-  },
-  acceptText: {
-    ...TYPOGRAPHY.body.medium,
-    color: COLORS.background.primary,
-    fontWeight: '800',
+  toggleSubtext: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 
-  // Next Card
-  nextCard: {
-    backgroundColor: COLORS.background.primary,
-    borderRadius: 18,
-    padding: 16,
+  // Stats Grid
+  statsGrid: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
-  nextLeft: {
-    flexDirection: 'row',
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#000',
+  },
+
+
+
+  // Section
+  section: {
+    marginTop: 24,
+    paddingHorizontal: 20,
+  },
+  sectionHeader: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#999',
+  },
+
+  // Order Card (New)
+  orderCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  orderInfo: {
+    flexDirection: 'row',
     flex: 1,
     gap: 12,
   },
-  nextAvatar: {
+  orderAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -673,69 +847,227 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nextAvatarText: {
-    ...TYPOGRAPHY.heading.h4,
-    color: COLORS.primary,
-    fontWeight: '800',
+  orderDetails: {
+    flex: 1,
   },
-  nextInfo: { flex: 1 },
-  nextName: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.text.primary,
-    fontWeight: '800',
-    marginBottom: 2,
+  orderName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
   },
-  nextMetaRow: {
+  orderMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  nextMeta: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
+  orderMetaText: {
+    fontSize: 13,
+    color: '#999',
+  },
+  orderDot: {
+    fontSize: 13,
+    color: '#999',
+    marginHorizontal: 4,
+  },
+  orderPrice: {
+    alignItems: 'flex-end',
+  },
+  orderPriceText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  orderActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  declineBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+  },
+  declineBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#666',
+  },
+  acceptButton: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+  },
+  acceptButtonLoading: {
+    opacity: 0.7,
+  },
+  acceptButtonText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFF',
   },
 
-  // Completed item
-  completedItem: {
-    backgroundColor: COLORS.background.primary,
-    borderRadius: 14,
-    padding: 14,
+  // Active Order Card
+  activeCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  activeLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    flex: 1,
   },
-  completedIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.success,
+  activePulse: {
+    position: 'relative',
+  },
+  activeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  completedName: {
-    ...TYPOGRAPHY.body.medium,
-    color: COLORS.text.primary,
-    fontWeight: '800',
+  activeName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
   },
-  completedTime: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.text.secondary,
+  activeMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  completedAmount: {
-    ...TYPOGRAPHY.body.medium,
-    color: COLORS.success,
-    fontWeight: '900',
+  activeMetaText: {
+    fontSize: 13,
+    color: '#999',
+  },
+  navigateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primary + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  navigateBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
 
-  earningsPill: {
-    ...TYPOGRAPHY.body.medium,
-    color: COLORS.success,
-    fontWeight: '900',
+  // Quick Actions Grid
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
   },
+  actionCard: {
+    width: (width - 52) / 2,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  actionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000',
+  },
+
+  // Verification Banner
+  verificationBannerContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  verificationBanner: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    gap: 12,
+  },
+  verificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verificationContent: {
+    flex: 1,
+  },
+  verificationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
+  },
+  verificationSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  verificationWarning: {
+    fontSize: 12,
+    color: '#FF3B30',
+    fontWeight: '600',
+    marginTop: 6,
+  },
+
+  // Toast
+  toast: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 9999,
+  },
+  toastText: {
+    ...TYPOGRAPHY.body.medium,
+    color: COLORS.text.inverse,
+    fontWeight: '700' as const,
+    flex: 1,
+  },
+
 });

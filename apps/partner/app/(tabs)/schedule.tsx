@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@/store/useStore';
@@ -180,6 +180,9 @@ export default function PartnerScheduleScreen() {
           <TouchableOpacity
             style={styles.modalSaveButton}
             onPress={() => setShowWorkingHoursModal(false)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Save working hours changes"
           >
             <Text style={styles.modalSaveButtonText}>Save Changes</Text>
           </TouchableOpacity>
@@ -233,12 +236,21 @@ export default function PartnerScheduleScreen() {
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => setShowWorkingHoursModal(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Set working hours"
           >
             <Ionicons name="time-outline" size={20} color={COLORS.primary} />
             <Text style={styles.quickActionText}>Working Hours</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickActionButton}>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => Alert.alert('Block Dates', 'Coming soon! Block specific dates when you\'re unavailable.')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Block dates"
+          >
             <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
             <Text style={styles.quickActionText}>Block Dates</Text>
           </TouchableOpacity>
@@ -342,7 +354,7 @@ export default function PartnerScheduleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F5F5F5',
   },
   scrollView: {
     flex: 1,
@@ -351,27 +363,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 16,
+    backgroundColor: '#FFF',
   },
   title: {
-    ...TYPOGRAPHY.heading.h1,
-    color: COLORS.text.primary,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#000',
     marginBottom: 4,
   },
   subtitle: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.text.secondary,
+    fontSize: 14,
+    color: '#666',
   },
   availabilityCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#FFF',
     marginHorizontal: 20,
-    padding: 16,
-    borderRadius: 12,
+    marginTop: 20,
+    padding: 18,
+    borderRadius: 16,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   availabilityInfo: {
     flexDirection: 'row',
@@ -384,13 +405,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   availabilityLabel: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.secondary,
-    marginBottom: 2,
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 4,
   },
   availabilityStatus: {
-    ...TYPOGRAPHY.body.large,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
   quickActionsContainer: {
     flexDirection: 'row',
@@ -403,24 +424,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background.primary,
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 14,
     gap: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   quickActionText: {
-    ...TYPOGRAPHY.button,
+    fontSize: 14,
+    fontWeight: '700',
     color: COLORS.primary,
-    fontSize: 13,
   },
   calendarContainer: {
     marginHorizontal: 20,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   legendContainer: {
     flexDirection: 'row',
@@ -461,11 +490,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   bookingCard: {
-    backgroundColor: COLORS.background.primary,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#FFF',
+    padding: 18,
+    borderRadius: 16,
     borderLeftWidth: 4,
     borderLeftColor: COLORS.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   bookingHeader: {
     flexDirection: 'row',
@@ -494,9 +528,9 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   customerName: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.text.primary,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
     marginBottom: 8,
   },
   servicesContainer: {
@@ -519,9 +553,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   priceText: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.success,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.primary,
+    marginTop: 4,
   },
   emptyBookings: {
     padding: 40,
@@ -538,15 +573,21 @@ const styles = StyleSheet.create({
     color: COLORS.text.tertiary,
   },
   statsContainer: {
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#FFF',
     marginHorizontal: 20,
     marginBottom: 24,
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statsTitle: {
-    ...TYPOGRAPHY.heading.h4,
-    color: COLORS.text.primary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
     marginBottom: 16,
   },
   statsRow: {
@@ -557,9 +598,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    ...TYPOGRAPHY.heading.h2,
+    fontSize: 28,
+    fontWeight: '800',
     color: COLORS.primary,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   statLabel: {
     ...TYPOGRAPHY.body.small,

@@ -10,17 +10,22 @@ export default function OnboardingLayout() {
   const segments = useSegments();
   const onboardingData = useStore((state) => state.onboardingData);
   
-  // Route guard - redirect if user tries to access wrong step
+  // Route guard - DISABLED for now since we're skipping services/availability/portfolio screens
+  // TODO: Re-enable when all onboarding screens are implemented
   useEffect(() => {
-    if (!onboardingData) return;
-    
-    const currentRoute = `/${segments.join('/')}`;
-    const expectedRoute = getNextOnboardingRoute(onboardingData.progress);
-    
-    // If user is on wrong route, redirect to correct step
-    if (currentRoute !== expectedRoute && segments[0] === 'onboarding') {
-      router.replace(expectedRoute as any);
-    }
+    // Commented out to allow direct navigation to pending-approval
+    // if (!onboardingData) return;
+    // 
+    // const currentRoute = `/${segments.join('/')}`;
+    // const expectedRoute = getNextOnboardingRoute(onboardingData.progress);
+    // 
+    // console.log('🛑 Route guard check:', { currentRoute, expectedRoute });
+    // 
+    // // If user is on wrong route, redirect to correct step
+    // if (currentRoute !== expectedRoute && segments[0] === 'onboarding' && segments[1] !== 'welcome') {
+    //   console.log('⚠️ Redirecting from', currentRoute, 'to', expectedRoute);
+    //   router.replace(expectedRoute as any);
+    // }
   }, [onboardingData, segments]);
 
   return (
@@ -49,15 +54,11 @@ export default function OnboardingLayout() {
           gestureEnabled: false, // Prevent swipe back
         }}
       >
-        {/* Phase 1 - Core Onboarding Screens */}
+        {/* Core Onboarding Screens */}
         <Stack.Screen name="welcome" />
-        <Stack.Screen name="account-type" />
         <Stack.Screen name="ekyc" />
-        <Stack.Screen name="ekyc-pending" />
         <Stack.Screen name="business" />
-        <Stack.Screen name="business-pending" />
         <Stack.Screen name="payout" />
-        <Stack.Screen name="payout-pending" />
         
         {/* Phase 2 - Optional Enhancement Screens (not implemented yet) */}
         {/* Uncomment when Phase 2 screens are created:

@@ -1,11 +1,13 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { COLORS, TYPOGRAPHY } from '@/shared/constants';
+import { COLORS } from '@/shared/constants';
 import { mockBarbers } from '@/shared/services/mockData';
+
+const { width } = Dimensions.get('window');
 
 const SPECIALIZATIONS = [
   'Classic Cuts',
@@ -40,7 +42,6 @@ export default function ProfileEditScreen() {
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -65,7 +66,7 @@ export default function ProfileEditScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -149,247 +150,370 @@ export default function ProfileEditScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+    <View style={styles.container}>
+      {/* Fixed Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
-          <Text style={styles.cancelText}>Cancel</Text>
+        <TouchableOpacity 
+          onPress={handleCancel} 
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
-        <TouchableOpacity onPress={handleSave} style={styles.headerButton}>
-          <Text style={styles.saveText}>Save</Text>
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Photo */}
-        <View style={styles.photoSection}>
-          <View style={styles.avatarLarge}>
-            <Text style={styles.avatarText}>{formData.fullName.charAt(0)}</Text>
-          </View>
-          <TouchableOpacity style={styles.changePhotoButton} onPress={handlePhotoChange}>
-            <Ionicons name="camera" size={16} color={COLORS.primary} />
-            <Text style={styles.changePhotoText}>Change Photo</Text>
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Hero Section with Photo */}
+        <View style={styles.heroSection}>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={handlePhotoChange}
+            activeOpacity={0.8}
+          >
+            <View style={styles.avatarLarge}>
+              <Text style={styles.avatarText}>{formData.fullName.charAt(0)}</Text>
+            </View>
+            <View style={styles.cameraIconBadge}>
+              <Ionicons name="camera" size={20} color="#FFF" />
+            </View>
           </TouchableOpacity>
+          <Text style={styles.photoHint}>Tap to change photo</Text>
         </View>
 
-        {/* Personal Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-          <View style={styles.card}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name *</Text>
-              <TextInput
-                style={[styles.input, errors.fullName && styles.inputError]}
-                value={formData.fullName}
-                onChangeText={(value) => handleChange('fullName', value)}
-                placeholder="Enter your full name"
-                placeholderTextColor={COLORS.text.secondary}
-              />
-              {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
+        {/* Form Fields - Each in separate cards */}
+        
+        {/* Personal Info Card */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconCircle}>
+              <Ionicons name="person-outline" size={20} color={COLORS.primary} />
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number *</Text>
-              <TextInput
-                style={[styles.input, errors.phone && styles.inputError]}
-                value={formData.phone}
-                onChangeText={(value) => handleChange('phone', value)}
-                placeholder="+60 12-345 6789"
-                placeholderTextColor={COLORS.text.secondary}
-                keyboardType="phone-pad"
-              />
-              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email (optional)</Text>
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                value={formData.email}
-                onChangeText={(value) => handleChange('email', value)}
-                placeholder="your.email@example.com"
-                placeholderTextColor={COLORS.text.secondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-            </View>
+            <Text style={styles.cardTitle}>Personal Information</Text>
           </View>
-        </View>
 
-        {/* About */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About You</Text>
-          <View style={styles.card}>
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Bio</Text>
-                <Text style={styles.charCount}>{formData.bio.length}/500</Text>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Full Name</Text>
+            <TextInput
+              style={[styles.textInput, errors.fullName && styles.inputError]}
+              value={formData.fullName}
+              onChangeText={(value) => handleChange('fullName', value)}
+              placeholder="Enter your full name"
+              placeholderTextColor="#999"
+            />
+            {errors.fullName && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={14} color={COLORS.error} />
+                <Text style={styles.errorText}>{errors.fullName}</Text>
               </View>
-              <TextInput
-                style={[styles.textArea, errors.bio && styles.inputError]}
-                value={formData.bio}
-                onChangeText={(value) => handleChange('bio', value)}
-                placeholder="Tell us about yourself and your expertise..."
-                placeholderTextColor={COLORS.text.secondary}
-                multiline
-                numberOfLines={4}
-                maxLength={500}
-                textAlignVertical="top"
-              />
-              {errors.bio && <Text style={styles.errorText}>{errors.bio}</Text>}
-            </View>
+            )}
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Phone Number</Text>
+            <TextInput
+              style={[styles.textInput, errors.phone && styles.inputError]}
+              value={formData.phone}
+              onChangeText={(value) => handleChange('phone', value)}
+              placeholder="+60 12-345 6789"
+              placeholderTextColor="#999"
+              keyboardType="phone-pad"
+            />
+            {errors.phone && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={14} color={COLORS.error} />
+                <Text style={styles.errorText}>{errors.phone}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Email (Optional)</Text>
+            <TextInput
+              style={[styles.textInput, errors.email && styles.inputError]}
+              value={formData.email}
+              onChangeText={(value) => handleChange('email', value)}
+              placeholder="your.email@example.com"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {errors.email && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={14} color={COLORS.error} />
+                <Text style={styles.errorText}>{errors.email}</Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Location */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location</Text>
-          <View style={styles.card}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Service Area *</Text>
-              <TextInput
-                style={[styles.input, errors.serviceArea && styles.inputError]}
-                value={formData.serviceArea}
-                onChangeText={(value) => handleChange('serviceArea', value)}
-                placeholder="e.g., Kuala Lumpur"
-                placeholderTextColor={COLORS.text.secondary}
-              />
-              {errors.serviceArea && <Text style={styles.errorText}>{errors.serviceArea}</Text>}
+        {/* About Card */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconCircle}>
+              <Ionicons name="document-text-outline" size={20} color={COLORS.primary} />
             </View>
+            <Text style={styles.cardTitle}>About You</Text>
+          </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Address (optional)</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.address}
-                onChangeText={(value) => handleChange('address', value)}
-                placeholder="Your address or base location"
-                placeholderTextColor={COLORS.text.secondary}
-              />
+          <View style={styles.inputWrapper}>
+            <View style={styles.labelRow}>
+              <Text style={styles.inputLabel}>Bio</Text>
+              <Text style={styles.charCount}>{formData.bio.length}/500</Text>
             </View>
+            <TextInput
+              style={[styles.textInput, styles.textArea, errors.bio && styles.inputError]}
+              value={formData.bio}
+              onChangeText={(value) => handleChange('bio', value)}
+              placeholder="Tell customers about yourself and your expertise..."
+              placeholderTextColor="#999"
+              multiline
+              numberOfLines={4}
+              maxLength={500}
+            />
+            {errors.bio && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={14} color={COLORS.error} />
+                <Text style={styles.errorText}>{errors.bio}</Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Specializations */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Specializations *</Text>
-          <View style={styles.card}>
-            <View style={styles.specializationsGrid}>
-              {SPECIALIZATIONS.map((spec) => (
+        {/* Location Card */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconCircle}>
+              <Ionicons name="location-outline" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.cardTitle}>Location</Text>
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Service Area</Text>
+            <TextInput
+              style={[styles.textInput, errors.serviceArea && styles.inputError]}
+              value={formData.serviceArea}
+              onChangeText={(value) => handleChange('serviceArea', value)}
+              placeholder="e.g., Kuala Lumpur"
+              placeholderTextColor="#999"
+            />
+            {errors.serviceArea && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={14} color={COLORS.error} />
+                <Text style={styles.errorText}>{errors.serviceArea}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Address (Optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              value={formData.address}
+              onChangeText={(value) => handleChange('address', value)}
+              placeholder="Your base location"
+              placeholderTextColor="#999"
+            />
+          </View>
+        </View>
+
+        {/* Specializations Card */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconCircle}>
+              <Ionicons name="cut-outline" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.cardTitle}>Specializations</Text>
+          </View>
+
+          <Text style={styles.helperText}>Select your areas of expertise</Text>
+          
+          <View style={styles.chipsContainer}>
+            {SPECIALIZATIONS.map((spec) => {
+              const isSelected = formData.specializations.includes(spec);
+              return (
                 <TouchableOpacity
                   key={spec}
-                  style={[
-                    styles.specializationChip,
-                    formData.specializations.includes(spec) && styles.specializationChipActive
-                  ]}
+                  style={[styles.chip, isSelected && styles.chipSelected]}
                   onPress={() => toggleSpecialization(spec)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={[
-                    styles.specializationText,
-                    formData.specializations.includes(spec) && styles.specializationTextActive
-                  ]}>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} style={styles.chipIcon} />
+                  )}
+                  <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                     {spec}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            {errors.specializations && <Text style={styles.errorText}>{errors.specializations}</Text>}
+              );
+            })}
           </View>
+          
+          {errors.specializations && (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle" size={14} color={COLORS.error} />
+              <Text style={styles.errorText}>{errors.specializations}</Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.bottomSpacer} />
+        <View style={{ height: 100 }} />
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Floating Save Button */}
+      <View style={styles.floatingButtonContainer}>
+        <TouchableOpacity 
+          style={styles.saveButton}
+          onPress={handleSave}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.saveButtonText}>Save Changes</Text>
+          <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F5F5F5',
   },
+  
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    backgroundColor: COLORS.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border.light,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  headerButton: {
-    minWidth: 60,
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
   },
   headerTitle: {
-    ...TYPOGRAPHY.heading.h3,
-    color: COLORS.text.primary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
   },
-  cancelText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.secondary,
+
+  // Scroll
+  scrollView: {
+    flex: 1,
   },
-  saveText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.primary,
-    fontWeight: '600',
-    textAlign: 'right',
+  scrollContent: {
+    paddingBottom: 20,
   },
-  photoSection: {
+
+  // Hero Photo Section
+  heroSection: {
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: COLORS.background.primary,
+    paddingVertical: 40,
+    backgroundColor: '#FFF',
+    marginBottom: 12,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 12,
   },
   avatarLarge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    borderWidth: 5,
+    borderColor: '#E8F5E9',
   },
   avatarText: {
-    ...TYPOGRAPHY.heading.h1,
-    color: COLORS.text.inverse,
-    fontSize: 40,
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#FFF',
   },
-  changePhotoButton: {
+  cameraIconBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  photoHint: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '600',
+  },
+
+  // Form Cards
+  formCard: {
+    backgroundColor: '#FFF',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: COLORS.primaryLight,
-  },
-  changePhotoText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  section: {
-    padding: 20,
-  },
-  sectionTitle: {
-    ...TYPOGRAPHY.heading.h3,
-    color: COLORS.text.primary,
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: COLORS.background.primary,
-    borderRadius: 12,
-    padding: 16,
-  },
-  inputGroup: {
+    gap: 12,
     marginBottom: 20,
   },
-  label: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.primary,
-    marginBottom: 8,
-    fontWeight: '600',
+  cardIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  helperText: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 16,
+  },
+
+  // Inputs
+  inputWrapper: {
+    marginBottom: 20,
   },
   labelRow: {
     flexDirection: 'row',
@@ -397,65 +521,114 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  charCount: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.secondary,
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
   },
-  input: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.primary,
-    backgroundColor: COLORS.background.secondary,
+  charCount: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
+  },
+  textInput: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#000',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    paddingTop: 14,
   },
   inputError: {
     borderColor: COLORS.error,
+    backgroundColor: '#FEF2F2',
   },
-  textArea: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.primary,
-    backgroundColor: COLORS.background.secondary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
-    minHeight: 100,
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
   },
   errorText: {
-    ...TYPOGRAPHY.body.small,
+    fontSize: 13,
     color: COLORS.error,
-    marginTop: 4,
-  },
-  specializationsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  specializationChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.background.secondary,
-    borderWidth: 1,
-    borderColor: COLORS.border.medium,
-  },
-  specializationChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  specializationText: {
-    ...TYPOGRAPHY.body.regular,
-    color: COLORS.text.secondary,
-  },
-  specializationTextActive: {
-    color: COLORS.text.inverse,
     fontWeight: '600',
   },
-  bottomSpacer: {
-    height: 40,
+
+  // Chips
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  chipSelected: {
+    backgroundColor: '#E8F5E9',
+    borderColor: COLORS.primary,
+  },
+  chipIcon: {
+    marginLeft: -4,
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  chipTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+
+  // Floating Button
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  saveButtonText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#FFF',
   },
 });

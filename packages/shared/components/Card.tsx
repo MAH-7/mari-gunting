@@ -7,8 +7,9 @@
  * @production-ready
  */
 
-import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
-import { COLORS, SPACING, RADIUS } from '../constants';
+import React from 'react';
+import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import { Colors, BorderRadius, Spacing, Shadows } from '../theme';
 
 interface CardProps {
   /** Child components */
@@ -20,54 +21,88 @@ interface CardProps {
   /** Padding variant */
   padding?: 'none' | 'small' | 'medium' | 'large';
   
-  /** Whether to show shadow/elevation */
-  elevated?: boolean;
+  /** Card variant */
+  variant?: 'elevated' | 'outlined' | 'flat';
+  
+  /** On press handler for interactive cards */
+  onPress?: () => void;
+  
+  /** Whether card is disabled */
+  disabled?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
   style,
   padding = 'medium',
-  elevated = true,
+  variant = 'elevated',
+  onPress,
+  disabled,
 }) => {
   const cardStyles = [
     styles.base,
-    elevated && styles.elevated,
+    variant === 'elevated' && styles.elevated,
+    variant === 'outlined' && styles.outlined,
+    variant === 'flat' && styles.flat,
     padding !== 'none' && styles[`padding_${padding}`],
+    disabled && styles.disabled,
     style,
   ];
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        style={({ pressed }) => [
+          cardStyles,
+          pressed && !disabled && styles.pressed,
+        ]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
 
   return <View style={cardStyles}>{children}</View>;
 };
 
 const styles = StyleSheet.create({
   base: {
-    backgroundColor: COLORS.background.primary,
-    borderRadius: RADIUS.lg,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    marginVertical: Spacing.sm,
   },
 
   elevated: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    ...Shadows.md,
+  },
+
+  outlined: {
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+  },
+
+  flat: {
+    backgroundColor: Colors.gray[50],
+  },
+
+  disabled: {
+    opacity: 0.5,
+  },
+
+  pressed: {
+    opacity: 0.7,
   },
 
   // Padding variants
   padding_small: {
-    padding: SPACING.md,
+    padding: Spacing.sm,
   },
   padding_medium: {
-    padding: SPACING.lg,
+    padding: Spacing.md,
   },
   padding_large: {
-    padding: SPACING.xl,
+    padding: Spacing.lg,
   },
 });

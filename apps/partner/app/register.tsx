@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { authService } from '@mari-gunting/shared/services/authService';
 
 export default function PartnerRegisterScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -56,21 +57,34 @@ export default function PartnerRegisterScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate API call to send OTP
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Format phone number
+      const cleanPhone = phoneNumber.replace(/\D/g, '');
+      const fullPhone = `${countryCode}${cleanPhone}`;
 
-      // Navigate to account type selection with phone number
+      // Send OTP via Supabase/Twilio WhatsApp
+      const response = await authService.sendOTP({ phoneNumber: fullPhone });
+
+      if (!response.success) {
+        Alert.alert(
+          'Failed to Send OTP',
+          response.error || 'Please try again',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Navigate to OTP verification with barber role for registration
       router.push({
-        pathname: '/select-account-type',
+        pathname: '/verify-otp',
         params: { 
-          phoneNumber: phoneNumber,
-          isRegistering: 'true'
-        }
+          phoneNumber: fullPhone,
+          role: 'barber', // Partner app = barber role
+        },
       });
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert(
         'Registration Failed',
-        'Unable to send OTP. Please try again.',
+        error.message || 'Unable to send OTP. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {

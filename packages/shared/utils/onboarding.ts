@@ -9,15 +9,7 @@ import { OnboardingStatus, OnboardingProgress, AccountType, OnboardingStep } fro
  * Define all onboarding steps
  */
 export const ONBOARDING_STEPS: OnboardingStep[] = [
-  {
-    id: 'account_type',
-    route: '/onboarding/account-type',
-    title: 'Account Type',
-    description: 'Choose your partner type',
-    isRequired: true,
-    accountTypes: ['freelance', 'barbershop'],
-    order: 1,
-  },
+  // Note: account_type step removed - now selected during registration
   {
     id: 'ekyc',
     route: '/onboarding/ekyc',
@@ -25,7 +17,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: 'Verify your identity',
     isRequired: true,
     accountTypes: ['freelance', 'barbershop'],
-    order: 2,
+    order: 1,
   },
   {
     id: 'business',
@@ -34,7 +26,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: 'Register your business',
     isRequired: true,
     accountTypes: ['barbershop'],
-    order: 3,
+    order: 2,
   },
   {
     id: 'payout',
@@ -43,7 +35,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: 'Add your bank account',
     isRequired: true,
     accountTypes: ['freelance', 'barbershop'],
-    order: 4,
+    order: 3,
   },
   {
     id: 'services',
@@ -52,7 +44,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: 'Configure your services',
     isRequired: true,
     accountTypes: ['freelance', 'barbershop'],
-    order: 5,
+    order: 4,
   },
   {
     id: 'availability',
@@ -61,7 +53,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: 'Set your working hours',
     isRequired: true,
     accountTypes: ['freelance', 'barbershop'],
-    order: 6,
+    order: 5,
   },
   {
     id: 'portfolio',
@@ -70,7 +62,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: 'Showcase your work',
     isRequired: true,
     accountTypes: ['freelance', 'barbershop'],
-    order: 7,
+    order: 6,
   },
   {
     id: 'review',
@@ -79,7 +71,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     description: 'Review and submit',
     isRequired: true,
     accountTypes: ['freelance', 'barbershop'],
-    order: 8,
+    order: 7,
   },
 ];
 
@@ -104,22 +96,14 @@ export function getNextOnboardingRoute(progress?: OnboardingProgress): string {
 
   const { status, accountType } = progress;
 
-  // Not started or just phone verified
-  if (status === 'not_started' || status === 'phone_verified') {
-    return '/onboarding/account-type';
-  }
-
-  // Account type selected
-  if (status === 'account_type_selected') {
+  // Not started, phone verified, or account type selected - go to eKYC
+  // Note: Account type is now selected during registration, not as a separate onboarding step
+  if (status === 'not_started' || status === 'phone_verified' || status === 'account_type_selected') {
     return '/onboarding/ekyc';
   }
 
-  // eKYC flow
-  if (status === 'ekyc_submitted') {
-    return '/onboarding/ekyc-pending';
-  }
-
-  if (status === 'ekyc_passed') {
+  // eKYC flow - skip pending screens, go straight to next step
+  if (status === 'ekyc_submitted' || status === 'ekyc_passed') {
     // Barbershop needs business details
     if (accountType === 'barbershop') {
       return '/onboarding/business';
@@ -128,21 +112,13 @@ export function getNextOnboardingRoute(progress?: OnboardingProgress): string {
     return '/onboarding/payout';
   }
 
-  // Business verification (barbershop only)
-  if (status === 'business_submitted') {
-    return '/onboarding/business-pending';
-  }
-
-  if (status === 'business_verified') {
+  // Business verification (barbershop only) - skip pending screen
+  if (status === 'business_submitted' || status === 'business_verified') {
     return '/onboarding/payout';
   }
 
-  // Payout
-  if (status === 'payout_submitted') {
-    return '/onboarding/payout-pending';
-  }
-
-  if (status === 'payout_verified') {
+  // Payout - skip pending screen
+  if (status === 'payout_submitted' || status === 'payout_verified') {
     return '/onboarding/services';
   }
 

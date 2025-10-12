@@ -15,21 +15,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '@/store/useStore';
-import { mockCustomer } from '@/services/mockData';
+import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
+import { useStore } from '@/store/useStore';
 
 export default function RegisterScreen() {
   const params = useLocalSearchParams();
   const phoneNumber = params.phoneNumber as string || '';
   const role = (params.role as 'customer' | 'barber') || 'customer';
+  const setCurrentUser = useStore((state) => state.setCurrentUser);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  const setCurrentUser = useStore((state) => state.setCurrentUser);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -84,39 +83,51 @@ export default function RegisterScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // TODO: Replace with actual API call
-      // const response = await api.register({
-      //   phoneNumber,
-      //   name: fullName,
-      //   email,
-      //   role,
-      //   avatar: avatar ? await uploadImage(avatar) : null,
-      // });
-
-      // Create user object based on role
-      const newUser = {
-        ...mockCustomer,
-        id: `${role}_${Date.now()}`,
-        name: fullName,
+      // Register user with Supabase
+      const response = await authService.register({
+        phoneNumber,
+        fullName,
         email: email.toLowerCase(),
-        phone: phoneNumber,
-        role: role,
-        avatar: avatar || mockCustomer.avatar,
-        createdAt: new Date().toISOString(),
-      };
+        role,
+        avatarUrl: avatar || null,
+      });
 
-      // Set user in store
-      setCurrentUser(newUser as any);
+      if (!response.success) {
+        Alert.alert(
+          'Registration Failed',
+          response.error || 'Unable to complete registration.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
 
-      // Navigate to appropriate app
-      router.replace('/(tabs)');
-    } catch (error) {
+      // Save user to store
+      if (response.data) {
+        setCurrentUser({
+          id: response.data.id,
+          name: response.data.full_name,
+          email: response.data.email,
+          phone: response.data.phone_number,
+          avatar: response.data.avatar_url || avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(fullName),
+          role: response.data.role,
+        } as any);
+      }
+
+      // Success - navigate to app
+      Alert.alert(
+        'Welcome to Mari-Gunting! 🎉',
+        'Your account has been created successfully.',
+        [
+          {
+            text: 'Get Started',
+            onPress: () => router.replace('/(tabs)'),
+          },
+        ]
+      );
+    } catch (error: any) {
       Alert.alert(
         'Registration Failed',
-        'Unable to complete registration. Please try again.',
+        error.message || 'Unable to complete registration. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {

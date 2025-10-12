@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@/store/useStore';
+import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 
 const MALAYSIAN_STATES = [
   'Johor', 'Kedah', 'Kelantan', 'Kuala Lumpur', 'Labuan', 'Malacca', 'Negeri Sembilan',
@@ -37,10 +38,17 @@ export default function BusinessScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed'>('in_progress');
 
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
   const completeOnboardingStep = useStore((state) => state.completeOnboardingStep);
   const onboardingData = useStore((state) => state.onboardingData);
+
+  useEffect(() => {
+    if (onboardingData?.business?.verificationStatus) {
+      setVerificationStatus(onboardingData.business.verificationStatus);
+    }
+  }, [onboardingData]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -161,7 +169,8 @@ export default function BusinessScreen() {
 
       completeOnboardingStep('business');
 
-      router.push('/onboarding/business-pending');
+      // Go to next step
+      router.push('/onboarding/payout');
     } catch (error) {
       Alert.alert('Error', 'Failed to submit business details. Please try again.');
     } finally {
@@ -178,6 +187,15 @@ export default function BusinessScreen() {
             Register your barbershop for verification
           </Text>
         </View>
+
+        <VerificationStatusBanner 
+          status={verificationStatus}
+          message={
+            verificationStatus === 'submitted' 
+              ? 'Your business documents are being verified. You can continue with the next steps.'
+              : undefined
+          }
+        />
 
         <View style={styles.form}>
           {/* SSM Number */}

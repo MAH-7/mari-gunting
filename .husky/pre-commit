@@ -1,0 +1,29 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Checking for secrets and sensitive files..."
+
+# Check for .env files
+if git diff --cached --name-only | grep -E "\.env$|\.env\.(development|staging|production)$"; then
+  echo "❌ ERROR: Attempting to commit .env files!"
+  echo "Please remove .env files from commit."
+  exit 1
+fi
+
+# Check for API keys in staged files
+if git diff --cached | grep -iE "(api_key|api-key|apikey|secret_key|secret-key|secretkey|password|token|credential)" | grep -v ".example" | grep -v "# "; then
+  echo "⚠️  WARNING: Possible API keys or secrets detected in staged files!"
+  echo "Please review your changes carefully."
+  echo ""
+  echo "If this is a false positive, you can skip this hook with:"
+  echo "  git commit --no-verify"
+  exit 1
+fi
+
+# Check for private keys
+if git diff --cached --name-only | grep -E "\.(pem|key|p8|p12|jks|keystore)$"; then
+  echo "❌ ERROR: Attempting to commit private keys!"
+  exit 1
+fi
+
+echo "✅ No secrets detected. Proceeding with commit."

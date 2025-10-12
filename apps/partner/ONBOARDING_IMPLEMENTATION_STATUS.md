@@ -59,9 +59,9 @@ Smart onboarding layout with:
 ```
 Registration (phone + OTP)
     ↓
-/onboarding/welcome
+/select-account-type (Freelance vs Barbershop) ← BEFORE onboarding
     ↓
-/onboarding/account-type (Freelance vs Barbershop)
+/onboarding/welcome
     ↓
 /onboarding/ekyc (NRIC/Passport + Selfie)
     ↓ (pending verification)
@@ -94,14 +94,14 @@ Registration (phone + OTP)
 
 | Step | Route | Freelance | Barbershop | Required |
 |------|-------|-----------|------------|----------|
-| 1 | `/onboarding/account-type` | ✓ | ✓ | ✓ |
-| 2 | `/onboarding/ekyc` | ✓ | ✓ | ✓ |
-| 3 | `/onboarding/business` | ✗ | ✓ | ✓ |
-| 4 | `/onboarding/payout` | ✓ | ✓ | ✓ |
-| 5 | `/onboarding/services` | ✓ | ✓ | ✓ |
-| 6 | `/onboarding/availability` | ✓ | ✓ | ✓ |
-| 7 | `/onboarding/portfolio` | ✓ | ✓ | ✓ |
-| 8 | `/onboarding/review` | ✓ | ✓ | ✓ |
+| 0 | `/select-account-type` *(pre-onboarding)* | ✓ | ✓ | ✓ |
+| 1 | `/onboarding/ekyc` | ✓ | ✓ | ✓ |
+| 2 | `/onboarding/business` | ✗ | ✓ | ✓ |
+| 3 | `/onboarding/payout` | ✓ | ✓ | ✓ |
+| 4 | `/onboarding/services` | ✓ | ✓ | ✓ |
+| 5 | `/onboarding/availability` | ✓ | ✓ | ✓ |
+| 6 | `/onboarding/portfolio` | ✓ | ✓ | ✓ |
+| 7 | `/onboarding/review` | ✓ | ✓ | ✓ |
 
 **Freelance:** 7 steps  
 **Barbershop:** 8 steps (includes business verification)
@@ -111,14 +111,14 @@ Registration (phone + OTP)
 ## 🚧 What's Next (Still To Build)
 
 ### Phase 1: Welcome & Core Screens (Priority)
-- [ ] `/onboarding/welcome.tsx` - Intro screen with benefits
-- [ ] `/onboarding/account-type.tsx` - Enhanced account selection
-- [ ] `/onboarding/ekyc.tsx` - ID verification screen (placeholder)
-- [ ] `/onboarding/ekyc-pending.tsx` - Pending verification status
-- [ ] `/onboarding/business.tsx` - Business registration (barbershop)
-- [ ] `/onboarding/business-pending.tsx` - Pending verification
-- [ ] `/onboarding/payout.tsx` - Bank account setup
-- [ ] `/onboarding/payout-pending.tsx` - Pending verification
+- [x] `/select-account-type.tsx` - Account type selection (pre-onboarding) ✅
+- [x] `/onboarding/welcome.tsx` - Intro screen with benefits ✅
+- [x] `/onboarding/ekyc.tsx` - ID verification screen (placeholder) ✅
+- [x] `/onboarding/ekyc-pending.tsx` - Pending verification status ✅
+- [x] `/onboarding/business.tsx` - Business registration (barbershop) ✅
+- [x] `/onboarding/business-pending.tsx` - Pending verification ✅
+- [x] `/onboarding/payout.tsx` - Bank account setup ✅
+- [x] `/onboarding/payout-pending.tsx` - Pending verification ✅
 
 ### Phase 2: Operational Screens
 - [ ] `/onboarding/services.tsx` - Services & pricing configuration
@@ -141,9 +141,9 @@ Registration (phone + OTP)
 - [ ] `PortfolioGallery` - Image upload & preview
 
 ### Phase 5: Integration
-- [ ] Update `app/index.tsx` - Add onboarding guard
-- [ ] Update `app/register.tsx` - Redirect to onboarding
-- [ ] Update `app/select-account-type.tsx` - Integrate with onboarding
+- [x] Update `app/index.tsx` - Add onboarding guard ✅
+- [x] Update `app/register.tsx` - Redirect to account selection ✅
+- [x] Update `app/select-account-type.tsx` - Integrate with onboarding ✅
 - [ ] Add error boundaries
 - [ ] Add loading states
 - [ ] Add form validation
@@ -203,7 +203,7 @@ Render Screen with Data
 ### Route Guard Logic
 ```typescript
 // Automatically redirects user to correct step
-if (status === 'phone_verified') → /onboarding/account-type
+if (status === 'phone_verified') → /select-account-type
 if (status === 'account_type_selected') → /onboarding/ekyc
 if (status === 'ekyc_passed' && accountType === 'barbershop') → /onboarding/business
 if (status === 'ekyc_passed' && accountType === 'freelance') → /onboarding/payout
