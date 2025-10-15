@@ -79,6 +79,12 @@ export default function SelectAccountTypeScreen() {
       // Setup account based on selected type
       console.log(`🔧 Setting up ${selectedType} account for user:`, currentUserId);
       
+      if (!selectedType) {
+        Alert.alert('Error', 'Please select an account type.');
+        setIsLoading(false);
+        return;
+      }
+      
       const response = await partnerAccountService.setupAccount(
         currentUserId,
         selectedType
@@ -96,12 +102,18 @@ export default function SelectAccountTypeScreen() {
       console.log('✅ Account setup successful:', response);
 
       // Save account type to AsyncStorage
-      await AsyncStorage.setItem('partnerAccountType', selectedType);
+      if (selectedType) {
+        await AsyncStorage.setItem('partnerAccountType', selectedType);
+      }
       
       // Navigate to onboarding to complete profile setup
       // Use replace() to prevent user from swiping back to account selection
-      // After onboarding, partner will be directed to pending approval
-      router.replace('/onboarding/welcome');
+      // Route directly to the appropriate onboarding flow
+      if (selectedType === 'freelance') {
+        router.replace('/onboarding/barber/basic-info');
+      } else {
+        router.replace('/onboarding/barbershop/business-info');
+      }
     } catch (error: any) {
       console.error('❌ Account setup error:', error);
       Alert.alert(

@@ -65,7 +65,7 @@ export const uploadFile = async ({
       .from(bucket)
       .upload(filePath, arrayBuffer, {
         contentType,
-        upsert: false,
+        upsert: false, // Each upload creates a new file
       });
 
     if (error) throw error;

@@ -35,8 +35,6 @@ export const verificationService = {
    */
   async getVerificationStatus(userId: string): Promise<VerificationInfo> {
     try {
-      console.log('🔍 Checking verification status for:', userId);
-
       // Check if user is a freelance barber
       const { data: barber, error: barberError } = await supabase
         .from('barbers')
@@ -46,7 +44,6 @@ export const verificationService = {
 
       if (barber) {
         const status = barber.verification_status as VerificationStatus;
-        console.log('✅ Found freelance barber:', { status, verified: barber.is_verified });
         
         // Check if onboarding was actually submitted (status is pending or verified, not unverified)
         const hasSubmittedOnboarding = status !== 'unverified';
@@ -76,7 +73,6 @@ export const verificationService = {
 
       if (barbershop) {
         const status = barbershop.verification_status as VerificationStatus;
-        console.log('✅ Found barbershop owner:', { status });
         
         // Check if onboarding was actually submitted
         const hasSubmittedOnboarding = status !== 'unverified';
@@ -98,7 +94,6 @@ export const verificationService = {
       }
 
       // User has profile but hasn't completed account type selection
-      console.log('⚠️ User has no barber or barbershop record');
       return {
         status: 'unverified',
         accountType: null,

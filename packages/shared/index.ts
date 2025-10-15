@@ -9,13 +9,16 @@ export * from './constants';
 
 // Export types
 export * from './types';
-export * from './types/database';
+// Note: types/database.ts is imported by types/index.ts, so no need to re-export here
 
 // Export Services
 export * from './services/mockData';
 export * from './services/auth';
 export * from './services/storage';
 export * from './services/cloudinaryUpload';
+export * from './services/barberService';
+export * from './services/serviceService';
+export * from './services/portfolioService';
 
 // Export store
 export * from './store/useStore';

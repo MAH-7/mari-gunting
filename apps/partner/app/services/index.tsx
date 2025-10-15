@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
+import { useStore } from '@/store/useStore';
+import { serviceService, Service as ServiceType } from '@mari-gunting/shared';
 
 interface Service {
   id: string;
@@ -12,30 +14,88 @@ interface Service {
   duration: number;
   description?: string;
   isActive: boolean;
+  isPopular: boolean;
 }
 
 export default function ServicesManagementScreen() {
   const router = useRouter();
-  const [services, setServices] = useState<Service[]>([
-    { id: '1', name: 'Classic Haircut', price: 45, duration: 45, description: 'Traditional haircut with scissors', isActive: true },
-    { id: '2', name: 'Fade Cut', price: 55, duration: 60, description: 'Modern fade with precision', isActive: true },
-    { id: '3', name: 'Beard Trim', price: 25, duration: 30, description: 'Professional beard grooming', isActive: true },
-    { id: '4', name: 'Hair Coloring', price: 120, duration: 120, description: 'Full hair coloring service', isActive: true },
-    { id: '5', name: 'Kids Haircut', price: 35, duration: 30, description: 'Haircut for children under 12', isActive: true },
-  ]);
+  const currentUser = useStore((state) => state.currentUser);
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     price: '',
     duration: '',
     description: '',
+    category: '',
   });
+
+  // Categories for filtering
+  const categories = ['Haircut', 'Beard', 'Styling', 'Coloring', 'Treatment', 'Other'];
+
+  // Filter services based on search and category
+  const filteredServices = services.filter(service => {
+    const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || service.description?.toLowerCase().includes(selectedCategory.toLowerCase());
+    return matchesSearch && matchesCategory;
+  });
+
+  // Load services on mount
+  useEffect(() => {
+    loadServices();
+  }, [currentUser]);
+
+  const loadServices = async () => {
+    if (!currentUser?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const data = await serviceService.getMyServices(currentUser.id);
+      
+      // Convert from Supabase format to local format
+      const mappedServices: Service[] = data.map((s: ServiceType) => ({
+        id: s.id,
+        name: s.name,
+        price: s.price,
+        duration: s.duration_minutes,
+        description: s.description || undefined,
+        isActive: s.is_active,
+        isPopular: s.is_popular,
+      }));
+      
+      setServices(mappedServices);
+    } catch (error) {
+      console.error('Error loading services:', error);
+      Alert.alert('Error', 'Failed to load services');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAddService = () => {
     setEditingService(null);
-    setFormData({ name: '', price: '', duration: '', description: '' });
+    setFormData({ name: '', price: '', duration: '', description: '', category: '' });
+    setModalVisible(true);
+  };
+
+  const handleQuickAdd = (serviceName: string, price: number, duration: number, category: string) => {
+    setEditingService(null);
+    setFormData({ 
+      name: serviceName, 
+      price: price.toString(), 
+      duration: duration.toString(), 
+      description: '',
+      category 
+    });
     setModalVisible(true);
   };
 
@@ -46,11 +106,12 @@ export default function ServicesManagementScreen() {
       price: service.price.toString(),
       duration: service.duration.toString(),
       description: service.description || '',
+      category: '', // We'll extract from description if needed
     });
     setModalVisible(true);
   };
 
-  const handleSaveService = () => {
+  const handleSaveService = async () => {
     // Validate
     if (!formData.name.trim()) {
       Alert.alert('Error', 'Service name is required');
@@ -65,33 +126,41 @@ export default function ServicesManagementScreen() {
       return;
     }
 
-    if (editingService) {
-      // Update existing service
-      setServices(services.map(s => 
-        s.id === editingService.id 
-          ? {
-              ...s,
-              name: formData.name,
-              price: parseFloat(formData.price),
-              duration: parseInt(formData.duration),
-              description: formData.description,
-            }
-          : s
-      ));
-    } else {
-      // Add new service
-      const newService: Service = {
-        id: Date.now().toString(),
-        name: formData.name,
-        price: parseFloat(formData.price),
-        duration: parseInt(formData.duration),
-        description: formData.description,
-        isActive: true,
-      };
-      setServices([...services, newService]);
+    if (!currentUser?.id) {
+      Alert.alert('Error', 'User not found');
+      return;
     }
 
-    setModalVisible(false);
+    try {
+      setIsSaving(true);
+
+      if (editingService) {
+        // Update existing service
+        await serviceService.updateService(editingService.id, {
+          name: formData.name,
+          price: parseFloat(formData.price),
+          duration_minutes: parseInt(formData.duration),
+          description: formData.description || undefined,
+        });
+      } else {
+        // Add new service
+        await serviceService.createMyService(currentUser.id, {
+          name: formData.name,
+          price: parseFloat(formData.price),
+          duration_minutes: parseInt(formData.duration),
+          description: formData.description || undefined,
+        });
+      }
+
+      // Reload services
+      await loadServices();
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Error saving service:', error);
+      Alert.alert('Error', 'Failed to save service');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteService = (service: Service) => {
@@ -103,26 +172,79 @@ export default function ServicesManagementScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setServices(services.filter(s => s.id !== service.id));
+          onPress: async () => {
+            try {
+              await serviceService.deleteService(service.id);
+              await loadServices();
+            } catch (error) {
+              console.error('Error deleting service:', error);
+              Alert.alert('Error', 'Failed to delete service');
+            }
           },
         },
       ]
     );
   };
 
-  const handleToggleActive = (service: Service) => {
-    setServices(services.map(s => 
-      s.id === service.id ? { ...s, isActive: !s.isActive } : s
-    ));
+  const handleToggleActive = async (service: Service) => {
+    try {
+      await serviceService.toggleServiceActive(service.id, !service.isActive);
+      await loadServices();
+    } catch (error) {
+      console.error('Error toggling service:', error);
+      Alert.alert('Error', 'Failed to update service status');
+    }
   };
 
-  const activeServices = services.filter(s => s.isActive);
-  const inactiveServices = services.filter(s => !s.isActive);
-  const totalRevenue = services.reduce((sum, s) => s.isActive ? sum + s.price : sum, 0);
-  const avgDuration = services.length > 0 
-    ? Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length)
-    : 0;
+  const handleTogglePopular = async (service: Service) => {
+    try {
+      await serviceService.toggleServicePopular(service.id, !service.isPopular);
+      await loadServices();
+    } catch (error) {
+      console.error('Error toggling popular:', error);
+      Alert.alert('Error', 'Failed to update service popularity');
+    }
+  };
+
+  const activeServices = filteredServices.filter(s => s.isActive);
+  const inactiveServices = filteredServices.filter(s => !s.isActive);
+  const totalActiveServices = services.filter(s => s.isActive).length;
+  const totalPopularServices = services.filter(s => s.isPopular).length;
+  
+  // Calculate price range
+  const prices = services.map(s => s.price);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  const priceRange = prices.length > 0 
+    ? (minPrice === maxPrice ? `RM ${minPrice}` : `RM ${minPrice}-${maxPrice}`)
+    : 'RM 0';
+  
+  // Calculate time range
+  const durations = services.map(s => s.duration);
+  const minDuration = durations.length > 0 ? Math.min(...durations) : 0;
+  const maxDuration = durations.length > 0 ? Math.max(...durations) : 0;
+  const timeRange = durations.length > 0
+    ? (minDuration === maxDuration ? `${minDuration}m` : `${minDuration}-${maxDuration}m`)
+    : '0m';
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Services</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading services...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -135,151 +257,249 @@ export default function ServicesManagementScreen() {
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Info Card */}
-        <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={24} color={COLORS.primary} />
-          <View style={styles.infoTextContainer}>
-            <Text style={styles.infoTitle}>Manage Your Services</Text>
-            <Text style={styles.infoText}>
-              Add, edit, or remove services you offer. Set competitive prices and accurate durations.
-            </Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Search Bar */}
+        {services.length > 0 && (
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={20} color={COLORS.text.tertiary} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search services..."
+                placeholderTextColor={COLORS.text.tertiary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color={COLORS.text.tertiary} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Add Service Button */}
-        <TouchableOpacity style={styles.addServiceCard} onPress={handleAddService}>
-          <View style={styles.addIconContainer}>
-            <Ionicons name="add" size={32} color={COLORS.primary} />
+        {/* Stats - Improved */}
+        {services.length > 0 && (
+          <View style={styles.statsContainer}>
+            <View style={styles.statCardLarge}>
+              <View style={styles.statIconContainer}>
+                <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
+              </View>
+              <View style={styles.statInfo}>
+                <Text style={styles.statValue}>{totalActiveServices}</Text>
+                <Text style={styles.statLabel}>Active Services</Text>
+              </View>
+            </View>
+            <View style={styles.statRow}>
+              <View style={styles.statCardSmall}>
+                <Ionicons name="star" size={20} color="#FFA500" />
+                <Text style={styles.statValueSmall}>{totalPopularServices}</Text>
+                <Text style={styles.statLabelSmall}>Popular</Text>
+              </View>
+              <View style={styles.statCardSmall}>
+                <Ionicons name="cash-outline" size={20} color={COLORS.primary} />
+                <Text style={styles.statValueSmall}>{priceRange}</Text>
+                <Text style={styles.statLabelSmall}>Price Range</Text>
+              </View>
+              <View style={styles.statCardSmall}>
+                <Ionicons name="time-outline" size={20} color={COLORS.warning} />
+                <Text style={styles.statValueSmall}>{timeRange}</Text>
+                <Text style={styles.statLabelSmall}>Duration</Text>
+              </View>
+            </View>
           </View>
-          <Text style={styles.addServiceTitle}>Add New Service</Text>
-          <Text style={styles.addServiceSubtitle}>Create a new service offering</Text>
-        </TouchableOpacity>
+        )}
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{activeServices.length}</Text>
-            <Text style={styles.statLabel}>Active Services</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>RM {totalRevenue}</Text>
-            <Text style={styles.statLabel}>Total Value</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{avgDuration}m</Text>
-            <Text style={styles.statLabel}>Avg Duration</Text>
-          </View>
-        </View>
-
-        {/* Active Services */}
+        {/* Active Services - Redesigned */}
         {activeServices.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Active Services ({activeServices.length})</Text>
-            <View style={styles.card}>
-              {activeServices.map((service, index) => (
-                <View key={service.id}>
-                  <View style={styles.serviceRow}>
-                    <View style={styles.serviceLeft}>
-                      <View style={styles.serviceIcon}>
-                        <Ionicons name="cut" size={20} color={COLORS.primary} />
-                      </View>
-                      <View style={styles.serviceInfo}>
-                        <Text style={styles.serviceName}>{service.name}</Text>
-                        <Text style={styles.serviceDuration}>{service.duration} min</Text>
-                        {service.description && (
-                          <Text style={styles.serviceDescription} numberOfLines={1}>
-                            {service.description}
-                          </Text>
+            <Text style={styles.sectionTitle}>Active Services</Text>
+            {activeServices.map((service) => (
+              <View key={service.id} style={styles.serviceCard}>
+                <View style={styles.serviceCardHeader}>
+                  <View style={styles.serviceCardLeft}>
+                    <View style={styles.serviceIconNew}>
+                      <Ionicons name="cut" size={24} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.serviceCardInfo}>
+                      <View style={styles.serviceNameRow}>
+                        <Text style={styles.serviceNameNew}>{service.name}</Text>
+                        {service.isPopular && (
+                          <View style={styles.popularBadge}>
+                            <Ionicons name="star" size={12} color="#FFA500" />
+                            <Text style={styles.popularBadgeText}>Popular</Text>
+                          </View>
                         )}
                       </View>
-                    </View>
-                    <View style={styles.serviceRight}>
-                      <Text style={styles.servicePrice}>RM {service.price}</Text>
-                      <View style={styles.serviceActions}>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleToggleActive(service)}
-                        >
-                          <Ionicons name="eye-off-outline" size={18} color={COLORS.text.secondary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleEditService(service)}
-                        >
-                          <Ionicons name="create-outline" size={18} color={COLORS.primary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleDeleteService(service)}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={COLORS.error} />
-                        </TouchableOpacity>
-                      </View>
+                      {service.description && (
+                        <Text style={styles.serviceDescriptionNew} numberOfLines={2}>
+                          {service.description}
+                        </Text>
+                      )}
                     </View>
                   </View>
-                  {index < activeServices.length - 1 && <View style={styles.divider} />}
                 </View>
-              ))}
-            </View>
+                
+                <View style={styles.serviceCardMeta}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="time-outline" size={16} color={COLORS.text.secondary} />
+                    <Text style={styles.metaText}>{service.duration} min</Text>
+                  </View>
+                  <View style={styles.metaDivider} />
+                  <View style={styles.metaItem}>
+                    <Ionicons name="cash-outline" size={16} color={COLORS.text.secondary} />
+                    <Text style={styles.metaText}>RM {service.price.toFixed(2)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.serviceCardFooter}>
+                  <TouchableOpacity 
+                    style={styles.serviceActionBtn}
+                    onPress={() => handleTogglePopular(service)}
+                  >
+                    <Ionicons 
+                      name={service.isPopular ? "star" : "star-outline"} 
+                      size={18} 
+                      color={service.isPopular ? "#FFA500" : COLORS.text.secondary} 
+                    />
+                    <Text style={[styles.serviceActionText, service.isPopular && { color: "#FFA500" }]}>
+                      {service.isPopular ? 'Popular' : 'Mark'}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.serviceActionBtn}
+                    onPress={() => handleEditService(service)}
+                  >
+                    <Ionicons name="create-outline" size={18} color={COLORS.primary} />
+                    <Text style={styles.serviceActionText}>Edit</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.serviceActionBtn}
+                    onPress={() => handleToggleActive(service)}
+                  >
+                    <Ionicons name="eye-off-outline" size={18} color={COLORS.text.secondary} />
+                    <Text style={[styles.serviceActionText, { color: COLORS.text.secondary }]}>Hide</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.serviceActionBtn}
+                    onPress={() => handleDeleteService(service)}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={COLORS.error} />
+                    <Text style={[styles.serviceActionText, { color: COLORS.error }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
-        {/* Inactive Services */}
+        {/* Inactive Services - Simplified */}
         {inactiveServices.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Inactive Services ({inactiveServices.length})</Text>
-            <View style={styles.card}>
-              {inactiveServices.map((service, index) => (
-                <View key={service.id}>
-                  <View style={styles.serviceRow}>
-                    <View style={styles.serviceLeft}>
-                      <View style={[styles.serviceIcon, styles.inactiveIcon]}>
-                        <Ionicons name="cut" size={20} color={COLORS.text.tertiary} />
-                      </View>
-                      <View style={styles.serviceInfo}>
-                        <Text style={[styles.serviceName, styles.inactiveText]}>{service.name}</Text>
-                        <Text style={styles.serviceDuration}>{service.duration} min</Text>
-                      </View>
-                    </View>
-                    <View style={styles.serviceRight}>
-                      <Text style={[styles.servicePrice, styles.inactiveText]}>RM {service.price}</Text>
-                      <View style={styles.serviceActions}>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleToggleActive(service)}
-                        >
-                          <Ionicons name="eye-outline" size={18} color={COLORS.success} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleDeleteService(service)}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={COLORS.error} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+            <Text style={styles.sectionTitle}>Hidden Services</Text>
+            {inactiveServices.map((service) => (
+              <View key={service.id} style={[styles.serviceCard, styles.inactiveServiceCard]}>
+                <View style={styles.inactiveServiceRow}>
+                  <View style={styles.inactiveServiceInfo}>
+                    <Text style={styles.inactiveServiceName}>{service.name}</Text>
+                    <Text style={styles.inactiveServiceMeta}>
+                      {service.duration} min • RM {service.price}
+                    </Text>
                   </View>
-                  {index < inactiveServices.length - 1 && <View style={styles.divider} />}
+                  <View style={styles.inactiveActions}>
+                    <TouchableOpacity 
+                      style={styles.inactiveActionBtn}
+                      onPress={() => handleToggleActive(service)}
+                    >
+                      <Ionicons name="eye-outline" size={20} color={COLORS.success} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.inactiveActionBtn}
+                      onPress={() => handleDeleteService(service)}
+                    >
+                      <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              ))}
-            </View>
+              </View>
+            ))}
           </View>
         )}
 
-        {/* Empty State */}
+        {/* Empty State with Quick Add Suggestions */}
         {services.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="cut-outline" size={64} color={COLORS.text.tertiary} />
-            <Text style={styles.emptyStateTitle}>No Services Yet</Text>
-            <Text style={styles.emptyStateText}>
-              Add your first service to start accepting bookings
-            </Text>
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateHeader}>
+              <Ionicons name="cut-outline" size={64} color={COLORS.primary} />
+              <Text style={styles.emptyStateTitle}>Let's Add Your Services</Text>
+              <Text style={styles.emptyStateText}>
+                Start with popular services or create your own
+              </Text>
+            </View>
+
+            <Text style={styles.quickAddTitle}>Popular Services</Text>
+            <View style={styles.quickAddGrid}>
+              <TouchableOpacity 
+                style={styles.quickAddCard}
+                onPress={() => handleQuickAdd('Classic Haircut', 45, 45, 'Haircut')}
+              >
+                <Ionicons name="cut" size={24} color={COLORS.primary} />
+                <Text style={styles.quickAddName}>Classic Haircut</Text>
+                <Text style={styles.quickAddPrice}>RM 45 • 45 min</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.quickAddCard}
+                onPress={() => handleQuickAdd('Fade Cut', 55, 60, 'Haircut')}
+              >
+                <Ionicons name="cut" size={24} color={COLORS.primary} />
+                <Text style={styles.quickAddName}>Fade Cut</Text>
+                <Text style={styles.quickAddPrice}>RM 55 • 60 min</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.quickAddCard}
+                onPress={() => handleQuickAdd('Beard Trim', 25, 30, 'Beard')}
+              >
+                <Ionicons name="cut" size={24} color={COLORS.primary} />
+                <Text style={styles.quickAddName}>Beard Trim</Text>
+                <Text style={styles.quickAddPrice}>RM 25 • 30 min</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.quickAddCard}
+                onPress={() => handleQuickAdd('Hair Coloring', 120, 120, 'Coloring')}
+              >
+                <Ionicons name="color-palette" size={24} color={COLORS.primary} />
+                <Text style={styles.quickAddName}>Hair Coloring</Text>
+                <Text style={styles.quickAddPrice}>RM 120 • 2h</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.emptyStateButton} onPress={handleAddService}>
+              <Ionicons name="add-circle-outline" size={20} color="#FFF" />
+              <Text style={styles.emptyStateButtonText}>Create Custom Service</Text>
+            </TouchableOpacity>
           </View>
         )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Floating Action Button */}
+      {services.length > 0 && (
+        <TouchableOpacity 
+          style={styles.fab}
+          onPress={handleAddService}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color="#FFF" />
+        </TouchableOpacity>
+      )}
 
       {/* Add/Edit Service Modal */}
       <Modal
@@ -296,8 +516,10 @@ export default function ServicesManagementScreen() {
             <Text style={styles.modalTitle}>
               {editingService ? 'Edit Service' : 'Add Service'}
             </Text>
-            <TouchableOpacity onPress={handleSaveService}>
-              <Text style={styles.modalSaveText}>Save</Text>
+            <TouchableOpacity onPress={handleSaveService} disabled={isSaving}>
+              <Text style={[styles.modalSaveText, isSaving && styles.disabledText]}>
+                {isSaving ? 'Saving...' : 'Save'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -391,175 +613,320 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 32,
   },
-  infoCard: {
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  // Search Bar
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  searchBar: {
     flexDirection: 'row',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 12,
-    padding: 16,
-    margin: 20,
-    marginBottom: 16,
-    gap: 12,
-  },
-  infoTextContainer: {
-    flex: 1,
-  },
-  infoTitle: {
-    ...TYPOGRAPHY.body.large,
-    color: COLORS.primary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  infoText: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.secondary,
-    lineHeight: 18,
-  },
-  addServiceCard: {
+    alignItems: 'center',
     backgroundColor: COLORS.background.primary,
     borderRadius: 12,
-    padding: 24,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderStyle: 'dashed',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
   },
-  addIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primaryLight,
+  searchInput: {
+    flex: 1,
+    ...TYPOGRAPHY.body.regular,
+    color: COLORS.text.primary,
+  },
+  // Stats - New Design
+  statsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  statCardLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.primary,
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+  },
+  statIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: `${COLORS.success}15`,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
   },
-  addServiceTitle: {
-    ...TYPOGRAPHY.heading.h3,
+  statInfo: {
+    flex: 1,
+  },
+  statValue: {
+    ...TYPOGRAPHY.heading.h1,
     color: COLORS.text.primary,
     marginBottom: 4,
   },
-  addServiceSubtitle: {
+  statLabel: {
     ...TYPOGRAPHY.body.regular,
     color: COLORS.text.secondary,
   },
-  statsContainer: {
+  statRow: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    gap: 12,
+    gap: 8,
   },
-  statCard: {
+  statCardSmall: {
     flex: 1,
     backgroundColor: COLORS.background.primary,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 12,
     alignItems: 'center',
+    gap: 6,
   },
-  statValue: {
-    ...TYPOGRAPHY.heading.h3,
-    color: COLORS.primary,
-    marginBottom: 4,
+  statValueSmall: {
+    ...TYPOGRAPHY.body.large,
+    fontWeight: '600',
+    color: COLORS.text.primary,
   },
-  statLabel: {
+  statLabelSmall: {
     ...TYPOGRAPHY.body.small,
     color: COLORS.text.secondary,
     textAlign: 'center',
+    fontSize: 11,
   },
   section: {
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sectionTitle: {
     ...TYPOGRAPHY.heading.h3,
     color: COLORS.text.primary,
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  card: {
+  // Service Cards - New Modern Design
+  serviceCard: {
     backgroundColor: COLORS.background.primary,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  serviceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
+  serviceCardHeader: {
+    marginBottom: 16,
   },
-  serviceLeft: {
+  serviceCardLeft: {
     flexDirection: 'row',
-    flex: 1,
     gap: 12,
+    flex: 1,
   },
-  serviceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  serviceIconNew: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inactiveIcon: {
-    backgroundColor: COLORS.background.tertiary,
-  },
-  serviceInfo: {
+  serviceCardInfo: {
     flex: 1,
   },
-  serviceName: {
+  serviceNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  serviceNameNew: {
+    ...TYPOGRAPHY.heading.h3,
+    color: COLORS.text.primary,
+  },
+  popularBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  popularBadgeText: {
+    ...TYPOGRAPHY.body.small,
+    color: '#FFA500',
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  serviceDescriptionNew: {
+    ...TYPOGRAPHY.body.regular,
+    color: COLORS.text.secondary,
+    lineHeight: 20,
+  },
+  serviceCardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border.light,
+    marginBottom: 16,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: COLORS.border.light,
+    marginHorizontal: 16,
+  },
+  metaText: {
+    ...TYPOGRAPHY.body.regular,
+    color: COLORS.text.secondary,
+  },
+  serviceCardFooter: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  serviceActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: COLORS.background.secondary,
+    gap: 6,
+  },
+  serviceActionText: {
+    ...TYPOGRAPHY.body.regular,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  // Inactive Services
+  inactiveServiceCard: {
+    opacity: 0.6,
+  },
+  inactiveServiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  inactiveServiceInfo: {
+    flex: 1,
+  },
+  inactiveServiceName: {
     ...TYPOGRAPHY.body.large,
     color: COLORS.text.primary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  serviceDuration: {
+  inactiveServiceMeta: {
     ...TYPOGRAPHY.body.small,
     color: COLORS.text.secondary,
   },
-  serviceDescription: {
-    ...TYPOGRAPHY.body.small,
-    color: COLORS.text.tertiary,
-    marginTop: 2,
-  },
-  serviceRight: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  servicePrice: {
-    ...TYPOGRAPHY.heading.h3,
-    color: COLORS.primary,
-  },
-  serviceActions: {
+  inactiveActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
-  actionButton: {
-    padding: 4,
-  },
-  inactiveText: {
-    color: COLORS.text.tertiary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border.light,
-  },
-  emptyState: {
-    backgroundColor: COLORS.background.primary,
-    borderRadius: 12,
-    padding: 48,
-    marginHorizontal: 20,
+  inactiveActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.background.secondary,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Empty State with Quick Add
+  emptyStateContainer: {
+    paddingHorizontal: 20,
+  },
+  emptyStateHeader: {
+    backgroundColor: COLORS.background.primary,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 24,
   },
   emptyStateTitle: {
-    ...TYPOGRAPHY.heading.h3,
+    ...TYPOGRAPHY.heading.h2,
     color: COLORS.text.primary,
     marginTop: 16,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptyStateText: {
     ...TYPOGRAPHY.body.regular,
     color: COLORS.text.secondary,
     textAlign: 'center',
   },
+  quickAddTitle: {
+    ...TYPOGRAPHY.heading.h3,
+    color: COLORS.text.primary,
+    marginBottom: 16,
+  },
+  quickAddGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  quickAddCard: {
+    width: '48%',
+    backgroundColor: COLORS.background.primary,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  quickAddName: {
+    ...TYPOGRAPHY.body.large,
+    color: COLORS.text.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  quickAddPrice: {
+    ...TYPOGRAPHY.body.small,
+    color: COLORS.text.secondary,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyStateButtonText: {
+    ...TYPOGRAPHY.body.large,
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  // Floating Action Button
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   bottomSpacer: {
-    height: 40,
+    height: 80,
   },
   modalContainer: {
     flex: 1,
@@ -634,5 +1001,19 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body.small,
     color: COLORS.text.secondary,
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    ...TYPOGRAPHY.body.regular,
+    color: COLORS.text.secondary,
+    marginTop: 16,
+  },
+  disabledText: {
+    opacity: 0.5,
   },
 });

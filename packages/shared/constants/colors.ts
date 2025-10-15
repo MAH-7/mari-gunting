@@ -15,6 +15,7 @@ export const COLORS = {
   success: '#10B981',
   error: '#EF4444',
   warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   info: '#3B82F6',
   
   // Text Colors
@@ -47,6 +48,7 @@ export const COLORS = {
     confirmed: '#3B82F6',
     ready: '#8B5CF6',
     'on-the-way': '#8B5CF6',
+    arrived: '#8B5CF6',
     'in-progress': '#00B14F',
     completed: '#10B981',
     cancelled: '#EF4444',
@@ -66,6 +68,7 @@ export const getStatusBackground = (status: string): string => {
     confirmed: '#DBEAFE',
     ready: '#EDE9FE',
     'on-the-way': '#EDE9FE',
+    arrived: '#EDE9FE',
     'in-progress': '#D1FAE5',
     completed: '#D1FAE5',
     cancelled: '#FEE2E2',

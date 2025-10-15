@@ -1,116 +1,80 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet, Animated, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet, Animated, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '@/store/useStore';
-import type { Voucher, Activity } from '@/store/useStore';
+import { rewardsService, type Voucher as DBVoucher, type UserVoucher, type PointsTransaction } from '@/services/rewardsService';
 
-// Utility function to parse voucher expiry date
-const parseExpiryDate = (expiryStr: string): Date => {
-  // Format: '31 Dec 2025' or 'DD MMM YYYY'
-  const months: { [key: string]: number } = {
-    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
-  };
-  
-  const parts = expiryStr.split(' ');
-  if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = months[parts[1]];
-    const year = parseInt(parts[2], 10);
-    return new Date(year, month, day, 23, 59, 59); // End of day
-  }
-  
-  return new Date(); // Fallback
-};
-
-// Utility function to get days until expiry
-const getDaysUntilExpiry = (expiryStr: string): number => {
-  const expiryDate = parseExpiryDate(expiryStr);
-  const now = new Date();
-  const diffTime = expiryDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-};
-
-// Utility function to check if voucher is expired
-const isVoucherExpired = (expiryStr: string): boolean => {
-  return getDaysUntilExpiry(expiryStr) < 0;
-};
-
-// Utility function to check if voucher is expiring soon (within 7 days)
-const isExpiringSoon = (expiryStr: string): boolean => {
-  const days = getDaysUntilExpiry(expiryStr);
-  return days >= 0 && days <= 7;
-};
-
-const availableVouchers: Voucher[] = [
-  {
-    id: 1,
-    title: 'RM 5 OFF',
-    description: 'Minimum spend RM 30',
-    points: 500,
-    expires: '31 Dec 2025',
-    type: 'discount',
-    discountAmount: 5,
-    minSpend: 30,
-  },
-  {
-    id: 2,
-    title: 'Free Hair Wash',
-    description: 'With any haircut service',
-    points: 300,
-    expires: '15 Oct 2025', // Expiring soon for demo
-    type: 'free',
-  },
-  {
-    id: 3,
-    title: 'RM 10 OFF',
-    description: 'Minimum spend RM 50',
-    points: 800,
-    expires: '31 Dec 2025',
-    type: 'discount',
-    discountAmount: 10,
-    minSpend: 50,
-  },
-  {
-    id: 4,
-    title: '20% OFF',
-    description: 'Hair treatment services',
-    points: 1000,
-    expires: '31 Dec 2025',
-    type: 'discount',
-    discountPercent: 20,
-  },
-];
 
 
 export default function RewardsScreen() {
-  // Global state
-  const userPoints = useStore((state) => state.userPoints);
-  const myVouchers = useStore((state) => state.myVouchers);
-  const activity = useStore((state) => state.activity);
-  const deductPoints = useStore((state) => state.deductPoints);
-  const addVoucher = useStore((state) => state.addVoucher);
-  const addActivity = useStore((state) => state.addActivity);
+  // User from store
+  const currentUser = useStore((state) => state.currentUser);
   
-  // Local state
+  // Local state - Data
+  const [userPoints, setUserPoints] = useState(0);
+  const [availableVouchers, setAvailableVouchers] = useState<DBVoucher[]>([]);
+  const [myVouchers, setMyVouchers] = useState<UserVoucher[]>([]);
+  const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
+  
+  // Local state - UI
   const [activeTab, setActiveTab] = useState<'vouchers' | 'myVouchers' | 'activity'>('vouchers');
-  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<DBVoucher | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const successScale = useRef(new Animated.Value(0)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
 
-  const handleRedeemPress = (voucher: Voucher) => {
-    if (userPoints < voucher.points) {
+  // Load data on mount
+  useEffect(() => {
+    if (currentUser?.id) {
+      loadRewardsData();
+    }
+  }, [currentUser?.id]);
+
+  const loadRewardsData = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Load all data in parallel
+      const [points, vouchers, userVouchers, history] = await Promise.all([
+        rewardsService.getUserPoints(currentUser.id),
+        rewardsService.getAvailableVouchers(),
+        rewardsService.getUserVouchers(currentUser.id),
+        rewardsService.getPointsHistory(currentUser.id),
+      ]);
+      
+      setUserPoints(points);
+      setAvailableVouchers(vouchers);
+      setMyVouchers(userVouchers);
+      setPointsHistory(history);
+    } catch (error) {
+      console.error('[RewardsScreen] Error loading data:', error);
+      Alert.alert('Error', 'Failed to load rewards data. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadRewardsData();
+    setIsRefreshing(false);
+  };
+
+  const handleRedeemPress = (voucher: DBVoucher) => {
+    if (userPoints < voucher.points_cost) {
       Alert.alert(
         'Insufficient Points',
-        `You need ${voucher.points - userPoints} more points to redeem this voucher.\n\nKeep booking to earn more points!`,
+        `You need ${voucher.points_cost - userPoints} more points to redeem this voucher.\n\nKeep booking to earn more points!`,
         [{ text: 'OK' }]
       );
       return;
@@ -120,62 +84,49 @@ export default function RewardsScreen() {
   };
 
   const handleConfirmRedeem = async () => {
-    if (!selectedVoucher) return;
+    if (!selectedVoucher || !currentUser?.id) return;
     
     setIsRedeeming(true);
     setShowConfirmModal(false);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Haptic feedback
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
-    // Deduct points
-    deductPoints(selectedVoucher.points);
-    
-    // Add to My Vouchers
-    const redeemedVoucher: Voucher = {
-      ...selectedVoucher,
-      redeemedAt: new Date().toISOString(),
-    };
-    addVoucher(redeemedVoucher);
-    
-    // Add to Activity History
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    const newActivity: Activity = {
-      id: Date.now(),
-      type: 'redeem',
-      amount: -selectedVoucher.points,
-      description: `${selectedVoucher.title} voucher redeemed`,
-      date: formattedDate,
-    };
-    addActivity(newActivity);
-    
-    // Show success modal
-    setShowSuccessModal(true);
-    setIsRedeeming(false);
-    
-    // Success animation
-    Animated.parallel([
-      Animated.spring(successScale, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-      Animated.timing(successOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    // Auto dismiss after 2.5 seconds
-    setTimeout(() => {
-      handleCloseSuccess();
-    }, 2500);
+    try {
+      // Redeem voucher via API
+      await rewardsService.redeemVoucher(currentUser.id, selectedVoucher.id);
+      
+      // Haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Reload data to get updated points and vouchers
+      await loadRewardsData();
+      
+      // Show success modal
+      setShowSuccessModal(true);
+      setIsRedeeming(false);
+      
+      // Success animation
+      Animated.parallel([
+        Animated.spring(successScale, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+        Animated.timing(successOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      
+      // Auto dismiss after 2.5 seconds
+      setTimeout(() => {
+        handleCloseSuccess();
+      }, 2500);
+    } catch (error: any) {
+      setIsRedeeming(false);
+      console.error('[RewardsScreen] Redeem error:', error);
+      Alert.alert('Redemption Failed', error.message || 'Failed to redeem voucher. Please try again.');
+    }
   };
 
   const handleCloseSuccess = () => {
@@ -197,29 +148,37 @@ export default function RewardsScreen() {
     });
   };
 
-  const redeemedVoucherIds = myVouchers.map(v => v.id);
+  const redeemedVoucherIds = myVouchers.map(v => v.voucher_id);
   const availableForRedemption = availableVouchers.filter(v => 
-    !redeemedVoucherIds.includes(v.id) && !isVoucherExpired(v.expires)
+    !redeemedVoucherIds.includes(v.id) && !rewardsService.isExpired(v.valid_until)
   );
   
   // Filter my vouchers to show only non-expired ones
-  const activeMyVouchers = myVouchers.filter(v => !isVoucherExpired(v.expires));
+  const activeMyVouchers = myVouchers.filter(v => !rewardsService.isExpired(v.voucher.valid_until));
 
-  const renderVoucherCard = (voucher: Voucher, isRedeemed: boolean = false) => {
-    const daysLeft = getDaysUntilExpiry(voucher.expires);
-    const expiringSoon = isExpiringSoon(voucher.expires);
-    const isUsed = voucher.status === 'used';
+  const renderVoucherCard = (voucher: DBVoucher | UserVoucher, isRedeemed: boolean = false) => {
+    // Handle both DBVoucher and UserVoucher types
+    const voucherData = 'voucher' in voucher ? voucher.voucher : voucher;
+    const daysLeft = rewardsService.getDaysUntilExpiry(voucherData.valid_until);
+    const expiringSoon = rewardsService.isExpiringSoon(voucherData.valid_until);
+    const isUsed = 'status' in voucher && voucher.status === 'used';
+    const voucherId = 'voucher' in voucher ? voucher.id : voucher.id;
+    const voucherType = voucherData.type;
+    const voucherTitle = voucherData.title;
+    const voucherDescription = voucherData.description;
+    const voucherPoints = voucherData.points_cost;
+    const voucherExpiry = rewardsService.formatExpiryDate(voucherData.valid_until);
     
     return (
       <View
-        key={voucher.id}
+        key={voucherId}
         style={[styles.voucherCard, (isRedeemed || isUsed) && styles.voucherCardUsed]}
       >
         <View style={styles.voucherLeft}>
           <View style={styles.badgesRow}>
-            <View style={[styles.typeBadge, voucher.type === 'discount' ? styles.typeBadgeOrange : styles.typeBadgeBlue]}>
-              <Text style={[styles.typeBadgeText, voucher.type === 'discount' ? styles.typeBadgeTextOrange : styles.typeBadgeTextBlue]}>
-                {voucher.type === 'discount' ? 'DISCOUNT' : 'FREE'}
+            <View style={[styles.typeBadge, voucherType === 'percentage' ? styles.typeBadgeOrange : styles.typeBadgeBlue]}>
+              <Text style={[styles.typeBadgeText, voucherType === 'percentage' ? styles.typeBadgeTextOrange : styles.typeBadgeTextBlue]}>
+                {voucherType === 'percentage' ? 'DISCOUNT' : 'FIXED'}
               </Text>
             </View>
             
@@ -232,42 +191,42 @@ export default function RewardsScreen() {
             )}
           </View>
           
-          <Text style={styles.voucherTitle}>{voucher.title}</Text>
-          <Text style={styles.voucherDescription}>{voucher.description}</Text>
+          <Text style={styles.voucherTitle}>{voucherTitle}</Text>
+          <Text style={styles.voucherDescription}>{voucherDescription}</Text>
           
           <View style={styles.voucherFooter}>
             <View style={styles.pointsRow}>
               <Ionicons name="pricetag" size={14} color="#00B14F" />
-              <Text style={styles.pointsText}>{voucher.points} points</Text>
+              <Text style={styles.pointsText}>{voucherPoints} points</Text>
             </View>
-            <Text style={[styles.expiryText, expiringSoon && styles.expiryTextWarning]}>Exp: {voucher.expires}</Text>
+            <Text style={[styles.expiryText, expiringSoon && styles.expiryTextWarning]}>Exp: {voucherExpiry}</Text>
           </View>
         </View>
 
-        <View style={[styles.voucherRight, (isRedeemed || isUsed) && styles.voucherRightUsed]}>
+        <View style={[styles.voucherRight, isUsed ? styles.voucherRightUsed : isRedeemed ? styles.voucherRightActive : {}]}>
           {isUsed ? (
             <View style={styles.usedLabel}>
               <Ionicons name="checkmark-done" size={24} color="#FFFFFF" />
               <Text style={styles.usedText}>Used</Text>
             </View>
           ) : isRedeemed ? (
-            <View style={styles.usedLabel}>
+            <View style={styles.availableLabel}>
               <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-              <Text style={styles.usedText}>Redeemed</Text>
+              <Text style={styles.availableText}>Available</Text>
             </View>
           ) : (
             <TouchableOpacity
-              disabled={userPoints < voucher.points}
-              onPress={() => handleRedeemPress(voucher)}
+              disabled={userPoints < voucherPoints}
+              onPress={() => 'voucher' in voucher ? undefined : handleRedeemPress(voucher)}
               style={styles.redeemButton}
             >
               <Ionicons
                 name="gift"
                 size={28}
-                color={userPoints < voucher.points ? '#FFFFFF80' : '#FFFFFF'}
+                color={userPoints < voucherPoints ? '#FFFFFF80' : '#FFFFFF'}
               />
-              <Text style={[styles.redeemText, userPoints < voucher.points && styles.redeemTextLocked]}>
-                {userPoints < voucher.points ? 'Locked' : 'Redeem'}
+              <Text style={[styles.redeemText, userPoints < voucherPoints && styles.redeemTextLocked]}>
+                {userPoints < voucherPoints ? 'Locked' : 'Redeem'}
               </Text>
             </TouchableOpacity>
           )}
@@ -337,22 +296,41 @@ export default function RewardsScreen() {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {activeTab === 'vouchers' && (
-          <View style={styles.contentSection}>
-            {availableForRedemption.length > 0 ? (
-              availableForRedemption.map(voucher => renderVoucherCard(voucher, false))
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="gift-outline" size={64} color="#D1D5DB" />
-                <Text style={styles.emptyTitle}>All Vouchers Redeemed!</Text>
-                <Text style={styles.emptyText}>Check back later for new rewards</Text>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#00B14F"
+            colors={['#00B14F']}
+          />
+        }
+      >
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#00B14F" />
+            <Text style={styles.loadingText}>Loading rewards...</Text>
+          </View>
+        ) : (
+          <>
+            {activeTab === 'vouchers' && (
+              <View style={styles.contentSection}>
+                {availableForRedemption.length > 0 ? (
+                  availableForRedemption.map(voucher => renderVoucherCard(voucher, false))
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="gift-outline" size={64} color="#D1D5DB" />
+                    <Text style={styles.emptyTitle}>All Vouchers Redeemed!</Text>
+                    <Text style={styles.emptyText}>Check back later for new rewards</Text>
+                  </View>
+                )}
               </View>
             )}
-          </View>
-        )}
 
-        {activeTab === 'myVouchers' && (
+            {activeTab === 'myVouchers' && (
           <View style={styles.contentSection}>
             {myVouchers.length > 0 ? (
               myVouchers.map(voucher => renderVoucherCard(voucher, true))
@@ -370,31 +348,41 @@ export default function RewardsScreen() {
               </View>
             )}
           </View>
-        )}
+            )}
 
-        {activeTab === 'activity' && (
+            {activeTab === 'activity' && (
           <View style={styles.contentSection}>
-            {activity.map((item) => (
-              <View key={item.id} style={styles.activityCard}>
-                <View style={[styles.activityIcon, item.type === 'earn' ? styles.activityIconEarn : styles.activityIconRedeem]}>
-                  <Ionicons
-                    name={item.type === 'earn' ? 'add-circle' : 'remove-circle'}
-                    size={24}
-                    color={item.type === 'earn' ? '#00B14F' : '#EF4444'}
-                  />
-                </View>
+            {pointsHistory.length > 0 ? (
+              pointsHistory.map((transaction) => (
+                <View key={transaction.id} style={styles.activityCard}>
+                  <View style={[styles.activityIcon, transaction.type === 'earn' ? styles.activityIconEarn : styles.activityIconRedeem]}>
+                    <Ionicons
+                      name={transaction.type === 'earn' ? 'add-circle' : 'remove-circle'}
+                      size={24}
+                      color={transaction.type === 'earn' ? '#00B14F' : '#EF4444'}
+                    />
+                  </View>
 
-                <View style={styles.activityDetails}>
-                  <Text style={styles.activityDescription}>{item.description}</Text>
-                  <Text style={styles.activityDate}>{item.date}</Text>
-                </View>
+                  <View style={styles.activityDetails}>
+                    <Text style={styles.activityDescription}>{transaction.description}</Text>
+                    <Text style={styles.activityDate}>{new Date(transaction.created_at).toLocaleDateString()}</Text>
+                  </View>
 
-                <Text style={[styles.activityAmount, item.type === 'earn' ? styles.activityAmountEarn : styles.activityAmountRedeem]}>
-                  {item.amount > 0 ? '+' : ''}{item.amount}
-                </Text>
+                  <Text style={[styles.activityAmount, transaction.type === 'earn' ? styles.activityAmountEarn : styles.activityAmountRedeem]}>
+                    {transaction.amount > 0 ? '+' : ''}{transaction.amount}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="list-outline" size={64} color="#D1D5DB" />
+                <Text style={styles.emptyTitle}>No Activity Yet</Text>
+                <Text style={styles.emptyText}>Start earning and redeeming to see your activity</Text>
               </View>
-            ))}
+            )}
           </View>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -418,7 +406,7 @@ export default function RewardsScreen() {
 
                 <View style={styles.modalPoints}>
                   <Ionicons name="pricetag" size={20} color="#F59E0B" />
-                  <Text style={styles.modalPointsText}>{selectedVoucher.points} points will be deducted</Text>
+                  <Text style={styles.modalPointsText}>{selectedVoucher.points_cost} points will be deducted</Text>
                 </View>
 
                 <View style={styles.modalWarning}>
@@ -611,6 +599,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 24,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
   contentSection: {
     gap: 12,
   },
@@ -713,6 +707,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  voucherRightActive: {
+    backgroundColor: '#00B14F',
+  },
   voucherRightUsed: {
     backgroundColor: '#6B7280',
   },
@@ -733,6 +730,15 @@ const styles = StyleSheet.create({
   },
   usedText: {
     fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 8,
+  },
+  availableLabel: {
+    alignItems: 'center',
+  },
+  availableText: {
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginTop: 8,

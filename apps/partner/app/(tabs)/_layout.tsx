@@ -43,7 +43,7 @@ export default function PartnerTabLayout() {
     tabBarInactiveTintColor: COLORS.text.tertiary,
     tabBarLabelStyle: {
       fontSize: 10,
-      fontWeight: '600',
+      fontWeight: '600' as '600',
       marginTop: 4,
     },
     tabBarStyle: {

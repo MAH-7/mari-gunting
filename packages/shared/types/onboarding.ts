@@ -7,6 +7,7 @@ export type OnboardingStatus =
   | 'not_started'
   | 'phone_verified'
   | 'account_type_selected'
+  | 'in_progress'
   | 'ekyc_submitted'
   | 'ekyc_passed'
   | 'business_submitted'
@@ -16,6 +17,7 @@ export type OnboardingStatus =
   | 'services_completed'
   | 'availability_completed'
   | 'portfolio_completed'
+  | 'submitted'
   | 'pending_review'
   | 'approved'
   | 'rejected'
@@ -38,6 +40,8 @@ export interface OnboardingProgress {
 }
 
 // eKYC Data
+export type VerificationStatus = 'not_started' | 'pending' | 'submitted' | 'in_progress' | 'verified' | 'failed';
+
 export interface EKYCData {
   nricNumber?: string; // Last 4 digits only for display
   fullName: string;
@@ -46,7 +50,7 @@ export interface EKYCData {
   nricFrontUrl?: string;
   nricBackUrl?: string;
   livenessScore?: number;
-  verificationStatus?: 'pending' | 'verified' | 'failed';
+  verificationStatus?: VerificationStatus;
   verifiedAt?: string;
 }
 
@@ -78,6 +82,7 @@ export interface PayoutDetails {
   accountNumberMasked?: string; // e.g., ****1234
   duitNowId?: string;
   bankVerificationStatus?: 'pending' | 'verified' | 'failed';
+  verificationStatus?: 'pending' | 'verified' | 'failed'; // Alias for compatibility
   verifiedAt?: string;
 }
 
@@ -115,13 +120,21 @@ export interface FreelanceAvailability {
 }
 
 // Operating Hours (Barbershop)
+export interface DaySchedule {
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  breakTime?: { start: string; end: string };
+}
+
 export interface ShopOperatingHours {
-  [day: string]: {
-    isOpen: boolean;
-    openTime: string;
-    closeTime: string;
-    breakTime?: { start: string; end: string };
-  };
+  monday?: DaySchedule;
+  tuesday?: DaySchedule;
+  wednesday?: DaySchedule;
+  thursday?: DaySchedule;
+  friday?: DaySchedule;
+  saturday?: DaySchedule;
+  sunday?: DaySchedule;
   capacity: number; // Number of chairs/barbers
   allowWalkIns: boolean;
   advanceBookingDays: number;

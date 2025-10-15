@@ -52,13 +52,17 @@ export function useLocation() {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
         checkPermission();
+        // Refresh location if stale
+        if (!locationService.isLocationFresh() && permission?.granted) {
+          getCurrentLocation();
+        }
       }
     });
 
     return () => {
       subscription.remove();
     };
-  }, [checkPermission]);
+  }, [checkPermission, getCurrentLocation, permission]);
 
   // Initial permission check
   useEffect(() => {

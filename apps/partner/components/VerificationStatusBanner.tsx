@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 
-type StatusType = 'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed';
+type StatusType = 'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed' | 'pending';
 
 interface VerificationStatusBannerProps {
   status: StatusType;
@@ -21,6 +21,7 @@ export default function VerificationStatusBanner({ status, message }: Verificati
           title: 'Verified',
           defaultMessage: 'Your documents have been verified',
         };
+      case 'pending':
       case 'submitted':
         return {
           icon: 'time' as const,

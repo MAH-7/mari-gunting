@@ -116,7 +116,9 @@ export const mockBarbers: Barber[] = [
       address: 'Currently in KLCC area',
     },
     isOnline: true,
+    isAvailable: true,
     isVerified: true,
+    serviceRadiusKm: 20,
     joinedDate: '2022-03-15',
     distance: 3.2,
     photos: [
@@ -153,7 +155,9 @@ export const mockBarbers: Barber[] = [
       address: 'Currently in Bangsar area',
     },
     isOnline: true,
+    isAvailable: true,
     isVerified: true,
+    serviceRadiusKm: 20,
     joinedDate: '2021-11-20',
     distance: 2.3,
     photos: [
@@ -190,7 +194,9 @@ export const mockBarbers: Barber[] = [
       address: 'Currently in Cheras area',
     },
     isOnline: true,
+    isAvailable: true,
     isVerified: false,
+    serviceRadiusKm: 15,
     joinedDate: '2023-01-10',
     distance: 14.7,
     photos: [
@@ -226,7 +232,9 @@ export const mockBarbers: Barber[] = [
       address: 'Currently in Subang Jaya area',
     },
     isOnline: true,
+    isAvailable: true,
     isVerified: true,
+    serviceRadiusKm: 20,
     joinedDate: '2022-07-05',
     distance: 1.5,
     photos: [

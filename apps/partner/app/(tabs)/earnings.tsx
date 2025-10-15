@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Modal, Alert, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,6 +93,7 @@ export default function GrabEarningsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F2F4F7" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -210,7 +211,7 @@ export default function GrabEarningsScreen() {
                   <Ionicons name="car-outline" size={20} color="#FF9800" />
                 </View>
                 <View>
-                  <Text style={styles.breakdownLabel}>Travel Fees</Text>
+                  <Text style={styles.breakdownLabel}>Travel</Text>
                   <Text style={styles.breakdownSub}>100% to you</Text>
                 </View>
               </View>
@@ -333,7 +334,7 @@ export default function GrabEarningsScreen() {
                   <View style={styles.keyFactDivider} />
                   <View style={styles.keyFactItem}>
                     <Text style={styles.keyFactValue}>100%</Text>
-                    <Text style={styles.keyFactLabel}>Travel Fees</Text>
+                    <Text style={styles.keyFactLabel}>Travel</Text>
                   </View>
                 </View>
               </View>
@@ -359,9 +360,9 @@ export default function GrabEarningsScreen() {
                   <Ionicons name="car-outline" size={20} color="#FF9800" />
                 </View>
                 <View style={styles.infoText}>
-                  <Text style={styles.infoItemTitle}>Travel Fees (100%)</Text>
+                  <Text style={styles.infoItemTitle}>Travel (100%)</Text>
                   <Text style={styles.infoItemDesc}>
-                    <Text style={{ fontWeight: '700', color: '#FF9800' }}>100% of travel costs</Text> go directly to you. No commission deducted from travel fees!
+                    <Text style={{ fontWeight: '700', color: '#FF9800' }}>100% of travel</Text> goes directly to you. No commission deducted from travel!
                   </Text>
                   <View style={styles.infoHighlight}>
                     <Text style={styles.infoHighlightText}>✓ Full reimbursement for your time & fuel</Text>
@@ -388,14 +389,14 @@ export default function GrabEarningsScreen() {
                 </View>
               </View>
 
-              {/* Platform Fee Details */}
+              {/* Booking Fee Details */}
               <View style={styles.platformFeeCard}>
                 <View style={styles.platformFeeHeader}>
                   <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
-                  <Text style={styles.platformFeeTitle}>RM 2 Platform Fee (Customer Pays)</Text>
+                  <Text style={styles.platformFeeTitle}>RM 2 Booking Fee (Customer Pays)</Text>
                 </View>
                 <Text style={styles.platformFeeDesc}>
-                  Customers pay an additional <Text style={{ fontWeight: '700' }}>RM 2.00 platform fee</Text> per booking. This fee is <Text style={{ fontWeight: '700', color: '#00B14F' }}>NOT deducted from your earnings</Text> - it goes directly to the company for operational costs. This helps keep your commission low at just 12%.
+                  Customers pay an additional <Text style={{ fontWeight: '700' }}>RM 2.00 booking fee</Text> per booking. This fee is <Text style={{ fontWeight: '700', color: '#00B14F' }}>NOT deducted from your earnings</Text> - it goes directly to the company for operational costs. This helps keep your commission low at just 12%.
                 </Text>
               </View>
               
@@ -424,7 +425,7 @@ export default function GrabEarningsScreen() {
                     <Text style={[styles.calcValue, { color: '#F44336' }]}>- RM 6.00</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>RM 2 Platform Fee:</Text>
+                    <Text style={styles.calcLabel}>RM 2 Booking Fee:</Text>
                     <Text style={[styles.calcValue, { color: '#3B82F6' }]}>RM 0.00 (customer pays)</Text>
                   </View>
                   <View style={styles.calcRow}>
@@ -532,7 +533,7 @@ export default function GrabEarningsScreen() {
                         <Text style={styles.tripDetailRowValue}>RM {netService.toFixed(2)}</Text>
                       </View>
                       <View style={styles.tripDetailRow}>
-                        <Text style={styles.tripDetailRowLabel}>Travel Fee</Text>
+                        <Text style={styles.tripDetailRowLabel}>Travel</Text>
                         <Text style={styles.tripDetailRowValue}>RM {(booking.travelCost || 0).toFixed(2)}</Text>
                       </View>
                       <View style={[styles.tripDetailRow, styles.tripDetailTotal]}>

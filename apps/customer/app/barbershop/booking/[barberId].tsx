@@ -151,15 +151,15 @@ export default function BarbershopBookingScreen() {
   // NO TRAVEL COST for barbershop bookings (walk-in service)
   const travelCost = 0;
   
-  // Platform fee
-  const platformFee = 2.00; // RM 2 platform fee
+  // Booking fee
+  const bookingFee = 2.00; // RM 2 booking fee
   
   // Commission calculation (12% from service price)
   const serviceCommission = Math.round((subtotal * 0.12) * 100) / 100;
   const barberServiceEarning = Math.round((subtotal * 0.88) * 100) / 100;
   
   // Calculate total
-  const total = Math.round((subtotal + platformFee) * 100) / 100;
+  const total = Math.round((subtotal + bookingFee) * 100) / 100;
 
   const handleBookNow = () => {
     if (selectedServiceIds.length === 0) {
@@ -199,7 +199,7 @@ export default function BarbershopBookingScreen() {
         // Pricing (NO travel cost for barbershop)
         subtotal: subtotal.toString(),
         travelCost: '0',
-        platformFee: platformFee.toString(),
+        bookingFee: bookingFee.toString(),
         serviceCommission: serviceCommission.toString(),
         barberServiceEarning: barberServiceEarning.toString(),
         amount: total.toString(),

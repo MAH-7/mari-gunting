@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency, formatDistance } from '@/utils/format';
 import { Barber } from '@/types';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
+import { supabase } from '@mari-gunting/shared/config/supabase';
+import { useLocation } from '@/hooks/useLocation';
+import { batchCalculateDistances, formatDuration } from '@mari-gunting/shared/utils/directions';
+import { ENV } from '@mari-gunting/shared/config/env';
 
 export default function BarbersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,24 +19,197 @@ export default function BarbersScreen() {
   const [showRadiusModal, setShowRadiusModal] = useState(false);
   const [sortBy, setSortBy] = useState<'distance' | 'price-low' | 'price-high'>('distance');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [calculatingDistances, setCalculatingDistances] = useState(false);
+  const queryClient = useQueryClient();
+  const { location, getCurrentLocation, hasPermission } = useLocation();
+  
+  // Get user location on mount
+  useEffect(() => {
+    if (hasPermission) {
+      getCurrentLocation();
+    }
+  }, [hasPermission, getCurrentLocation]);
 
-  const { data: barbersResponse, isLoading } = useQuery({
-    queryKey: ['barbers', radius],
+  const { data: barbersResponse, isLoading, refetch } = useQuery({
+    queryKey: ['barbers', radius, location?.latitude, location?.longitude],
     queryFn: () => api.getBarbers({
       isOnline: true,
+      isAvailable: true,
+      location: location ? {
+        lat: location.latitude,
+        lng: location.longitude,
+        radius: radius,
+      } : undefined,
     }),
+    enabled: !!location, // Only fetch when location is available
+    refetchOnMount: true,
+    refetchOnWindowFocus: false, // Disable auto-refetch, use real-time updates instead
   });
 
-  const barbers = barbersResponse?.data?.data || [];
+  // Local state for real-time updates (Grab's pattern)
+  const [realtimeBarbers, setRealtimeBarbers] = useState<typeof rawBarbers>([]);
+
+  // Sync realtime state with query data
+  useEffect(() => {
+    if (barbersResponse?.data?.data) {
+      setRealtimeBarbers(barbersResponse.data.data);
+    }
+  }, [barbersResponse]);
+
+  // Real-time subscription for barber availability changes (Grab's pattern)
+  useEffect(() => {
+    console.log('🔌 Setting up real-time subscriptions (Grab pattern)...');
+    
+    // Subscribe to profiles table changes (is_online)
+    const profilesChannel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          const affectedUserId = payload.new?.id;
+          const newOnline = payload.new?.is_online;
+          
+          console.log(`⚡ Real-time: Barber ${affectedUserId} online: ${newOnline}`);
+          
+          // Update state directly (instant UI update!)
+          setRealtimeBarbers(prev => {
+            if (!newOnline) {
+              // Barber went offline - remove immediately
+              const filtered = prev.filter(b => b.id !== affectedUserId);
+              console.log(`👋 Removed offline barber (${prev.length} → ${filtered.length})`);
+              return filtered;
+            } else {
+              // Barber came online - need to refetch to add them
+              console.log('✅ Barber came online - refetching to add...');
+              queryClient.invalidateQueries({ queryKey: ['barbers'] });
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Profiles channel status:', status);
+      });
+
+    // Subscribe to barbers table changes (is_available)
+    const barbersChannel = supabase
+      .channel('barbers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'barbers',
+        },
+        (payload) => {
+          const affectedBarberId = payload.new?.id;
+          const newAvailable = payload.new?.is_available;
+          
+          console.log(`⚡ Real-time: Barber ${affectedBarberId} available: ${newAvailable}`);
+          
+          // Update state directly (instant UI update!)
+          setRealtimeBarbers(prev => {
+            if (!newAvailable) {
+              // Barber became unavailable - remove immediately
+              const filtered = prev.filter(b => b.id !== affectedBarberId);
+              console.log(`🚫 Removed unavailable barber (${prev.length} → ${filtered.length})`);
+              return filtered;
+            } else {
+              // Barber became available - need to refetch to add them
+              console.log('✅ Barber became available - refetching to add...');
+              queryClient.invalidateQueries({ queryKey: ['barbers'] });
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Barbers channel status:', status);
+      });
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      console.log('🔌 Cleaning up subscriptions...');
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(barbersChannel);
+    };
+  }, []); // No dependencies - set up once!
+
+  // Use realtime barbers instead of query data directly
+  const rawBarbers = realtimeBarbers;
+  
+  // State to store calculated driving distances and durations
+  const [barberRoutesInfo, setBarberRoutesInfo] = useState<Map<string, { distanceKm: number; durationMinutes: number }>>(new Map());
+  
+  // Calculate DRIVING distances for nearby barbers (already pre-filtered by PostGIS)
+  useEffect(() => {
+    if (!location || rawBarbers.length === 0) return;
+    
+    const calculateDrivingDistances = async () => {
+      setCalculatingDistances(true);
+      
+      try {
+        console.log(`🗺️ Calculating driving distances for ${rawBarbers.length} nearby barbers (pre-filtered by PostGIS)`);
+        
+        // Calculate actual driving distances for all barbers returned by PostGIS
+        const destinations = rawBarbers.map(b => ({
+          id: b.id,
+          latitude: b.location.latitude,
+          longitude: b.location.longitude,
+        }));
+        
+        const routesMap = await batchCalculateDistances(
+          location, 
+          destinations, 
+          ENV.MAPBOX_ACCESS_TOKEN || '',
+          { 
+            useCache: true, // Enable route caching
+            supabase: supabase // Pass supabase client for cache access
+          }
+        );
+        
+        console.log(`✅ Calculated driving distances for ${routesMap.size} barbers`);
+        setBarberRoutesInfo(routesMap);
+      } catch (error) {
+        console.error('❌ Error calculating driving distances:', error);
+      } finally {
+        setCalculatingDistances(false);
+      }
+    };
+    
+    calculateDrivingDistances();
+  }, [rawBarbers, location, radius]);
+  
+  // Combine barbers with their driving distance info
+  const barbers = useMemo(() => {
+    return rawBarbers.map(barber => {
+      const routeInfo = barberRoutesInfo.get(barber.id);
+      return {
+        ...barber,
+        distance: routeInfo?.distanceKm, // DRIVING distance!
+        durationMinutes: routeInfo?.durationMinutes,
+      };
+    });
+  }, [rawBarbers, barberRoutesInfo]);
 
   const filteredBarbers = barbers.filter(barber => {
     const matchesSearch = !searchQuery || 
       barber.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       barber.specializations.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const withinRadius = !barber.distance || barber.distance <= radius;
+    // Solution A: Filter by DRIVING distance (matches what customer selected!)
+    // Customer's search radius: barber must be within customer's chosen DRIVING radius
+    const withinCustomerRadius = barber.distance !== undefined && barber.distance <= radius;
     
-    return matchesSearch && withinRadius && barber.isOnline;
+    // Barber's service radius: customer must be within barber's service area (also driving distance)
+    const withinBarberServiceArea = barber.distance !== undefined && barber.distance <= barber.serviceRadiusKm;
+    
+    return matchesSearch && withinCustomerRadius && withinBarberServiceArea && barber.isOnline && barber.isAvailable;
   });
 
   const sortedBarbers = [...filteredBarbers].sort((a, b) => {
@@ -109,6 +286,13 @@ export default function BarbersScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {calculatingDistances && (
+          <View style={styles.calculatingBanner}>
+            <ActivityIndicator size="small" color="#00B14F" />
+            <Text style={styles.calculatingText}>Calculating driving distances...</Text>
+          </View>
+        )}
+        
         {isLoading ? (
           // Skeleton Loading Cards
           <>
@@ -311,50 +495,61 @@ function BarberCard({ barber }: { barber: Barber }) {
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/barber/${barber.id}` as any)}
-      activeOpacity={0.6}
+      onPress={() => router.push(`/barber/${barber.id}${barber.distance ? `?distance=${barber.distance}` : ''}` as any)}
+      activeOpacity={0.7}
     >
       <View style={styles.cardInner}>
         <Image source={{ uri: barber.avatar }} style={styles.avatar} />
         
         <View style={styles.info}>
-          <View style={styles.topRow}>
-            <Text style={styles.name} numberOfLines={1}>
-              {barber.name}
-            </Text>
-            {barber.isVerified && (
-              <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
-            )}
-          </View>
-
-          <View style={styles.metaRow}>
-            <Ionicons name="star" size={12} color="#FBBF24" />
-            <Text style={styles.rating}>{barber.rating.toFixed(1)}</Text>
-            <Text style={styles.meta}>• {barber.completedJobs} jobs</Text>
-          </View>
-
-          {barber.distance && (
-            <View style={styles.distanceRow}>
-              <Ionicons name="navigate" size={14} color="#00B14F" />
-              <Text style={styles.distanceText}>{formatDistance(barber.distance)} away</Text>
-            </View>
-          )}
-
-          <View style={styles.bottom}>
-            <View>
-              <Text style={styles.priceLabel}>From</Text>
-              <Text style={styles.price}>
-                {formatCurrency(lowestPrice)}
+          {/* Section 1: Identity */}
+          <View style={styles.identitySection}>
+            <View style={styles.nameRow}>
+              <Text style={styles.name} numberOfLines={1}>
+                {barber.name}
               </Text>
+              {barber.isVerified && (
+                <Ionicons name="checkmark-circle" size={18} color="#007AFF" />
+              )}
             </View>
-            {barber.isOnline && (
-              <View style={styles.statusBadge}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>Available</Text>
+          </View>
+
+          {/* Section Divider */}
+          <View style={styles.sectionDivider} />
+
+          {/* Section 2: Stats & Distance */}
+          <View style={styles.statsSection}>
+            <View style={styles.metaRow}>
+              <Ionicons name="star" size={14} color="#FBBF24" />
+              <Text style={styles.rating}>{barber.rating.toFixed(1)}</Text>
+              <Text style={styles.reviewCount}>({barber.totalReviews})</Text>
+              <Text style={styles.meta}>• {barber.completedJobs} jobs</Text>
+            </View>
+
+            {barber.distance && (
+              <View style={styles.distanceRow}>
+                <Ionicons name="navigate" size={14} color="#00B14F" />
+                <Text style={styles.distanceText}>
+                  {formatDistance(barber.distance)}
+                  {barber.durationMinutes && ` • ~${formatDuration(barber.durationMinutes)}`}
+                </Text>
               </View>
             )}
           </View>
+
+          {/* Section Divider */}
+          <View style={styles.sectionDivider} />
+
+          {/* Section 3: Price */}
+          <View style={styles.priceSection}>
+            <Text style={styles.priceLabel}>Starting from</Text>
+            <Text style={styles.price}>
+              {formatCurrency(lowestPrice)}
+            </Text>
+          </View>
         </View>
+        
+        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" style={styles.chevron} />
       </View>
     </TouchableOpacity>
   );
@@ -474,49 +669,72 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardInner: {
     flexDirection: 'row',
-    padding: 12,
-    gap: 12,
+    padding: 16,
+    gap: 14,
+    alignItems: 'center',
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
+    width: 80,
+    height: 80,
+    borderRadius: 12,
     backgroundColor: '#F2F2F7',
   },
   info: {
     flex: 1,
-    gap: 2,
   },
-  topRow: {
+  // Section 1: Identity
+  identitySection: {
+    paddingBottom: 10,
+  },
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 4,
   },
   name: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1C1C1E',
     flex: 1,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
+  },
+  // Section Divider
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#F2F2F7',
+    marginVertical: 10,
+  },
+  // Section 2: Stats
+  statsSection: {
+    paddingBottom: 10,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   rating: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#1C1C1E',
     marginLeft: 2,
+  },
+  reviewCount: {
+    fontSize: 13,
+    color: '#8E8E93',
+    fontWeight: '500',
   },
   meta: {
     fontSize: 12,
@@ -527,49 +745,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
   },
   distanceText: {
     fontSize: 13,
     fontWeight: '500',
     color: '#00B14F',
   },
+  // Section 3: Price
+  priceSection: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  priceLabel: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#00B14F',
+    letterSpacing: -0.4,
+  },
   bottom: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  priceLabel: {
-    fontSize: 10,
-    color: '#8E8E93',
-    fontWeight: '400',
-    marginBottom: 2,
-  },
-  price: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#00B14F',
-    letterSpacing: -0.3,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 5,
-    gap: 3,
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#00B14F',
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#00B14F',
+  chevron: {
+    marginLeft: 8,
   },
   // Sort Modal styles
   sortOptions: {
@@ -689,5 +894,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     lineHeight: 18,
+  },
+  calculatingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#00B14F30',
+  },
+  calculatingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#00B14F',
   },
 });

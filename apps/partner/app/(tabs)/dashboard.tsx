@@ -12,6 +12,8 @@ import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { verificationService, VerificationInfo } from '@mari-gunting/shared/services/verificationService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import VerificationProgressWidget from '@/components/VerificationProgressWidget';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { locationTrackingService } from '@/services/locationTrackingService';
 
 // Responsive helper
 const { width } = Dimensions.get('window');
@@ -110,6 +112,7 @@ export default function PartnerDashboardScreen() {
   const [acceptingJob, setAcceptingJob] = useState<string | null>(null);
   const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
   const [loadingVerification, setLoadingVerification] = useState(true);
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
 
   // Animation
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -121,8 +124,23 @@ export default function PartnerDashboardScreen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
     ]).start();
 
+    // Load account type
+    const loadAccountType = async () => {
+      try {
+        const type = await AsyncStorage.getItem('partnerAccountType');
+        if (type === 'freelance' || type === 'barbershop') {
+          setAccountType(type);
+        }
+      } catch (error) {
+        console.error('Error loading account type:', error);
+      }
+    };
+
+    loadAccountType();
     // Load verification status
     loadVerificationStatus();
+    // Load initial online status
+    loadOnlineStatus();
   }, []);
 
   const loadVerificationStatus = async () => {
@@ -139,6 +157,29 @@ export default function PartnerDashboardScreen() {
       console.error('Failed to load verification status:', error);
     } finally {
       setLoadingVerification(false);
+    }
+  };
+
+  const loadOnlineStatus = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_online')
+        .eq('id', currentUser.id)
+        .single();
+      
+      if (error) {
+        console.error('Error loading online status:', error);
+        return;
+      }
+      
+      if (data) {
+        setIsOnline(data.is_online || false);
+      }
+    } catch (error) {
+      console.error('Failed to load online status:', error);
     }
   };
 
@@ -173,7 +214,7 @@ export default function PartnerDashboardScreen() {
       pendingCount,
       activeCount,
       goalProgress: Math.min((todayEarnings / dailyGoal) * 100, 100),
-      avgRating: currentUser.rating || 4.8,
+      avgRating: ('rating' in currentUser ? currentUser.rating : 4.8),
       acceptance: 95,
     };
   }, [currentUser, dailyGoal]);
@@ -232,13 +273,86 @@ export default function PartnerDashboardScreen() {
   }, []);
 
   const toggleOnlineStatus = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    setIsOnline((prev) => {
-      const newStatus = !prev;
-      setToast({ message: newStatus ? "You're online" : "You're offline", type: newStatus ? 'success' : 'error', visible: true });
-      return newStatus;
-    });
-  }, []);
+    
+    const newStatus = !isOnline;
+    
+    try {
+      // Update local state immediately for better UX
+      setIsOnline(newStatus);
+      
+      // Start/stop location tracking for freelance barbers
+      if (accountType === 'freelance') {
+        if (newStatus) {
+          // Going online - start tracking
+          try {
+            await locationTrackingService.startTracking(currentUser.id);
+            console.log('✅ Location tracking started');
+          } catch (locationError) {
+            console.error('❌ Failed to start location tracking:', locationError);
+            // Don't block the online toggle if location fails
+          }
+        } else {
+          // Going offline - stop tracking
+          locationTrackingService.stopTracking();
+          console.log('🛑 Location tracking stopped');
+        }
+      }
+      
+      // Use server-side function to update status with server time
+      const { data, error } = await supabase.rpc('toggle_online_status', {
+        p_user_id: currentUser.id,
+        new_status: newStatus,
+        account_type: accountType,
+      });
+      
+      if (error) {
+        console.error('Error toggling online status:', error);
+        // Revert on error
+        setIsOnline(!newStatus);
+        // Stop tracking if we failed to go online
+        if (newStatus && accountType === 'freelance') {
+          locationTrackingService.stopTracking();
+        }
+        setToast({ message: 'Failed to update status', type: 'error', visible: true });
+        return;
+      }
+      
+      // Check result from server function
+      if (data && data.length > 0) {
+        const result = data[0];
+        
+        if (!result.success) {
+          console.error('Server rejected status update:', result.message);
+          setIsOnline(!newStatus);
+          // Stop tracking if we failed to go online
+          if (newStatus && accountType === 'freelance') {
+            locationTrackingService.stopTracking();
+          }
+          setToast({ message: result.message || 'Failed to update status', type: 'error', visible: true });
+          return;
+        }
+        
+        // Success!
+        setToast({ 
+          message: result.message, 
+          type: newStatus ? 'success' : 'error', 
+          visible: true 
+        });
+      }
+    } catch (error) {
+      console.error('Exception toggling online status:', error);
+      // Revert on error
+      setIsOnline(!newStatus);
+      // Stop tracking if we failed to go online
+      if (newStatus && accountType === 'freelance') {
+        locationTrackingService.stopTracking();
+      }
+      setToast({ message: 'Failed to update status', type: 'error', visible: true });
+    }
+  }, [currentUser, isOnline, accountType]);
 
   if (!currentUser) {
     return (
@@ -482,7 +596,9 @@ export default function PartnerDashboardScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
-            <ActionCard icon="calendar" label="Schedule" color="#3B82F6" onPress={() => router.push('/(tabs)/schedule')} />
+            {accountType === 'barbershop' && (
+              <ActionCard icon="calendar" label="Schedule" color="#3B82F6" onPress={() => router.push('/(tabs)/schedule')} />
+            )}
             <ActionCard icon="briefcase" label="My Orders" color="#8B5CF6" onPress={() => router.push('/(tabs)/jobs')} />
             <ActionCard icon="person" label="Profile" color="#F59E0B" onPress={() => router.push('/(tabs)/profile')} />
             <ActionCard icon="help-circle" label="Help" color="#EF4444" onPress={() => {}} />
@@ -1067,6 +1183,64 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body.medium,
     color: COLORS.text.inverse,
     fontWeight: '700' as const,
+    flex: 1,
+  },
+
+  // KPI Styles
+  kpiCard: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: COLORS.background.primary,
+    borderRadius: 12,
+    minWidth: 100,
+  },
+  kpiIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  kpiValue: {
+    fontSize: 24,
+    fontWeight: '800' as '800',
+    color: COLORS.text.primary,
+    marginBottom: 4,
+  },
+  kpiLabel: {
+    fontSize: 12,
+    fontWeight: '500' as '500',
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+
+  // Quick Action Styles
+  quickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.primary,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionText: {
+    fontSize: 15,
+    fontWeight: '600' as '600',
+    color: COLORS.text.primary,
     flex: 1,
   },
 

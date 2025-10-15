@@ -62,6 +62,7 @@ export interface Profile {
   id: string;
   role: UserRole;
   full_name: string;
+  email: string | null;
   phone_number: string | null;
   phone_verified: boolean;
   avatar_url: string | null;

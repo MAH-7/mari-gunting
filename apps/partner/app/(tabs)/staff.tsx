@@ -217,7 +217,7 @@ export default function StaffScreen() {
                   <Text style={styles.miniStatLabel}>This Week</Text>
                 </View>
                 <View style={styles.miniStat}>
-                  <Ionicons name="percent" size={16} color={COLORS.text.secondary} />
+                  <Ionicons name="stats-chart-outline" size={16} color={COLORS.text.secondary} />
                   <Text style={styles.miniStatValue}>{member.commissionRate}%</Text>
                   <Text style={styles.miniStatLabel}>Commission</Text>
                 </View>

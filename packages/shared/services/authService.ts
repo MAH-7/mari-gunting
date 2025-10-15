@@ -7,27 +7,14 @@ import { supabase } from '../config/supabase';
 import { ApiResponse } from '../types';
 import Constants from 'expo-constants';
 
-// Development mode configuration
-// SECURITY: Only allow test OTP in actual development/local builds
-// NOT in production or staging, even if APP_ENV is somehow set wrong
-const IS_DEV_MODE = 
-  process.env.EXPO_PUBLIC_APP_ENV === 'development' && 
-  __DEV__; // React Native debug mode
+// Production mode - no test OTP, real SMS only
+const IS_PRODUCTION = true;
 
-const IS_PRODUCTION = process.env.EXPO_PUBLIC_APP_ENV === 'production';
-const TEST_OTP = '123456';
-
-// Debug logging for environment detection
+// Debug logging
 console.log('🔧 Auth Service Config:', {
-  IS_DEV_MODE,
   IS_PRODUCTION,
-  APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
-  __DEV__,
-  appOwnership: Constants.appOwnership,
+  APP_ENV: process.env.EXPO_PUBLIC_APP_ENV || 'production',
 });
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const OTP_FUNCTION_URL = SUPABASE_URL + '/functions/v1/send-otp';
-const REGISTER_FUNCTION_URL = SUPABASE_URL + '/functions/v1/register-user';
 
 export interface RegisterParams {
   phoneNumber: string;
@@ -88,8 +75,14 @@ export const authService = {
         console.log('ℹ️ Current user phone:', currentUser.phone);
         
         // IMPORTANT: Verify the authenticated user matches the registration phone
-        if (currentUser.phone && currentUser.phone !== params.phoneNumber) {
+        // Normalize both phone numbers (remove +, spaces, dashes for comparison)
+        const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '');
+        const authPhone = normalizePhone(currentUser.phone || '');
+        const regPhone = normalizePhone(params.phoneNumber);
+        
+        if (currentUser.phone && authPhone !== regPhone) {
           console.error('❌ Phone mismatch! Auth:', currentUser.phone, 'Registering:', params.phoneNumber);
+          console.error('   Normalized - Auth:', authPhone, 'Reg:', regPhone);
           // Sign out the mismatched user
           await supabase.auth.signOut();
           return {
@@ -98,118 +91,84 @@ export const authService = {
           };
         }
         
+        console.log('✅ Phone numbers match (normalized):', authPhone);
+        
         userId = currentUser.id;
       } else {
-        // DEV MODE: Skip Supabase auth, use deterministic UUID
-        if (IS_DEV_MODE) {
-          console.log('✅ DEV MODE: Skipping auth user creation, using deterministic UUID');
-          // Generate a deterministic UUID from phone number
-          userId = generateDevUUID(params.phoneNumber);
-          console.log('🆔 Generated dev UUID:', userId);
-          newlyCreated = true;
-        } else {
-          // PRODUCTION: Create real auth user
-          console.log('ℹ️ No authenticated user, creating new auth user');
-          
-          const tempPassword = generateTemporaryPassword();
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            phone: params.phoneNumber,
-            password: tempPassword,
-            options: {
-              data: {
-                full_name: params.fullName,
-                email: params.email,
-                role: params.role,
-              },
+        // Create real auth user (both dev and production)
+        console.log('ℹ️ No authenticated user, creating new auth user');
+        
+        const tempPassword = generateTemporaryPassword();
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          phone: params.phoneNumber,
+          password: tempPassword,
+          options: {
+            data: {
+              full_name: params.fullName,
+              email: params.email,
+              role: params.role,
             },
-          });
+          },
+        });
 
-          if (authError) {
-            console.error('❌ Auth registration error:', authError);
-            return {
-              success: false,
-              error: authError.message,
-            };
-          }
-
-          if (!authData.user) {
-            return {
-              success: false,
-              error: 'Failed to create user account',
-            };
-          }
-          
-          userId = authData.user.id;
-          newlyCreated = true;
-          console.log('✅ Created new auth user:', userId);
+        if (authError) {
+          console.error('❌ Auth registration error:', authError);
+          return {
+            success: false,
+            error: authError.message,
+          };
         }
+
+        if (!authData.user) {
+          return {
+            success: false,
+            error: 'Failed to create user account',
+          };
+        }
+        
+        userId = authData.user.id;
+        newlyCreated = true;
+        console.log('✅ Created new auth user:', userId);
       }
       
       // 2. Create user profile
       console.log('ℹ️ Attempting to insert profile with ID:', userId);
       console.log('ℹ️ Phone number:', params.phoneNumber);
       
-      let profileData;
-      
-      // In dev mode, insert directly to database (RLS won't block mock user IDs)
-      if (IS_DEV_MODE) {
-        console.log('🔧 DEV MODE: Inserting profile directly to database');
+      // Insert profile (auth user exists now, so foreign key will work)
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          phone_number: params.phoneNumber,
+          full_name: params.fullName,
+          email: params.email,
+          avatar_url: params.avatarUrl,
+          role: params.role,
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('❌ Profile creation error:', profileError);
         
-        // Direct insert - RLS should allow for dev mock IDs
-        const { data, error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            phone_number: params.phoneNumber,
-            full_name: params.fullName,
-            email: params.email,
-            avatar_url: params.avatarUrl,
-            role: params.role,
-          })
-          .select()
-          .single();
-
-        if (profileError) {
-          console.error('❌ DEV MODE: Profile creation error:', profileError);
-          
-          // If RLS blocks it, provide helpful error
-          if (profileError.code === '42501') {
-            console.error('❌ RLS is blocking profile insert. You need to:');
-            console.error('   1. Deploy edge function: supabase functions deploy register-user');
-            console.error('   2. Or adjust RLS policies to allow dev mode inserts');
-          }
-          
-          return {
-            success: false,
-            error: `Failed to create profile: ${profileError.message}`,
-          };
-        }
-
-        profileData = data;
-      } else {
-        // Production mode: Direct insert (session should exist)
-        const { data, error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            phone_number: params.phoneNumber,
-            full_name: params.fullName,
-            email: params.email,
-            avatar_url: params.avatarUrl,
-            role: params.role,
-          })
-          .select()
-          .single();
-
-        if (profileError) {
-          console.error('❌ Profile creation error:', profileError);
-          return {
-            success: false,
-            error: 'Failed to create user profile',
-          };
+        // If RLS blocks it, provide helpful error
+        if (profileError.code === '42501') {
+          console.error('❌ RLS is blocking profile insert. You need to:');
+          console.error('   1. Deploy edge function: supabase functions deploy register-user');
+          console.error('   2. Or adjust RLS policies to allow authenticated inserts');
         }
         
-        profileData = data;
+        // If foreign key error, something is wrong with auth
+        if (profileError.code === '23503') {
+          console.error('❌ Foreign key constraint error - auth user does not exist');
+          console.error('   User ID:', userId);
+        }
+        
+        return {
+          success: false,
+          error: `Failed to create profile: ${profileError.message}`,
+        };
       }
 
       console.log('✅ User registered successfully:', profileData.id);
@@ -229,77 +188,32 @@ export const authService = {
 
   /**
    * Send OTP to phone number for login
-   * DEV MODE: Uses test OTP 123456
-   * PRODUCTION: Sends real SMS via Twilio edge function
+   * Uses Supabase built-in OTP (SMS via Twilio)
    */
   async sendOTP(params: LoginParams): Promise<ApiResponse<{ sent: boolean }>> {
-    // DEV MODE: Skip real OTP, use test OTP
-    if (IS_DEV_MODE) {
-      console.log(`🔐 DEV MODE: OTP for ${params.phoneNumber} is: ${TEST_OTP}`);
-      console.log('📱 SMS would be sent via Twilio in production');
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      return {
-        success: true,
-        data: { sent: true },
-      };
-    }
-
-    // PRODUCTION MODE: Send real OTP via Twilio edge function
     try {
-      // Generate a random 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log('📱 Sending OTP to:', params.phoneNumber);
       
-      // Get the anon key for edge function authentication
-      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (!anonKey) {
-        console.error('❌ Missing Supabase anon key');
-        return {
-          success: false,
-          error: 'Configuration error',
-        };
-      }
-
-      // Call the edge function to send OTP via Twilio
-      const response = await fetch(OTP_FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${anonKey}`,
-          'apikey': anonKey,
-        },
-        body: JSON.stringify({
-          phoneNumber: params.phoneNumber,
-          otp,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        console.error('❌ OTP send error:', result.error);
-        return {
-          success: false,
-          error: result.error || 'Failed to send OTP',
-        };
-      }
-
-      // Store OTP temporarily in Supabase auth for verification
-      // We use signUp with the OTP as password to create/update auth user
-      const { error: authError } = await supabase.auth.signUp({
+      // Use Supabase's built-in signInWithOtp
+      // This automatically sends SMS via Twilio if configured in Supabase
+      const { data, error } = await supabase.auth.signInWithOtp({
         phone: params.phoneNumber,
-        password: otp, // Temporary password that matches the OTP
+        options: {
+          // Optional: customize the OTP message
+          // channel: 'sms', // or 'whatsapp' if configured
+        },
       });
 
-      if (authError && !authError.message.includes('already registered')) {
-        console.error('❌ Auth OTP storage error:', authError);
-        // Don't fail - SMS was sent successfully
+      if (error) {
+        console.error('❌ OTP send error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to send OTP',
+        };
       }
 
       console.log('✅ OTP sent successfully to:', params.phoneNumber);
+      console.log('ℹ️ Supabase response:', data);
 
       return {
         success: true,
@@ -321,106 +235,7 @@ export const authService = {
     phoneNumber: string,
     otp: string
   ): Promise<ApiResponse<{ user: UserProfile; session: any }>> {
-    console.log('🔍 verifyOTP called with:', { phoneNumber, otp, IS_DEV_MODE, IS_PRODUCTION, TEST_OTP });
-    console.log('🔍 Comparison:', { otpMatch: otp === TEST_OTP, devMode: IS_DEV_MODE, combined: IS_DEV_MODE && otp === TEST_OTP });
-    
-    // DEV MODE: Accept test OTP and create authenticated session
-    // SECURITY: Extra check to ensure NOT in production
-    if (IS_DEV_MODE && otp === TEST_OTP && !IS_PRODUCTION) {
-      console.log(`✅ DEV MODE: Accepting test OTP ${TEST_OTP}`);
-      
-      try {
-        // Check if auth user exists
-        let authUserId: string | undefined;
-        
-        // Try to get existing session first
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        
-        if (existingSession?.user) {
-          console.log('ℹ️ Found existing auth session');
-          authUserId = existingSession.user.id;
-          
-          // Check if this session has a profile
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', existingSession.user.id)
-            .maybeSingle();
-          
-          if (!existingProfile) {
-            console.log('⚠️ Session has no profile, signing out old session');
-            await supabase.auth.signOut();
-            authUserId = undefined; // Force new auth user creation
-          }
-        }
-        
-        if (!authUserId) {
-          // DEV MODE: Skip Supabase auth entirely, just use profile IDs
-          console.log('ℹ️ DEV MODE: Skipping Supabase auth, checking profile directly...');
-          
-          // Check if user profile exists
-          const { data: existingProfileByPhone } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('phone_number', phoneNumber)
-            .maybeSingle();
-          
-          if (existingProfileByPhone?.id) {
-            console.log('✅ DEV MODE: Found existing profile:', existingProfileByPhone.id);
-            authUserId = existingProfileByPhone.id;
-          } else {
-            console.log('ℹ️ DEV MODE: No profile found, will need registration');
-            // Generate a deterministic UUID for dev mode
-            authUserId = generateDevUUID(phoneNumber);
-          }
-        }
-        
-        console.log('ℹ️ Auth user ID:', authUserId);
-        
-        // Now check if profile exists
-        console.log('ℹ️ Checking for profile with phone:', phoneNumber);
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('phone_number', phoneNumber)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error('❌ Profile check error:', profileError);
-        }
-        
-        console.log('🔍 Profile query result:', { found: !!profileData, role: profileData?.role });
-
-        if (profileData) {
-          // Existing user with profile
-          console.log('✅ Found existing user:', profileData.full_name, '| Role:', profileData.role);
-          return {
-            success: true,
-            data: {
-              user: profileData,
-              session: { mock: true }, // Mock session for dev
-            },
-          };
-        } else {
-          // New user - needs to complete registration
-          console.log('ℹ️ New user - will need to register');
-          return {
-            success: true,
-            data: {
-              user: null as any,
-              session: { mock: true },
-              needsRegistration: true,
-            } as any,
-          };
-        }
-      } catch (error: any) {
-        console.error('❌ DEV MODE error:', error);
-        return {
-          success: false,
-          error: error.message || 'Dev mode authentication failed',
-        };
-      }
-    }
+    console.log('🔍 verifyOTP called with:', { phoneNumber });
 
     try {
       const { data, error } = await supabase.auth.verifyOtp({
@@ -695,27 +510,4 @@ export const authService = {
  */
 function generateTemporaryPassword(): string {
   return Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
-}
-
-/**
- * Generate a deterministic UUID from phone number for dev mode
- * Always returns the same UUID for the same phone number
- */
-function generateDevUUID(phoneNumber: string): string {
-  // Extract digits only
-  const digits = phoneNumber.replace(/\D/g, '');
-  
-  // Pad to ensure we have enough digits
-  const paddedDigits = digits.padEnd(32, '0');
-  
-  // Format as UUID (8-4-4-4-12)
-  const uuid = [
-    paddedDigits.substring(0, 8),
-    paddedDigits.substring(8, 12),
-    paddedDigits.substring(12, 16),
-    paddedDigits.substring(16, 20),
-    paddedDigits.substring(20, 32),
-  ].join('-');
-  
-  return uuid;
 }

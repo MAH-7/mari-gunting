@@ -18,6 +18,9 @@ class LocationService {
   private static instance: LocationService;
   private currentLocation: UserLocation | null = null;
   private locationSubscription: Location.LocationSubscription | null = null;
+  private lastLocationTimestamp: number = 0;
+  private readonly LOCATION_FRESHNESS_MS = 60000; // Consider location stale after 1 minute
+  private readonly MAX_ACCEPTABLE_ACCURACY_METERS = 500; // Reject locations with accuracy > 500m
 
   private constructor() {}
 
@@ -159,16 +162,26 @@ class LocationService {
         }
       }
 
-      // Get location
+      // Get location with timeout and cache
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
+        maximumAge: 10000, // Use cached location if less than 10 seconds old
+        timeout: 15000, // Timeout after 15 seconds to prevent hanging
       });
+
+      // Validate location accuracy
+      const accuracy = location.coords.accuracy || 0;
+      if (accuracy > this.MAX_ACCEPTABLE_ACCURACY_METERS) {
+        console.warn(`Location accuracy too low: ${accuracy}m. Consider requesting again.`);
+        // Still return it, but warn
+      }
 
       this.currentLocation = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         accuracy: location.coords.accuracy,
       };
+      this.lastLocationTimestamp = Date.now();
 
       return this.currentLocation;
     } catch (error) {
@@ -234,8 +247,8 @@ class LocationService {
       this.locationSubscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
-          timeInterval: 10000, // Update every 10 seconds
-          distanceInterval: 50, // Or when user moves 50 meters
+          timeInterval: 30000, // Update every 30 seconds (battery optimized)
+          distanceInterval: 100, // Or when user moves 100 meters (battery optimized)
         },
         (location) => {
           const userLocation: UserLocation = {
@@ -297,6 +310,24 @@ class LocationService {
    */
   getCachedLocation(): UserLocation | null {
     return this.currentLocation;
+  }
+
+  /**
+   * Check if cached location is still fresh
+   */
+  isLocationFresh(): boolean {
+    if (!this.lastLocationTimestamp) return false;
+    return Date.now() - this.lastLocationTimestamp < this.LOCATION_FRESHNESS_MS;
+  }
+
+  /**
+   * Get cached location only if it's fresh
+   */
+  getFreshCachedLocation(): UserLocation | null {
+    if (this.isLocationFresh()) {
+      return this.currentLocation;
+    }
+    return null;
   }
 
   /**

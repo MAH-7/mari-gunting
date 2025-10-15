@@ -55,7 +55,6 @@ export default function OnboardingLayout() {
         }}
       >
         {/* Core Onboarding Screens */}
-        <Stack.Screen name="welcome" />
         <Stack.Screen name="ekyc" />
         <Stack.Screen name="business" />
         <Stack.Screen name="payout" />

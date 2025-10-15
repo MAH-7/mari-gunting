@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import { useStore } from '@/store/useStore';
+import { profileService } from '@/services/profileService';
 
 export default function RegisterScreen() {
   const params = useLocalSearchParams();
@@ -55,10 +56,20 @@ export default function RegisterScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled) {
-        setAvatar(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        
+        // Validate URI
+        if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+          Alert.alert('Error', 'Failed to get image. Please try again.');
+          return;
+        }
+
+        // Store locally only - will upload after registration
+        setAvatar(uri);
       }
     } catch (error) {
+      console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -83,13 +94,13 @@ export default function RegisterScreen() {
     setIsLoading(true);
 
     try {
-      // Register user with Supabase
+      // Step 1: Register user with Supabase (no avatar yet)
       const response = await authService.register({
         phoneNumber,
         fullName,
         email: email.toLowerCase(),
         role,
-        avatarUrl: avatar || null,
+        avatarUrl: null, // Will upload after registration
       });
 
       if (!response.success) {
@@ -101,19 +112,39 @@ export default function RegisterScreen() {
         return;
       }
 
-      // Save user to store
-      if (response.data) {
-        setCurrentUser({
-          id: response.data.id,
-          name: response.data.full_name,
-          email: response.data.email,
-          phone: response.data.phone_number,
-          avatar: response.data.avatar_url || avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(fullName),
-          role: response.data.role,
-        } as any);
+      const userId = response.data?.id;
+      if (!userId) {
+        throw new Error('User ID not returned from registration');
       }
 
-      // Success - navigate to app
+      console.log('✅ User registered successfully:', userId);
+
+      // Step 2: Upload avatar if selected (post-registration)
+      let avatarUrl = null;
+      if (avatar) {
+        try {
+          console.log('📤 Uploading avatar to UID folder:', userId);
+          const uploadedProfile = await profileService.updateAvatar(userId, avatar);
+          avatarUrl = uploadedProfile.avatar_url || uploadedProfile.avatar;
+          console.log('✅ Avatar uploaded successfully:', avatarUrl);
+        } catch (uploadError) {
+          console.error('⚠️ Avatar upload failed (non-critical):', uploadError);
+          // Don't fail registration if avatar upload fails
+          // User can update avatar later from profile
+        }
+      }
+
+      // Step 3: Save user to store
+      setCurrentUser({
+        id: response.data.id,
+        name: response.data.full_name,
+        email: response.data.email,
+        phone: response.data.phone_number,
+        avatar: avatarUrl || avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(fullName),
+        role: response.data.role,
+      } as any);
+
+      // Step 4: Success - navigate to app
       Alert.alert(
         'Welcome to Mari-Gunting! 🎉',
         'Your account has been created successfully.',
@@ -173,6 +204,7 @@ export default function RegisterScreen() {
               style={styles.avatarContainer}
               onPress={handlePickImage}
               activeOpacity={0.8}
+              disabled={isLoading}
             >
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatar} />
@@ -263,12 +295,6 @@ export default function RegisterScreen() {
                     {role === 'customer' ? 'Customer' : 'Barber'}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() => router.back()}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.changeText}>Change</Text>
-                </TouchableOpacity>
               </View>
             </View>
           </View>

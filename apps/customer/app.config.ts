@@ -34,6 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSPhotoLibraryUsageDescription: 'Mari Gunting needs photo library access to upload images.',
       },
       config: {
+        // Note: Using Mapbox, but keeping legacy iOS config structure
         googleMapsApiKey: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
       }
     },
@@ -56,6 +57,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'WRITE_EXTERNAL_STORAGE',
       ],
       config: {
+        // Note: Using Mapbox, but keeping legacy Android config structure
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
         }

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useMemo } from 'react';
@@ -6,8 +6,10 @@ import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
 import { useStore } from '@/store/useStore';
 import { mockBookings } from '@/services/mockData';
-import { Booking } from '@/types';
+import { Booking, BookingStatus } from '@/types';
 import * as ImagePicker from 'expo-image-picker';
+import * as Device from 'expo-device';
+import { locationTrackingService } from '@mari-gunting/shared/services/locationTrackingService';
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'completed';
 
@@ -25,7 +27,7 @@ export default function PartnerJobsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Job status overrides (simulating backend updates)
-  const [jobStatusOverrides, setJobStatusOverrides] = useState<Record<string, string>>({});
+  const [jobStatusOverrides, setJobStatusOverrides] = useState<Record<string, BookingStatus>>({});
   
   // Completion flow state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -86,7 +88,7 @@ export default function PartnerJobsScreen() {
   // Calculate analytics for completed jobs
   const completedJobsAnalytics = useMemo(() => {
     const completed = partnerJobs.filter(j => j.status === 'completed');
-    const totalEarnings = completed.reduce((sum, job) => sum + job.totalPrice, 0);
+    const totalEarnings = completed.reduce((sum, job) => sum + (job.totalPrice || 0), 0);
     const totalJobs = completed.length;
     const averageEarning = totalJobs > 0 ? totalEarnings / totalJobs : 0;
     
@@ -96,7 +98,7 @@ export default function PartnerJobsScreen() {
       const jobDate = new Date(job.completedAt || job.updatedAt);
       return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
     });
-    const monthlyEarnings = thisMonth.reduce((sum, job) => sum + job.totalPrice, 0);
+    const monthlyEarnings = thisMonth.reduce((sum, job) => sum + (job.totalPrice || 0), 0);
     const monthlyJobs = thisMonth.length;
 
     return {
@@ -115,7 +117,7 @@ export default function PartnerJobsScreen() {
     setRefreshing(false);
   };
 
-  const updateJobStatus = (jobId: string, newStatus: string) => {
+  const updateJobStatus = (jobId: string, newStatus: BookingStatus) => {
     setJobStatusOverrides(prev => ({ ...prev, [jobId]: newStatus }));
     // Update selectedJob if it's the current one
     if (selectedJob?.id === jobId) {
@@ -160,7 +162,7 @@ export default function PartnerJobsScreen() {
     );
   };
 
-  const handleOnTheWay = (job: Booking) => {
+  const handleOnTheWay = async (job: Booking) => {
     Alert.alert(
       "I'm on the way",
       `Let ${job.customer?.name} know you're heading to their location?`,
@@ -168,17 +170,29 @@ export default function PartnerJobsScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: "I'm on the way",
-          onPress: () => {
-            updateJobStatus(job.id, 'on-the-way');
-            Alert.alert('Status Updated', 'Customer has been notified that you\'re on the way!');
-            // Don't close modal, let user see updated status and timeline
+          onPress: async () => {
+            try {
+              updateJobStatus(job.id, 'on-the-way');
+              
+              // Switch location tracking to on-the-way mode (frequent updates)
+              if (currentUser?.id) {
+                await locationTrackingService.switchMode(currentUser.id, 'on-the-way');
+                console.log('📍 Switched to on-the-way tracking mode');
+              }
+              
+              Alert.alert('Status Updated', 'Customer has been notified that you\'re on the way!\n\nLocation tracking: Every 1.5 minutes');
+              // Don't close modal, let user see updated status and timeline
+            } catch (err) {
+              console.error('❌ Error switching tracking mode:', err);
+              Alert.alert('Status Updated', 'Customer notified, but location tracking may need attention.');
+            }
           },
         },
       ]
     );
   };
 
-  const handleArrived = (job: Booking) => {
+  const handleArrived = async (job: Booking) => {
     Alert.alert(
       'Arrived at Location',
       `Confirm you've arrived at ${job.customer?.name}'s location?`,
@@ -186,10 +200,22 @@ export default function PartnerJobsScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm Arrival',
-          onPress: () => {
-            updateJobStatus(job.id, 'arrived');
-            Alert.alert('Arrival Confirmed', 'Customer notified of your arrival!');
-            // Don't close modal
+          onPress: async () => {
+            try {
+              updateJobStatus(job.id, 'arrived');
+              
+              // Switch back to idle mode (less frequent updates) when arrived
+              if (currentUser?.id && locationTrackingService.isCurrentlyTracking()) {
+                await locationTrackingService.switchMode(currentUser.id, 'idle');
+                console.log('📍 Switched back to idle tracking mode');
+              }
+              
+              Alert.alert('Arrival Confirmed', 'Customer notified of your arrival!');
+              // Don't close modal
+            } catch (err) {
+              console.error('❌ Error switching tracking mode:', err);
+              Alert.alert('Arrival Confirmed', 'Customer notified!');
+            }
           },
         },
       ]
@@ -335,6 +361,18 @@ export default function PartnerJobsScreen() {
   
   const takePhoto = async (type: 'before' | 'after') => {
     try {
+      // Check if running on simulator
+      const isSimulator = !Device.isDevice;
+      
+      if (isSimulator) {
+        Alert.alert(
+          'Camera Not Available',
+          'Camera is not available on simulator. Please use "Choose from Library" instead.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
       
       if (permissionResult.granted === false) {
@@ -354,17 +392,31 @@ export default function PartnerJobsScreen() {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const photoUri = result.assets[0].uri;
+        
+        if (!photoUri || typeof photoUri !== 'string' || photoUri.trim() === '') {
+          Alert.alert('Error', 'Failed to capture photo. Please try again.');
+          return;
+        }
+        
         if (type === 'before') {
           setBeforePhotos(prev => [...prev, photoUri]);
         } else {
           setAfterPhotos(prev => [...prev, photoUri]);
         }
       }
-    } catch (error) {
-      Alert.alert(
-        'Error', 
-        `Failed to take photo: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
-      );
+    } catch (error: any) {
+      if (error.message && error.message.includes('Camera not available')) {
+        Alert.alert(
+          'Camera Not Available',
+          'Camera is not available on this device. Please use "Choose from Library" instead.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error', 
+          `Failed to take photo: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
+        );
+      }
     }
   };
   
@@ -452,6 +504,7 @@ export default function PartnerJobsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F2F4F7" />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Jobs</Text>
@@ -913,7 +966,7 @@ export default function PartnerJobsScreen() {
                   </View>
                   {selectedJob.travelCost && selectedJob.travelCost > 0 && (
                     <View style={styles.priceRow}>
-                      <Text style={styles.priceLabel}>Travel Fee</Text>
+                      <Text style={styles.priceLabel}>Travel</Text>
                       <Text style={styles.priceValue}>RM {selectedJob.travelCost}</Text>
                     </View>
                   )}
@@ -1010,8 +1063,6 @@ export default function PartnerJobsScreen() {
             <ScrollView 
               style={styles.modalContent} 
               showsVerticalScrollIndicator={false}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={10}
             >
             {/* Completion Banner */}
             <View style={styles.completionBanner}>

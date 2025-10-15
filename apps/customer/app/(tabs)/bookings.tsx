@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { Booking, BookingStatus } from '@/types';
 import BookingFilterModal, { BookingFilterOptions } from '@/components/BookingFilterModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 export default function BookingsScreen() {
   const currentUser = useStore((state) => state.currentUser);
@@ -41,9 +42,59 @@ export default function BookingsScreen() {
       );
     },
     enabled: !!currentUser?.id,
-    staleTime: 30000, // 30 seconds
+    // Real-time subscription replaces polling
     refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription for customer's bookings
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    console.log('🔌 Setting up real-time subscription for customer bookings');
+
+    // Subscribe to bookings table for this customer
+    const channel = supabase
+      .channel(`customer-bookings-${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'bookings',
+          filter: `customer_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          console.log('🔔 Customer booking change:', payload);
+          
+          // Refetch bookings list
+          refetch();
+          
+          // Show notification for specific events
+          if (payload.eventType === 'INSERT') {
+            Alert.alert('New Booking', 'A new booking has been created!');
+          } else if (payload.eventType === 'UPDATE') {
+            const newData = payload.new as any;
+            const oldData = payload.old as any;
+            
+            if (oldData?.status !== newData?.status) {
+              // Status changed - handled by booking details screen
+              console.log('Booking status changed:', newData?.id);
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Customer bookings subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to customer bookings');
+        }
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up customer bookings subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id, refetch]);
 
   // Handle pull-to-refresh
   const onRefresh = async () => {

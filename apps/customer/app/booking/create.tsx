@@ -1,31 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
+import { addressService } from '@mari-gunting/shared/services/addressService';
 import { formatCurrency, formatPrice } from '@/utils/format';
 import { useStore } from '@/store/useStore';
 import { ACTIVE_OPACITY } from '@/constants/animations';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
+import { useBooking } from '@/contexts/BookingContext';
+import { batchCalculateDistances } from '@mari-gunting/shared/utils/directions';
+import { ENV } from '@mari-gunting/shared/config/env';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 export default function CreateBookingScreen() {
   const { barberId } = useLocalSearchParams<{ barberId: string }>();
   const currentUser = useStore((state) => state.currentUser);
+  const booking = useBooking();
   
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [serviceNotes, setServiceNotes] = useState<string>('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMinutes: number } | null>(null);
+
+  // Initialize booking flow on mount
+  useEffect(() => {
+    if (barberId && !booking.isInBookingFlow && currentUser?.id) {
+      // Start booking flow and auto-select default address (Grab-style UX)
+      booking.startBookingFlow(barberId, 'Barber', currentUser.id);
+    }
+  }, [barberId, currentUser?.id]);
+
+  // Get selected address from context
+  const selectedAddress = booking.selectedAddress?.id || '';
 
   const { data: barberResponse } = useQuery({
     queryKey: ['barber', barberId],
     queryFn: () => api.getBarberById(barberId),
   });
 
+  // Fetch customer addresses from database
+  const { data: addressResponse } = useQuery({
+    queryKey: ['customer-addresses', currentUser?.id],
+    queryFn: () => addressService.getCustomerAddresses(currentUser?.id!),
+    enabled: !!currentUser?.id,
+  });
+
   const barber = barberResponse?.data;
   const selectedServices = barber?.services.filter(s => selectedServiceIds.includes(s.id)) || [];
+  const addresses = addressResponse?.data || [];
+  
+  // Calculate distance and duration from selected address to barber
+  useEffect(() => {
+    const calculateRoute = async () => {
+      if (!selectedAddress || !barber) return;
+      
+      const selectedAddr = addresses.find(a => a.id === selectedAddress);
+      if (!selectedAddr?.latitude || !selectedAddr?.longitude) return;
+      
+      setCalculatingRoute(true);
+      
+      try {
+        console.log('🗺️ Calculating route from service address to barber...');
+        
+        const routesMap = await batchCalculateDistances(
+          { latitude: selectedAddr.latitude, longitude: selectedAddr.longitude },
+          [{
+            id: barber.id,
+            latitude: barber.location.latitude,
+            longitude: barber.location.longitude,
+          }],
+          ENV.MAPBOX_ACCESS_TOKEN || '',
+          { 
+            useCache: true,
+            supabase: supabase
+          }
+        );
+        
+        const route = routesMap.get(barber.id);
+        if (route) {
+          console.log(`✅ Route calculated: ${route.distanceKm}km, ${route.durationMinutes}min`);
+          setRouteInfo(route);
+        }
+      } catch (error) {
+        console.error('❌ Error calculating route:', error);
+      } finally {
+        setCalculatingRoute(false);
+      }
+    };
+    
+    calculateRoute();
+  }, [selectedAddress, barber, addresses]);
   
   // Toggle service selection
   const toggleService = (serviceId: string) => {
@@ -36,39 +104,38 @@ export default function CreateBookingScreen() {
     );
   };
   
-  // Get customer addresses from authenticated user
-  const addresses = currentUser?.savedAddresses || [];
-  
   // Calculate totals
   const subtotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0);
   
-  // Calculate distance and travel cost
-  // In production, this would calculate distance between customer address and barber location
+  // Use calculated route info from selected address to barber
   const selectedAddr = addresses.find(a => a.id === selectedAddress);
-  const distance = barber?.distance || 3.5; // Use barber's current distance or default
+  const distance = routeInfo?.distanceKm || 0;
+  const drivingDuration = routeInfo?.durationMinutes || 0;
   
   // NEW PRICING MODEL: RM 5 base (0-4km) + RM 1/km after 4km
   let travelCost = 0;
-  if (distance <= 4) {
-    travelCost = 5; // Base fare for 0-4 km
-  } else {
-    travelCost = 5 + ((distance - 4) * 1); // Base + RM 1/km after 4km
+  if (distance > 0) {
+    if (distance <= 4) {
+      travelCost = 5; // Base fare for 0-4 km
+    } else {
+      travelCost = 5 + ((distance - 4) * 1); // Base + RM 1/km after 4km
+    }
+    travelCost = Math.round(travelCost * 100) / 100; // Round to 2 decimals
   }
-  travelCost = Math.round(travelCost * 100) / 100; // Round to 2 decimals
   
-  // Platform fee
-  const platformFee = 2.00; // RM 2 platform fee
+  // Booking fee
+  const bookingFee = 2.00; // RM 2 booking fee
   
   // Commission calculation (12% from service price)
   const serviceCommission = Math.round((subtotal * 0.12) * 100) / 100;
   const barberServiceEarning = Math.round((subtotal * 0.88) * 100) / 100;
   
-  // Calculate ETA (estimate: 5 min base + 2 min per km)
-  const estimatedETA = Math.round(5 + (distance * 2));
+  // Calculate ETA using actual driving time + 5 min preparation
+  const estimatedETA = drivingDuration > 0 ? Math.round(drivingDuration + 5) : 0;
   
   // Calculate total
-  const total = Math.round((subtotal + travelCost + platformFee) * 100) / 100;
+  const total = Math.round((subtotal + travelCost + bookingFee) * 100) / 100;
   
   const handleBookNow = () => {
     if (selectedServiceIds.length === 0) {
@@ -78,6 +145,11 @@ export default function CreateBookingScreen() {
     
     if (!selectedAddress) {
       Alert.alert('Required', 'Please select a service location');
+      return;
+    }
+    
+    if (!routeInfo) {
+      Alert.alert('Calculating Route', 'Please wait while we calculate the distance and travel time.');
       return;
     }
 
@@ -109,7 +181,7 @@ export default function CreateBookingScreen() {
         // Pricing
         subtotal: subtotal.toString(),
         travelCost: travelCost.toString(),
-        platformFee: platformFee.toString(),
+        bookingFee: bookingFee.toString(),
         serviceCommission: serviceCommission.toString(),
         barberServiceEarning: barberServiceEarning.toString(),
         amount: total.toString(),
@@ -251,17 +323,29 @@ export default function CreateBookingScreen() {
         <View style={styles.etaBanner}>
           <View style={styles.etaBannerLeft}>
             <View style={styles.etaBannerIcon}>
-              <Ionicons name="time" size={24} color="#00B14F" />
+              {calculatingRoute ? (
+                <ActivityIndicator size="small" color="#00B14F" />
+              ) : (
+                <Ionicons name="time" size={24} color="#00B14F" />
+              )}
             </View>
             <View style={styles.etaBannerContent}>
               <Text style={styles.etaBannerTitle}>Estimated Arrival</Text>
-              <Text style={styles.etaBannerTime}>~{estimatedETA} minutes</Text>
+              {calculatingRoute ? (
+                <Text style={styles.etaBannerTime}>Calculating...</Text>
+              ) : estimatedETA > 0 ? (
+                <Text style={styles.etaBannerTime}>~{estimatedETA} minutes</Text>
+              ) : (
+                <Text style={styles.etaBannerTime}>Select address</Text>
+              )}
             </View>
           </View>
-          <View style={styles.etaBadge}>
-            <Ionicons name="flash" size={14} color="#00B14F" />
-            <Text style={styles.etaBadgeText}>ASAP</Text>
-          </View>
+          {!calculatingRoute && estimatedETA > 0 && (
+            <View style={styles.etaBadge}>
+              <Ionicons name="flash" size={14} color="#00B14F" />
+              <Text style={styles.etaBadgeText}>ASAP</Text>
+            </View>
+          )}
         </View>
 
         {/* Barber Info */}
@@ -283,7 +367,13 @@ export default function CreateBookingScreen() {
               </View>
               <View style={styles.distanceRow}>
                 <Ionicons name="location" size={14} color="#00B14F" />
-                <Text style={styles.distanceText}>{distance.toFixed(1)} km away</Text>
+                {calculatingRoute ? (
+                  <Text style={styles.distanceText}>Calculating...</Text>
+                ) : distance > 0 ? (
+                  <Text style={styles.distanceText}>{distance.toFixed(1)} km away</Text>
+                ) : (
+                  <Text style={styles.distanceText}>Select address</Text>
+                )}
               </View>
             </View>
           </View>
@@ -329,47 +419,84 @@ export default function CreateBookingScreen() {
 
         {/* Select Address */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Location</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Service Location</Text>
+            {addresses.length > 0 && (
+              <TouchableOpacity onPress={booking.goToAddressSelection}>
+                <Text style={styles.manageAddressesLink}>Manage</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
           {addresses.length > 0 ? (
-            addresses.map((addr) => (
+            <>
+              {addresses.map((addr) => {
+                const fullAddress = [
+                  addr.address_line1,
+                  addr.address_line2,
+                  addr.city,
+                  addr.state,
+                  addr.postal_code
+                ].filter(Boolean).join(', ');
+                
+                return (
+                  <TouchableOpacity
+                    key={addr.id}
+                    style={[
+                      styles.addressCard,
+                      selectedAddress === addr.id && styles.addressCardActive,
+                    ]}
+                    onPress={() => {
+                      // Update context with selected address
+                      booking.setSelectedAddress({
+                        id: addr.id,
+                        label: addr.label,
+                        fullAddress: fullAddress,
+                        latitude: addr.latitude,
+                        longitude: addr.longitude,
+                      });
+                    }}
+                    activeOpacity={ACTIVE_OPACITY.SECONDARY}
+                  >
+                    <View style={[
+                      styles.radioCircle,
+                      selectedAddress === addr.id && styles.radioCircleActive,
+                    ]}>
+                      {selectedAddress === addr.id && <View style={styles.radioInner} />}
+                    </View>
+                    <View style={styles.addressInfo}>
+                      <Text style={styles.addressLabel}>{addr.label}</Text>
+                      <Text style={styles.addressText}>{fullAddress}</Text>
+                    </View>
+                    <Ionicons name="location" size={20} color="#00B14F" />
+                  </TouchableOpacity>
+                );
+              })}
+              
+              {/* Add New Address Option - Grab Style */}
               <TouchableOpacity
-                key={addr.id}
-                style={[
-                  styles.addressCard,
-                  selectedAddress === addr.id && styles.addressCardActive,
-                ]}
-                onPress={() => setSelectedAddress(addr.id)}
+                style={styles.addNewAddressCard}
+                onPress={booking.goToAddressSelection}
                 activeOpacity={ACTIVE_OPACITY.SECONDARY}
               >
-                <View style={[
-                  styles.radioCircle,
-                  selectedAddress === addr.id && styles.radioCircleActive,
-                ]}>
-                  {selectedAddress === addr.id && <View style={styles.radioInner} />}
+                <View style={styles.addIconCircle}>
+                  <Ionicons name="add" size={20} color="#00B14F" />
                 </View>
-                <View style={styles.addressInfo}>
-                  <Text style={styles.addressLabel}>{addr.label}</Text>
-                  <Text style={styles.addressText}>{addr.fullAddress}</Text>
-                  {addr.notes && (
-                    <Text style={styles.addressNotes}>Note: {addr.notes}</Text>
-                  )}
-                </View>
-                <Ionicons name="location" size={20} color="#00B14F" />
+                <Text style={styles.addNewAddressText}>Add New Address</Text>
+                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
               </TouchableOpacity>
-            ))
+            </>
           ) : (
             <View style={styles.emptyAddresses}>
               <Ionicons name="location-outline" size={48} color="#D1D5DB" />
               <Text style={styles.emptyAddressesText}>No saved addresses</Text>
+              <Text style={styles.emptyAddressesSubtext}>Add your address to get started</Text>
               <TouchableOpacity 
                 style={styles.addAddressButton}
-                onPress={() => {
-                  Alert.alert('Add Address', 'Address management coming soon!');
-                  // TODO: Navigate to add address screen
-                  // router.push('/profile/addresses/add');
-                }}
+                onPress={booking.goToAddressSelection}
               >
-                <Text style={styles.addAddressButtonText}>+ Add Address</Text>
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Text style={styles.addAddressButtonText}>Add Address</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -401,12 +528,18 @@ export default function CreateBookingScreen() {
               <Text style={styles.priceValue}>{formatCurrency(subtotal)}</Text>
             </View>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Travel Fee ({distance.toFixed(1)} km)</Text>
-              <Text style={styles.priceValue}>{formatPrice(travelCost)}</Text>
+              <Text style={styles.priceLabel}>
+                Travel {distance > 0 ? `(${distance.toFixed(1)} km)` : ''}
+              </Text>
+              {calculatingRoute ? (
+                <ActivityIndicator size="small" color="#00B14F" />
+              ) : (
+                <Text style={styles.priceValue}>{formatPrice(travelCost)}</Text>
+              )}
             </View>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Platform Fee</Text>
-              <Text style={styles.priceValue}>{formatPrice(platformFee)}</Text>
+              <Text style={styles.priceLabel}>Booking Fee</Text>
+              <Text style={styles.priceValue}>{formatPrice(bookingFee)}</Text>
             </View>
             <View style={styles.priceDivider} />
             <View style={styles.priceRow}>
@@ -429,13 +562,17 @@ export default function CreateBookingScreen() {
         <TouchableOpacity 
           style={[
             styles.bookButton,
-            (selectedServiceIds.length === 0 || !selectedAddress) && styles.bookButtonDisabled
+            (selectedServiceIds.length === 0 || !selectedAddress || !routeInfo || calculatingRoute) && styles.bookButtonDisabled
           ]}
           onPress={handleBookNow}
-          disabled={selectedServiceIds.length === 0 || !selectedAddress}
+          disabled={selectedServiceIds.length === 0 || !selectedAddress || !routeInfo || calculatingRoute}
           activeOpacity={ACTIVE_OPACITY.PRIMARY}
         >
-          <Text style={styles.bookButtonText}>Request Barber Now</Text>
+          {calculatingRoute ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.bookButtonText}>Request Barber Now</Text>
+          )}
         </TouchableOpacity>
       </View>
       
@@ -810,25 +947,75 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  manageAddressesLink: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#00B14F',
+  },
+  addNewAddressCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#00B14F',
+    borderStyle: 'dashed',
+  },
+  addIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addNewAddressText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#00B14F',
+  },
   emptyAddresses: {
     alignItems: 'center',
     paddingVertical: 40,
-    gap: 12,
+    gap: 8,
   },
   emptyAddressesText: {
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  emptyAddressesSubtext: {
+    fontSize: 14,
     color: '#8E8E93',
+    marginBottom: 8,
   },
   addAddressButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     backgroundColor: '#00B14F',
-    borderRadius: 8,
+    borderRadius: 12,
+    shadowColor: '#00B14F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   addAddressButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   notesInput: {

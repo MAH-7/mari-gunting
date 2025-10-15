@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
+import { profileService } from '@mari-gunting/shared/services/profileService';
 
 export default function CompleteProfileScreen() {
   const params = useLocalSearchParams();
@@ -53,10 +54,20 @@ export default function CompleteProfileScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled) {
-        setAvatar(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        
+        // Validate URI
+        if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+          Alert.alert('Error', 'Failed to get image. Please try again.');
+          return;
+        }
+
+        // Store locally only - will upload after registration
+        setAvatar(uri);
       }
     } catch (error) {
+      console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -81,7 +92,7 @@ export default function CompleteProfileScreen() {
     setIsLoading(true);
 
     try {
-      // Register user with Supabase with temporary 'barber' role
+      // Step 1: Register user with Supabase with temporary 'barber' role (no avatar yet)
       // After account type selection, role will be finalized:
       // - Freelance: stays 'barber' + creates barbers table record
       // - Barbershop: updates to 'barbershop_owner' + creates barbershops table record
@@ -90,7 +101,7 @@ export default function CompleteProfileScreen() {
         fullName,
         email: email.toLowerCase(),
         role: 'barber', // Temporary - updated in account type selection
-        avatarUrl: avatar || null,
+        avatarUrl: null, // Will upload after registration
       });
 
       if (!response.success) {
@@ -102,13 +113,27 @@ export default function CompleteProfileScreen() {
         return;
       }
 
-      // Success - navigate to account type selection with user ID
-      // In dev mode, we don't have a real session, so we pass the user ID explicitly
+      // Get user ID for avatar upload
       const userId = response.data?.id;
       
       if (!userId) {
         Alert.alert('Error', 'Failed to get user ID. Please try again.');
         return;
+      }
+
+      console.log('✅ User registered successfully:', userId);
+
+      // Step 2: Upload avatar if selected (post-registration)
+      if (avatar) {
+        try {
+          console.log('📤 Uploading avatar to UID folder:', userId);
+          await profileService.updateAvatar(avatar, userId);
+          console.log('✅ Avatar uploaded successfully');
+        } catch (uploadError) {
+          console.error('⚠️ Avatar upload failed (non-critical):', uploadError);
+          // Don't fail registration if avatar upload fails
+          // User can update avatar later from profile
+        }
       }
       
       Alert.alert(
@@ -173,6 +198,7 @@ export default function CompleteProfileScreen() {
               style={styles.avatarContainer}
               onPress={handlePickImage}
               activeOpacity={0.8}
+              disabled={isLoading}
             >
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatar} />

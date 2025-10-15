@@ -35,7 +35,7 @@ export default function PayoutScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showBankDropdown, setShowBankDropdown] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState<'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed'>('in_progress');
+  const [verificationStatus, setVerificationStatus] = useState<'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed' | 'pending'>('in_progress');
 
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
   const completeOnboardingStep = useStore((state) => state.completeOnboardingStep);

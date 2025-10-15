@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api } from '@/services/api';
 import SuccessModal from '@/components/SuccessModal';
-import { useStore } from '@/store/useStore';
-import type { Voucher } from '@/store/useStore';
+import { rewardsService, type UserVoucher } from '@/services/rewardsService';
+import { supabase } from '@mari-gunting/shared';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -73,7 +73,7 @@ export default function PaymentMethodScreen() {
     // Pricing
     subtotal: string;
     travelCost: string;
-    platformFee: string;
+    bookingFee: string;
     serviceCommission: string;
     barberServiceEarning: string;
     amount: string;
@@ -88,45 +88,65 @@ export default function PaymentMethodScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [bookingId, setBookingId] = useState<string>('');
   const [showVoucherModal, setShowVoucherModal] = useState(false);
-  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
-  
-  // Get vouchers from store
-  const myVouchers = useStore((state) => state.myVouchers);
-  const useVoucher = useStore((state) => state.useVoucher);
+  const [selectedVoucher, setSelectedVoucher] = useState<UserVoucher | null>(null);
+  const [userVouchers, setUserVouchers] = useState<UserVoucher[]>([]);
+  const [isLoadingVouchers, setIsLoadingVouchers] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Load current user and their vouchers
+  useEffect(() => {
+    loadUserVouchers();
+  }, []);
+
+  const loadUserVouchers = async () => {
+    try {
+      setIsLoadingVouchers(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log('[payment-method] No authenticated user');
+        setUserVouchers([]);
+        setIsLoadingVouchers(false);
+        return;
+      }
+
+      setCurrentUserId(user.id);
+      
+      // Fetch active vouchers from Supabase
+      const vouchers = await rewardsService.getActiveUserVouchers(user.id);
+      console.log('[payment-method] Loaded vouchers:', vouchers.length);
+      setUserVouchers(vouchers);
+    } catch (error) {
+      console.error('[payment-method] Error loading vouchers:', error);
+      setUserVouchers([]);
+    } finally {
+      setIsLoadingVouchers(false);
+    }
+  };
 
   const subtotal = parseFloat(params.subtotal || '0');
   const travelCost = parseFloat(params.travelCost || '0');
-  const platformFee = parseFloat(params.platformFee || '0');
+  const bookingFee = parseFloat(params.bookingFee || '0');
   
   // Calculate discount from selected voucher
   const calculateDiscount = (): number => {
-    if (!selectedVoucher) return 0;
+    if (!selectedVoucher || !selectedVoucher.voucher) return 0;
     
-    // Check minimum spend requirement
-    if (selectedVoucher.minSpend && subtotal < selectedVoucher.minSpend) {
-      return 0;
-    }
-    
-    if (selectedVoucher.discountAmount) {
-      return selectedVoucher.discountAmount;
-    }
-    
-    if (selectedVoucher.discountPercent) {
-      return (subtotal * selectedVoucher.discountPercent) / 100;
-    }
-    
-    return 0;
+    return rewardsService.calculateDiscount(selectedVoucher.voucher, subtotal);
   };
   
   const discount = calculateDiscount();
-  const totalAmount = subtotal + travelCost + platformFee - discount;
+  const totalAmount = subtotal + travelCost + bookingFee - discount;
   
   // Filter usable vouchers (not expired, not used, meets minimum spend)
-  const usableVouchers = myVouchers.filter(v => {
-    if (v.status === 'used') return false;
-    if (v.minSpend && subtotal < v.minSpend) return false;
-    // Could add expiry check here
-    return true;
+  const usableVouchers = userVouchers.filter(uv => {
+    if (uv.status !== 'active') return false;
+    if (!uv.voucher) return false;
+    
+    const check = rewardsService.canApplyVoucher(uv.voucher, subtotal);
+    return check.canApply;
   });
 
   const handleConfirmPayment = async () => {
@@ -186,12 +206,12 @@ export default function PaymentMethodScreen() {
             barberName: params.barberName,
             barberAvatar: params.barberAvatar,
             barber: barber,
-            customerId: 'user123', // TODO: Get from auth context
+            customerId: currentUserId || 'user123', // Use authenticated user ID
             services: services,
             serviceName: params.serviceName,
             price: parseFloat(params.subtotal || '0'),
             travelCost: parseFloat(params.travelCost || '0'),
-            platformFee: parseFloat(params.platformFee || '0'),
+            platformFee: parseFloat(params.bookingFee || '0'), // Map bookingFee param to platformFee for API
             serviceCommission: parseFloat(params.serviceCommission || '0'),
             barberServiceEarning: parseFloat(params.barberServiceEarning || '0'),
             totalPrice: totalAmount,
@@ -226,9 +246,29 @@ export default function PaymentMethodScreen() {
           if (createdBookingId) {
             console.log('✅ Booking created with ID:', createdBookingId);
             
-            // Mark voucher as used if one was selected
-            if (selectedVoucher) {
-              useVoucher(selectedVoucher.id, createdBookingId);
+            // Apply voucher to booking if one was selected
+            if (selectedVoucher && currentUserId) {
+              try {
+                const result = await rewardsService.applyVoucherToBooking(
+                  createdBookingId,
+                  selectedVoucher.id,
+                  subtotal + travelCost + bookingFee, // original total
+                  discount, // discount applied
+                  totalAmount // final total
+                );
+                
+                if (!result.success) {
+                  console.error('Failed to apply voucher:', result.error);
+                  Alert.alert(
+                    'Voucher Application Failed',
+                    'Your booking was created but the voucher could not be applied. Please contact support.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              } catch (voucherError) {
+                console.error('Error applying voucher:', voucherError);
+                // Don't block the booking flow, just log the error
+              }
             }
             
             // NOTE: Points will be awarded when service is completed, not now
@@ -325,14 +365,14 @@ export default function PaymentMethodScreen() {
           </View>
           {travelCost > 0 && (
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Travel Cost</Text>
+              <Text style={styles.priceLabel}>Travel</Text>
               <Text style={styles.priceValue}>RM {travelCost.toFixed(2)}</Text>
             </View>
           )}
-          {platformFee > 0 && (
+          {bookingFee > 0 && (
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Platform Fee</Text>
-              <Text style={styles.priceValue}>RM {platformFee.toFixed(2)}</Text>
+              <Text style={styles.priceLabel}>Booking Fee</Text>
+              <Text style={styles.priceValue}>RM {bookingFee.toFixed(2)}</Text>
             </View>
           )}
           
@@ -480,18 +520,24 @@ export default function PaymentMethodScreen() {
               </TouchableOpacity>
             )}
             
-            {usableVouchers.length > 0 ? (
-              usableVouchers.map((voucher) => {
-                const isSelected = selectedVoucher?.id === voucher.id;
-                const voucherDiscount = voucher.discountAmount || 
-                  (voucher.discountPercent ? (subtotal * voucher.discountPercent) / 100 : 0);
+            {isLoadingVouchers ? (
+              <View style={styles.loadingVouchers}>
+                <ActivityIndicator size="large" color="#00B14F" />
+                <Text style={styles.loadingVouchersText}>Loading vouchers...</Text>
+              </View>
+            ) : usableVouchers.length > 0 ? (
+              usableVouchers.map((userVoucher) => {
+                const isSelected = selectedVoucher?.id === userVoucher.id;
+                const voucher = userVoucher.voucher;
+                const voucherDiscount = rewardsService.calculateDiscount(voucher, subtotal);
+                const expiryText = rewardsService.formatExpiryDate(voucher.valid_until);
                 
                 return (
                   <TouchableOpacity
-                    key={voucher.id}
+                    key={userVoucher.id}
                     style={[styles.voucherModalCard, isSelected && styles.voucherModalCardSelected]}
                     onPress={() => {
-                      setSelectedVoucher(voucher);
+                      setSelectedVoucher(userVoucher);
                       setShowVoucherModal(false);
                     }}
                   >
@@ -502,7 +548,7 @@ export default function PaymentMethodScreen() {
                       <View style={styles.voucherModalInfo}>
                         <Text style={styles.voucherModalCardTitle}>{voucher.title}</Text>
                         <Text style={styles.voucherModalCardDesc}>{voucher.description}</Text>
-                        <Text style={styles.voucherModalCardExpiry}>Exp: {voucher.expires}</Text>
+                        <Text style={styles.voucherModalCardExpiry}>Exp: {expiryText}</Text>
                       </View>
                     </View>
                     <View style={styles.voucherModalCardRight}>
@@ -934,5 +980,15 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  loadingVouchers: {
+    alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+  },
+  loadingVouchersText: {
+    fontSize: 15,
+    color: '#6B7280',
+    marginTop: 16,
   },
 });

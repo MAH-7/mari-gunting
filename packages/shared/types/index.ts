@@ -27,11 +27,14 @@ export interface Barber extends User {
   availability: BarberAvailability;
   location: Location;
   isOnline: boolean;
+  isAvailable: boolean;       // Whether barber is available for bookings
   isVerified: boolean;
   joinedDate: string;
   photos: string[];
   specializations: string[];
-  distance?: number;
+  serviceRadiusKm: number;    // How far barber will travel (in km)
+  distance?: number;          // DRIVING distance from customer (in km)
+  durationMinutes?: number;   // Estimated driving time to customer (in minutes)
 }
 
 export interface Barbershop {
@@ -156,6 +159,7 @@ export type BookingStatus =
   | 'confirmed'         // For barbershop bookings
   | 'ready'             // For barbershop: ready for customer
   | 'on-the-way'
+  | 'arrived'           // Partner has arrived at location
   | 'in-progress'
   | 'completed'
   | 'cancelled';

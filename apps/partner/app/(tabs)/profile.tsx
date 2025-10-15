@@ -4,47 +4,119 @@ import {
   StyleSheet, 
   ScrollView, 
   TouchableOpacity,
-  Switch,
-  Alert, 
-  Dimensions 
+  Alert,
+  ActivityIndicator,
+  Image,
+  StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/shared/constants';
-import { mockBarbers } from '@/shared/services/mockData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStore } from '@/store/useStore';
+import { barberService, BarberProfile } from '@/shared/services/barberService';
+import { locationTrackingService } from '@/services/locationTrackingService';
 
-const { width } = Dimensions.get('window');
+// Type for menu items
+type MenuItem = {
+  icon: string;
+  label: string;
+  iconBg: string;
+  iconColor: string;
+  screen?: string;
+  action?: string;
+  badge?: string;
+  badgeColor?: string;
+  value?: string;
+};
 
 export default function PartnerProfileScreen() {
   const router = useRouter();
+  const currentUser = useStore((state) => state.currentUser);
   const setCurrentUser = useStore((state) => state.setCurrentUser);
-  const profile = mockBarbers[0];
   
-  const [isOnline, setIsOnline] = useState(profile.isOnline);
+  // State
+  const [profile, setProfile] = useState<BarberProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
+  const [updatingLocation, setUpdatingLocation] = useState(false);
 
-  // This week's stats
-  const weekStats = {
-    earnings: 'RM 1,240',
-    jobs: 12,
-    rating: 4.9,
+  // Fetch barber profile and account type on mount (initial load)
+  useEffect(() => {
+    const loadAccountType = async () => {
+      try {
+        const type = await AsyncStorage.getItem('partnerAccountType');
+        if (type === 'freelance' || type === 'barbershop') {
+          setAccountType(type);
+        }
+      } catch (error) {
+        console.error('Error loading account type:', error);
+      }
+    };
+
+    loadAccountType();
+    if (currentUser?.id) {
+      loadBarberProfile(true); // Show loading spinner on initial load
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+  
+  // Reload profile when screen comes into focus (silent refresh in background)
+  useFocusEffect(
+    useCallback(() => {
+      // Only refresh if profile already exists (skip initial load)
+      if (currentUser?.id && profile) {
+        loadBarberProfile(false); // Silent refresh, no loading spinner
+      }
+    }, [currentUser?.id, profile])
+  );
+
+  const loadBarberProfile = async (showLoading: boolean = true) => {
+    try {
+      // Only show loading spinner on initial load
+      if (showLoading) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+      
+      if (!currentUser?.id) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+      
+      // Fetch barber profile
+      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id);
+      
+      if (barberProfile) {
+        setProfile(barberProfile);
+      } else {
+        // Only show error alert on initial load, not on background refresh
+        if (showLoading) {
+          Alert.alert('Error', 'Failed to load profile data');
+        }
+      }
+    } catch (error) {
+      // Only show error alert on initial load, not on background refresh
+      if (showLoading) {
+        Alert.alert('Error', 'Failed to load profile data');
+      }
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   };
 
-  // Menu sections
-  const menuSections = [
+  // Menu sections - Reorganized based on priority
+  const menuSections: { title: string; items: MenuItem[] }[] = [
     {
-      title: 'ACCOUNT',
+      title: 'ACCOUNT MANAGEMENT',
       items: [
-        { 
-          icon: 'person-outline', 
-          label: 'Personal Information', 
-          screen: '/profile/edit',
-          iconBg: '#E3F2FD',
-          iconColor: '#2196F3',
-        },
         { 
           icon: 'card-outline', 
           label: 'Bank & Payout Settings', 
@@ -56,64 +128,67 @@ export default function PartnerProfileScreen() {
           icon: 'shield-checkmark-outline', 
           label: 'Verification & Documents', 
           action: 'verification',
-          badge: profile.isVerified ? 'Verified' : 'Pending',
-          badgeColor: profile.isVerified ? '#4CAF50' : '#FF9800',
+          badge: profile?.isVerified ? 'Verified' : 'Pending',
+          badgeColor: profile?.isVerified ? '#4CAF50' : '#FF9800',
           iconBg: '#FFF3E0',
           iconColor: '#FF9800',
         },
         { 
-          icon: 'receipt-outline', 
-          label: 'Tax Information', 
-          action: 'tax',
-          iconBg: '#F3E5F5',
-          iconColor: '#9C27B0',
+          icon: 'lock-closed-outline', 
+          label: 'Security Settings', 
+          action: 'security',
+          iconBg: '#FFEBEE',
+          iconColor: '#F44336',
         },
       ],
     },
     {
-      title: 'MY BUSINESS',
+      title: 'BUSINESS SETTINGS',
       items: [
         { 
           icon: 'cut-outline', 
-          label: 'Manage Services & Pricing', 
+          label: 'Services & Pricing', 
           screen: '/services',
           iconBg: '#E8F5E9',
           iconColor: '#00B87C',
         },
         { 
-          icon: 'calendar-outline', 
-          label: 'Availability & Schedule', 
-          screen: '/schedule',
-          iconBg: '#FFF3E0',
-          iconColor: '#FF9800',
-        },
-        { 
           icon: 'images-outline', 
-          label: 'Portfolio Management', 
+          label: 'Portfolio', 
           screen: '/portfolio',
-          badge: `${profile.photos.length}`,
+          badge: `${profile?.photos?.length || 0}`,
           iconBg: '#F3E5F5',
           iconColor: '#9C27B0',
         },
-        { 
-          icon: 'star-outline', 
-          label: 'Ratings & Reviews', 
-          action: 'reviews',
-          badge: profile.rating.toFixed(1),
-          iconBg: '#FFF8E1',
-          iconColor: '#FFC107',
-        },
-        { 
-          icon: 'analytics-outline', 
-          label: 'Performance Insights', 
-          action: 'insights',
+        // Only show Service Radius for freelance barbers
+        ...(accountType === 'freelance' ? [{ 
+          icon: 'navigate-circle-outline', 
+          label: 'Service Radius', 
+          screen: '/service-radius',
+          value: profile?.serviceRadiusKm ? `${profile.serviceRadiusKm} km` : undefined,
           iconBg: '#E3F2FD',
           iconColor: '#2196F3',
-        },
+        }] : []),
+        // Only show Update Location for freelance barbers
+        ...(accountType === 'freelance' ? [{ 
+          icon: 'location-outline', 
+          label: 'Update My Location', 
+          action: 'update-location',
+          iconBg: '#E8F5E9',
+          iconColor: '#00B14F',
+        }] : []),
+        // Only show Availability for barbershops, not freelance barbers
+        ...(accountType === 'barbershop' ? [{ 
+          icon: 'calendar-outline', 
+          label: 'Availability', 
+          screen: '/schedule',
+          iconBg: '#FFF3E0',
+          iconColor: '#FF9800',
+        }] : []),
       ],
     },
     {
-      title: 'SETTINGS',
+      title: 'APP SETTINGS',
       items: [
         { 
           icon: 'notifications-outline', 
@@ -124,18 +199,11 @@ export default function PartnerProfileScreen() {
         },
         { 
           icon: 'globe-outline', 
-          label: 'Language & Region', 
+          label: 'Language', 
           action: 'language',
           value: 'English',
           iconBg: '#E8F5E9',
           iconColor: '#4CAF50',
-        },
-        { 
-          icon: 'settings-outline', 
-          label: 'App Preferences', 
-          action: 'preferences',
-          iconBg: '#F5F5F5',
-          iconColor: '#757575',
         },
       ],
     },
@@ -155,20 +223,6 @@ export default function PartnerProfileScreen() {
           action: 'contact',
           iconBg: '#E3F2FD',
           iconColor: '#2196F3',
-        },
-        { 
-          icon: 'document-text-outline', 
-          label: 'FAQs', 
-          action: 'faqs',
-          iconBg: '#FFF3E0',
-          iconColor: '#FF9800',
-        },
-        { 
-          icon: 'bug-outline', 
-          label: 'Report a Problem', 
-          action: 'report',
-          iconBg: '#FFEBEE',
-          iconColor: '#F44336',
         },
       ],
     },
@@ -191,7 +245,7 @@ export default function PartnerProfileScreen() {
         },
         { 
           icon: 'information-circle-outline', 
-          label: 'About Mari-Gunting', 
+          label: 'About', 
           action: 'about',
           iconBg: '#F5F5F5',
           iconColor: '#757575',
@@ -200,24 +254,41 @@ export default function PartnerProfileScreen() {
     },
   ];
 
-  const handleMenuPress = (item: any) => {
+  const handleMenuPress = (item: MenuItem) => {
     if (item.screen) {
-      router.push(item.screen);
+      router.push(item.screen as any);
     } else if (item.action) {
-      Alert.alert(item.label, `${item.label} feature`);
+      // Handle specific actions
+      switch (item.action) {
+        case 'bank':
+          router.push('/profile/bank');
+          break;
+        case 'verification':
+          router.push('/profile/verification');
+          break;
+        case 'update-location':
+          handleUpdateLocation();
+          break;
+        default:
+          Alert.alert(item.label, `${item.label} feature`);
+          break;
+      }
     }
   };
 
-  const handleToggleOnline = (value: boolean) => {
-    setIsOnline(value);
-    Alert.alert(
-      value ? 'Going Online' : 'Going Offline',
-      value ? 'You will now receive booking requests' : 'You will not receive booking requests'
-    );
-  };
-
-  const handleViewPublicProfile = () => {
-    Alert.alert('Public Profile', 'This shows how customers see your profile');
+  const handleUpdateLocation = async () => {
+    if (!currentUser?.id) return;
+    
+    setUpdatingLocation(true);
+    try {
+      await locationTrackingService.updateLocation(currentUser.id);
+      Alert.alert('Success', 'Your location has been updated successfully');
+    } catch (error) {
+      console.error('Failed to update location:', error);
+      Alert.alert('Error', 'Failed to update location. Please check your location permissions.');
+    } finally {
+      setUpdatingLocation(false);
+    }
   };
 
   const handleLogout = () => {
@@ -231,6 +302,9 @@ export default function PartnerProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Stop location tracking on logout
+              locationTrackingService.stopTracking();
+              
               setCurrentUser(null);
               await AsyncStorage.multiRemove(['partnerAccountType', 'mari-gunting-storage']);
               router.replace('/login');
@@ -244,88 +318,109 @@ export default function PartnerProfileScreen() {
     );
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error if no profile
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="warning-outline" size={48} color={COLORS.error} />
+          <Text style={styles.errorText}>Failed to load profile</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={loadBarberProfile}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFF' }} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Profile Header */}
+        {/* Profile Header - Enhanced */}
         <View style={styles.profileHeader}>
-          <View style={styles.profileTopRow}>
-            <View style={styles.avatarSection}>
+          {/* Edit Icon - Top Right */}
+          <TouchableOpacity 
+            style={styles.editIcon}
+            onPress={() => router.push('/profile/edit')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="create-outline" size={22} color={COLORS.primary} />
+          </TouchableOpacity>
+
+          {/* Avatar with Status Indicator */}
+          <View style={styles.avatarContainer}>
+            {profile.avatar ? (
+              <Image 
+                source={{ uri: profile.avatar }} 
+                style={styles.avatarImage}
+              />
+            ) : (
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{profile.name.charAt(0)}</Text>
               </View>
-              <View style={styles.profileInfo}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.profileName}>{profile.name}</Text>
-                  {profile.isVerified && (
-                    <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
-                  )}
+            )}
+            {/* Online Status Ring */}
+            {profile.isOnline && (
+              <View style={styles.onlineIndicator} />
+            )}
+          </View>
+
+          {/* Profile Info */}
+          <View style={styles.profileDetails}>
+            <View style={styles.nameRow}>
+              <Text style={styles.profileName}>{profile.name}</Text>
+              {profile.isVerified && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark-circle" size={20} color="#00BFA6" />
                 </View>
-                <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={14} color="#FFC107" />
-                  <Text style={styles.ratingText}>{profile.rating.toFixed(1)}</Text>
-                  <Text style={styles.ratingCount}>({profile.totalReviews})</Text>
-                </View>
+              )}
+            </View>
+            
+            {/* Contact Info */}
+            {profile.phone && (
+              <View style={styles.infoRow}>
+                <Ionicons name="call" size={14} color="#666" />
+                <Text style={styles.infoText}>{profile.phone}</Text>
               </View>
+            )}
+            {profile.email && (
+              <View style={styles.infoRow}>
+                <Ionicons name="mail" size={14} color="#666" />
+                <Text style={styles.infoText}>{profile.email}</Text>
+              </View>
+            )}
+            
+            {/* Member Since */}
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar" size={14} color="#666" />
+              <Text style={styles.infoText}>
+                Member since {new Date(profile.joinedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              </Text>
             </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.primaryButton}
-              onPress={() => router.push('/profile/edit')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="create-outline" size={18} color="#FFF" />
-              <Text style={styles.primaryButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.secondaryButton}
-              onPress={handleViewPublicProfile}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="eye-outline" size={18} color={COLORS.primary} />
-              <Text style={styles.secondaryButtonText}>View Public</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Online Toggle */}
-          <View style={styles.onlineToggleRow}>
-            <View style={styles.onlineToggleLeft}>
-              <View style={[styles.onlineDot, isOnline && styles.onlineDotActive]} />
-              <Text style={styles.onlineLabel}>{isOnline ? 'Online' : 'Offline'}</Text>
-            </View>
-            <Switch
-              value={isOnline}
-              onValueChange={handleToggleOnline}
-              trackColor={{ false: '#E0E0E0', true: COLORS.primaryLight }}
-              thumbColor={isOnline ? COLORS.primary : '#F5F5F5'}
-              ios_backgroundColor="#E0E0E0"
-            />
-          </View>
-        </View>
-
-        {/* This Week Stats */}
-        <View style={styles.statsCard}>
-          <View style={styles.statsCardHeader}>
-            <Text style={styles.statsCardTitle}>This Week</Text>
-            <Ionicons name="calendar-outline" size={16} color={COLORS.text.secondary} />
-          </View>
-          <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxValue}>{weekStats.earnings}</Text>
-              <Text style={styles.statBoxLabel}>Earnings</Text>
-            </View>
-            <View style={styles.statBoxDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxValue}>{weekStats.jobs}</Text>
-              <Text style={styles.statBoxLabel}>Jobs</Text>
-            </View>
-            <View style={styles.statBoxDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxValue}>{weekStats.rating.toFixed(1)}</Text>
-              <Text style={styles.statBoxLabel}>Rating</Text>
+            
+            {/* Rating Badge */}
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={16} color="#FFC107" />
+              <Text style={styles.ratingText}>{profile.rating.toFixed(1)}</Text>
+              <Text style={styles.ratingCount}>• {profile.totalReviews} reviews</Text>
             </View>
           </View>
         </View>
@@ -377,11 +472,8 @@ export default function PartnerProfileScreen() {
           <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
-
-        {/* Version */}
-        <Text style={styles.versionText}>Mari-Gunting Partner v1.0.0</Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -393,56 +485,140 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
+  // Loading & Error States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.error,
+    marginTop: 12,
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+  },
   // Profile Header
   profileHeader: {
+    position: 'relative',
     backgroundColor: '#FFF',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
     marginBottom: 16,
   },
-  profileTopRow: {
-    marginBottom: 16,
+  editIcon: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
   avatarSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    marginBottom: 16,
+  },
+  // Avatar Container
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: '#E0E0E0',
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: '800',
     color: COLORS.primary,
   },
-  profileInfo: {
-    flex: 1,
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#00BFA6',
+    borderWidth: 3,
+    borderColor: '#FFF',
+  },
+  profileDetails: {
+    alignItems: 'center',
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 12,
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1A1A1A',
   },
-  ratingRow: {
+  verifiedBadge: {
+    marginLeft: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: '#FFF8E1',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 8,
   },
   ratingText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1A1A1A',
   },
@@ -451,117 +627,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#999',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  primaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  primaryButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  secondaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primaryLight,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  onlineToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-  },
-  onlineToggleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  onlineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#CCC',
-  },
-  onlineDotActive: {
-    backgroundColor: COLORS.success,
-  },
-  onlineLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  // Stats Card
-  statsCard: {
-    backgroundColor: '#FFF',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  statsCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  statsCardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statBoxValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.primary,
-    marginBottom: 4,
-  },
-  statBoxLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#999',
-  },
-  statBoxDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#F0F0F0',
-  },
+  
   // Menu Container
   menuContainer: {
     paddingHorizontal: 16,

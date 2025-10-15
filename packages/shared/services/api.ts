@@ -1,8 +1,19 @@
 import { Barber, Booking, Service, ApiResponse, PaginatedResponse, Review } from '@/types';
 import { mockBarbers, mockBarbershopStaff, mockBookings, mockBarbershops, mockReviews, mockServices } from './mockData';
+import { supabaseApi } from './supabaseApi';
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Toggle between mock and real data
+// Set to true to use Supabase, false to use mock data
+const USE_REAL_DATA = true;
+
+if (USE_REAL_DATA) {
+  console.log('📡 Using REAL Supabase data');
+} else {
+  console.log('🎭 Using MOCK data');
+}
 
 // In-memory storage for created bookings (for testing)
 const createdBookings: Map<string, Booking> = new Map();
@@ -40,15 +51,26 @@ export const api = {
   // Barbers
   getBarbers: async (filters?: {
     isOnline?: boolean;
+    isAvailable?: boolean;
     serviceId?: string;
     location?: { lat: number; lng: number; radius?: number };
   }): Promise<ApiResponse<PaginatedResponse<Barber>>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getBarbers(filters) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(800);
     
     let filteredBarbers = [...mockBarbers];
     
     if (filters?.isOnline !== undefined) {
       filteredBarbers = filteredBarbers.filter(b => b.isOnline === filters.isOnline);
+    }
+    
+    if (filters?.isAvailable !== undefined) {
+      filteredBarbers = filteredBarbers.filter(b => b.isAvailable === filters.isAvailable);
     }
     
     if (filters?.serviceId) {
@@ -70,6 +92,12 @@ export const api = {
   },
 
   getBarberById: async (id: string): Promise<ApiResponse<any>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getBarberById(id) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(500);
     
     // First check freelance barbers
@@ -97,6 +125,12 @@ export const api = {
   },
 
   searchBarbers: async (query: string): Promise<ApiResponse<Barber[]>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.searchBarbers(query) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(600);
     const results = mockBarbers.filter(b => 
       b.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -111,6 +145,12 @@ export const api = {
 
   // Reviews
   getReviewsByBarberId: async (barberId: string): Promise<ApiResponse<Review[]>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getReviewsByBarberId(barberId) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(500);
     const reviews = mockReviews.filter(r => r.barberId === barberId);
     
@@ -347,10 +387,16 @@ export const api = {
     serviceId: string,
     time: string
   ): Promise<ApiResponse<{ barber: any }>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.quickBook(serviceId, time) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(1500);
     
-    // Find an available barber (any online barber for quick book)
-    const availableBarber = mockBarbers.find(b => b.isOnline);
+    // Find an available barber (online AND available for bookings)
+    const availableBarber = mockBarbers.find(b => b.isOnline && b.isAvailable);
     
     if (!availableBarber) {
       return {

@@ -3,9 +3,52 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
+    "skipLibCheck": true,
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@mari-gunting/shared": [
+        "../../packages/shared"
+      ],
+      "@mari-gunting/shared/*": [
+        "../../packages/shared/*"
+      ],
+      "../config/*": [
+        "../../packages/shared/config/*"
+      ],
+      "../config/supabase": [
+        "../../packages/shared/config/supabase"
+      ],
+      "../config/sentry": [
+        "../../packages/shared/config/sentry"
+      ],
+      "../config/mapbox": [
+        "../../packages/shared/config/mapbox"
+      ],
+      "../config/env": [
+        "../../packages/shared/config/env"
+      ],
+      "../config/cloudinary": [
+        "../../packages/shared/config/cloudinary"
+      ],
+      "../theme": [
+        "../../packages/shared/theme"
+      ],
+      "../theme/*": [
+        "../../packages/shared/theme/*"
+      ],
+      "../services/*": [
+        "../../packages/shared/services/*"
+      ],
+      "../types/*": [
+        "../../packages/shared/types/*"
+      ],
+      "../utils/*": [
+        "../../packages/shared/utils/*"
+      ],
+      "../constants/*": [
+        "../../packages/shared/constants/*"
       ]
     }
   },
@@ -15,5 +58,11 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "components-shared",
+    "services",
+    "shared"
   ]
 }

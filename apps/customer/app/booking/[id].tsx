@@ -10,13 +10,14 @@ import { formatCurrency, formatPrice, formatShortDate, formatTime, formatDate } 
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { useStore } from '@/store/useStore';
 import { BookingStatus, BookingType } from '@/types';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import SuccessModal from '@/components/SuccessModal';
 import PointsEarnedModal from '@/components/PointsEarnedModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import * as Calendar from 'expo-calendar';
 import { useBookingCompletion } from '@/hooks/useBookingCompletion';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,12 +28,71 @@ export default function BookingDetailScreen() {
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
 
-  const { data: bookingResponse, isLoading } = useQuery({
+  const { data: bookingResponse, isLoading, refetch } = useQuery({
     queryKey: ['booking-details', id],
     queryFn: () => bookingService.getBookingById(id!),
     enabled: !!id,
-    refetchInterval: 30000, // Refetch every 30 seconds for status updates
+    // Real-time subscription replaces polling
   });
+
+  // Real-time subscription for booking status updates
+  useEffect(() => {
+    if (!id) return;
+
+    console.log('🔌 Setting up real-time subscription for booking:', id);
+
+    // Subscribe to this specific booking's changes
+    const channel = supabase
+      .channel(`booking-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bookings',
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('🔔 Booking UPDATE received:', payload);
+          const newData = payload.new as any;
+          const oldData = payload.old as any;
+          
+          console.log('Status changed:', oldData?.status, '→', newData?.status);
+          
+          // Refetch booking data to update UI
+          refetch();
+          
+          // Also invalidate the bookings list
+          queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
+          
+          // Show notifications for important status changes
+          if (oldData?.status !== newData?.status) {
+            if (newData?.status === 'accepted') {
+              Alert.alert('Booking Accepted', 'Your barber has confirmed the booking!');
+            } else if (newData?.status === 'on-the-way') {
+              Alert.alert('Barber On The Way', 'Your barber is heading to your location!');
+            } else if (newData?.status === 'in-progress') {
+              Alert.alert('Service Started', 'Your haircut service has started.');
+            } else if (newData?.status === 'completed') {
+              Alert.alert('Service Completed', 'Thank you! Please rate your experience.');
+            } else if (newData?.status === 'cancelled') {
+              Alert.alert('Booking Cancelled', 'This booking has been cancelled.');
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Booking subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to booking updates');
+        }
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up booking subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [id, refetch, queryClient]);
 
   const cancelMutation = useMutation({
     mutationFn: (reason: string) => 
@@ -470,10 +530,21 @@ export default function BookingDetailScreen() {
                 </TouchableOpacity>
               </View>
             )}
+
+            {/* Track Barber button (when barber is on the way) */}
+            {!isBarbershop && ['accepted', 'on-the-way', 'in-progress'].includes(booking.status) && (
+              <TouchableOpacity 
+                style={styles.trackBarberButton} 
+                onPress={() => router.push(`/booking/track-barber?bookingId=${booking.id}`)}
+              >
+                <Ionicons name="location" size={20} color="#FFFFFF" />
+                <Text style={styles.trackBarberButtonText}>Track Barber Live</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
-        {/* Phase 1.6: Price Details with Travel Cost Explanation */}
+        {/* Phase 1.6: Price Details with Travel Explanation */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Price Details</Text>
 
@@ -511,14 +582,14 @@ export default function BookingDetailScreen() {
             </>
           )}
 
-          {/* Phase 1.6: Travel Cost with Explanation */}
+          {/* Phase 1.6: Travel with Explanation */}
           <View style={styles.dividerLine} />
           <View style={styles.serviceItem}>
             <View style={styles.serviceLeft}>
               <Ionicons name="car" size={18} color={isBarbershop ? '#9CA3AF' : '#00B14F'} style={{ marginRight: 12 }} />
               <View style={styles.serviceInfo}>
                 <Text style={[styles.serviceName, isBarbershop && styles.serviceNameDisabled]}>
-                  Travel Cost
+                  Travel
                 </Text>
                 <Text style={styles.serviceDuration}>
                   {isBarbershop ? 'Walk-in service' : `${booking.distance?.toFixed(1) || '0'} km`}
@@ -530,15 +601,15 @@ export default function BookingDetailScreen() {
             </Text>
           </View>
           {isBarbershop && (
-            <Text style={styles.travelNote}>✓ No travel cost - you visit the shop</Text>
+            <Text style={styles.travelNote}>✓ No travel - you visit the shop</Text>
           )}
 
-          {/* Platform Fee */}
+          {/* Booking Fee */}
           <View style={styles.serviceItem}>
             <View style={styles.serviceLeft}>
               <Ionicons name="shield-checkmark" size={18} color="#00B14F" style={{ marginRight: 12 }} />
               <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>Platform Fee</Text>
+                <Text style={styles.serviceName}>Booking Fee</Text>
                 <Text style={styles.serviceDuration}>Booking & Support</Text>
               </View>
             </View>
@@ -1058,6 +1129,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#00B14F',
+  },
+  trackBarberButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    backgroundColor: '#8B5CF6',
+    borderRadius: 8,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  trackBarberButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   subsectionLabel: {
     fontSize: 13,

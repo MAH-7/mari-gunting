@@ -34,6 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSPhotoLibraryUsageDescription: 'Mari Gunting Partner needs photo library access to upload images.',
       },
       config: {
+        // Note: Using Mapbox, but keeping legacy iOS config structure
         googleMapsApiKey: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
       }
     },
@@ -57,6 +58,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'WRITE_EXTERNAL_STORAGE',
       ],
       config: {
+        // Note: Using Mapbox, but keeping legacy Android config structure
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
         }
@@ -80,8 +82,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@rnmapbox/maps',
         {
-          RNMapboxMapsDownloadToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
-          RNMapboxMapsVersion: '11.0.0'
+          RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN,
+          RNMapboxMapsVersion: '10.19.0' // Standardized with customer app
         }
       ],
       [
@@ -167,19 +169,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       eas: {
         projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID
       }
-    },
-
-    hooks: {
-      postPublish: [
-        {
-          file: 'sentry-expo/upload-sourcemaps',
-          config: {
-            organization: process.env.SENTRY_ORG,
-            project: process.env.SENTRY_PROJECT,
-            authToken: process.env.SENTRY_AUTH_TOKEN,
-          }
-        }
-      ]
     }
+
+    // Note: hooks configuration moved to eas.json for EAS Build
+    // Legacy hooks are not supported in SDK 54+
   };
 };

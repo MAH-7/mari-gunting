@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
@@ -19,6 +19,10 @@ import { formatCurrency, formatDistance } from "@/utils/format";
 import { Barber } from "@/types";
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
+import { rewardsService } from '@/services/rewardsService';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BANNER_PADDING = 20;
@@ -37,7 +41,9 @@ const getAvatarUrl = (url: string | null | undefined, fallback: string) => {
 
 export default function HomeScreen() {
   const currentUser = useStore((state) => state.currentUser);
-  const userPoints = useStore((state) => state.userPoints);
+  const queryClient = useQueryClient();
+  const [userPoints, setUserPoints] = useState(0);
+  const [isLoadingPoints, setIsLoadingPoints] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<"all" | "online">("all");
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -53,13 +59,89 @@ export default function HomeScreen() {
 
   const [showLocationModal, setShowLocationModal] = useState(false);
 
-  const { data: barbersResponse, isLoading } = useQuery({
+  // Fetch user points from Supabase
+  const { data: pointsData, refetch: refetchPoints } = useQuery({
+    queryKey: ['userPoints', currentUser?.id],
+    queryFn: () => currentUser?.id ? rewardsService.getUserPoints(currentUser.id) : Promise.resolve(0),
+    enabled: !!currentUser?.id,
+    staleTime: 10000, // Cache for 10 seconds (shorter for more frequent updates)
+    refetchOnMount: 'always', // Always refetch when component mounts
+  });
+
+  // Update local state when points data changes
+  useEffect(() => {
+    if (pointsData !== undefined) {
+      setUserPoints(pointsData);
+    }
+  }, [pointsData]);
+
+  // Refresh points when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUser?.id) {
+        console.log('🔄 Home screen focused - refreshing points');
+        refetchPoints();
+      }
+    }, [currentUser?.id, refetchPoints])
+  );
+
+  const { data: barbersResponse, isLoading, refetch } = useQuery({
     queryKey: ["barbers", selectedFilter],
     queryFn: () =>
       api.getBarbers({
         isOnline: selectedFilter === "online" ? true : undefined,
+        isAvailable: selectedFilter === "online" ? true : undefined,
       }),
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
+
+  // Real-time subscription for barber availability changes
+  useEffect(() => {
+    // Subscribe to profiles table changes (is_online)
+    const profilesChannel = supabase
+      .channel('home-profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: 'is_online=neq.null',
+        },
+        (payload) => {
+          console.log('🔔 Barber online status changed:', payload);
+          // Force immediate refetch
+          refetch();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to barbers table changes (is_available)
+    const barbersChannel = supabase
+      .channel('home-barbers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'barbers',
+          filter: 'is_available=neq.null',
+        },
+        (payload) => {
+          console.log('🔔 Barber availability changed:', payload);
+          // Force immediate refetch
+          refetch();
+        }
+      )
+      .subscribe();
+
+    // Cleanup
+    return () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(barbersChannel);
+    };
+  }, [queryClient, refetch]);
 
   const barbers = barbersResponse?.data?.data || [];
 

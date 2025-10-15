@@ -1,3 +1,73 @@
+# Quick Test - RLS Profile Update Issue
+
+## 🔥 DO THIS FIRST: Check Session
+
+1. Restart your Partner app
+2. Go to Profile → Edit Profile  
+3. Make any change
+4. Click "Save Changes"
+5. Look at console for:
+
+```
+[EditProfile] Session check:
+[EditProfile]   - Session exists: ???
+[EditProfile]   - Session user ID: ???
+```
+
+**If Session exists: false** → Log out and log back in  
+**If Session user ID doesn't match** → Clear app data and re-login  
+**If both are good** → Continue to Test 2
+
+---
+
+## Test 2: Disable RLS (Proves RLS is the issue)
+
+In Supabase SQL Editor:
+```sql
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE barbers DISABLE ROW LEVEL SECURITY;
+```
+
+Test update → Works? → RLS is the problem
+
+**RE-ENABLE IMMEDIATELY:**
+```sql
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE barbers ENABLE ROW LEVEL SECURITY;
+```
+
+---
+
+## Test 3: Debug Policy (Most likely fix)
+
+In Supabase SQL Editor:
+```sql
+DROP POLICY IF EXISTS "profiles_update_policy" ON profiles;
+DROP POLICY IF EXISTS "barbers_update_policy" ON barbers;
+
+CREATE POLICY "profiles_update_debug" ON profiles
+    FOR UPDATE TO authenticated
+    USING (true)
+    WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "barbers_update_debug" ON barbers
+    FOR UPDATE TO authenticated
+    USING (true)
+    WITH CHECK (auth.uid() = user_id);
+```
+
+Test update → If this works, auth.uid() is fine, just needed USING (true)
+
+---
+
+## Files to Help:
+- `ACTION_PLAN.md` - Detailed step-by-step
+- `ALTERNATIVE_RLS_FIX.sql` - Different policy approaches
+- `TEMPORARY_RLS_BYPASS.sql` - Disable RLS for testing
+- `CHECK_USER_DATA.sql` - Verify your user exists
+
+Report back which test worked!
+
 # 🚀 Quick Test Guide - Onboarding Fix
 
 ## Test Now (5 minutes)

@@ -12,10 +12,29 @@ import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { reverseGeocode } from '../../utils/mapbox';
+import AddressFormBottomSheet, { AddressFormMode } from '@/components/AddressFormBottomSheet';
+import { useStore } from '@/store/useStore';
+import { CustomerAddress } from '@mari-gunting/shared/services/addressService';
+import { useBookingIfActive } from '@/contexts/BookingContext';
 
 export default function MapPickerScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    latitude?: string;
+    longitude?: string;
+    mode?: string;
+    addressId?: string;
+    addressData?: string; // JSON string of address for edit mode
+  }>();
+  
+  const currentUser = useStore((state) => state.currentUser);
+  const booking = useBookingIfActive();
+  
+  // Determine mode: 'add' or 'edit'
+  const mode: AddressFormMode = params.addressId ? 'edit' : 'add';
+  const addressToEdit: CustomerAddress | undefined = params.addressData 
+    ? JSON.parse(params.addressData as string) 
+    : undefined;
   
   // Initial location from params or default to KL
   const initialLat = params.latitude ? parseFloat(params.latitude as string) : 3.139;
@@ -28,6 +47,7 @@ export default function MapPickerScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [address, setAddress] = useState('');
   const [mapReady, setMapReady] = useState(false);
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
   const cameraRef = useRef<MapboxGL.Camera>(null);
 
   useEffect(() => {
@@ -130,18 +150,40 @@ export default function MapPickerScreen() {
 
   const handleConfirmLocation = () => {
     if (selectedLocation && address) {
-      // Use replace to remove map-picker from navigation stack
-      // This prevents users from getting stuck on map-picker when going back
-      router.replace({
-        pathname: '/profile/addresses',
-        params: {
-          selectedLatitude: selectedLocation.latitude.toString(),
-          selectedLongitude: selectedLocation.longitude.toString(),
-          selectedAddress: address,
-        },
-      });
+      // Option C: Show bottom sheet modal on the map!
+      setShowBottomSheet(true);
     } else {
       Alert.alert('No Location Selected', 'Please select a location on the map.');
+    }
+  };
+
+  const handleBottomSheetSuccess = (savedAddress: CustomerAddress) => {
+    // Address saved successfully!
+    setShowBottomSheet(false);
+    
+    // If in booking flow, set the address in context
+    if (booking) {
+      const fullAddress = [
+        savedAddress.address_line1,
+        savedAddress.address_line2,
+        savedAddress.city,
+        savedAddress.state,
+        savedAddress.postal_code
+      ].filter(Boolean).join(', ');
+      
+      booking.setSelectedAddress({
+        id: savedAddress.id,
+        label: savedAddress.label,
+        fullAddress: fullAddress,
+        latitude: savedAddress.latitude,
+        longitude: savedAddress.longitude,
+      });
+      
+      // Return to booking
+      booking.returnToBooking();
+    } else {
+      // Normal flow: go back to addresses screen
+      router.back();
     }
   };
 
@@ -229,6 +271,19 @@ export default function MapPickerScreen() {
           <Text style={styles.confirmButtonText}>Confirm Location</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Option C: Bottom Sheet for Address Form */}
+      <AddressFormBottomSheet
+        visible={showBottomSheet}
+        onClose={() => setShowBottomSheet(false)}
+        onSuccess={handleBottomSheetSuccess}
+        mode={mode}
+        userId={currentUser?.id!}
+        latitude={selectedLocation.latitude}
+        longitude={selectedLocation.longitude}
+        initialAddressString={address}
+        addressToEdit={addressToEdit}
+      />
     </View>
   );
 }

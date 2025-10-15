@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Platform, Alert, Modal, NativeScrollEvent, NativeSyntheticEvent, FlatList } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,17 +8,101 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency, formatDistance } from '@/utils/format';
 import { SkeletonCircle, SkeletonText, SkeletonBase, SkeletonImage } from '@/components/Skeleton';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 const { width } = Dimensions.get('window');
 
 export default function BarberProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, distance } = useLocalSearchParams<{ id: string; distance?: string }>();
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [fullscreenIndex, setFullscreenIndex] = useState(0);
+  const [imageLoading, setImageLoading] = useState<Record<number, boolean>>({});
+  const galleryScrollRef = useRef<ScrollView>(null);
+  const fullscreenFlatListRef = useRef<FlatList>(null);
+  const [previousBarberState, setPreviousBarberState] = useState<{
+    isOnline: boolean;
+    isAvailable: boolean;
+  } | null>(null);
   
-  const { data: barberResponse, isLoading } = useQuery({
+  const { data: barberResponse, isLoading, refetch } = useQuery({
     queryKey: ['barber', id],
     queryFn: () => api.getBarberById(id),
   });
+
+  // Real-time subscription to monitor if this specific barber goes offline
+  useEffect(() => {
+    if (!id || !barberResponse?.data) return;
+
+    const barber = barberResponse.data;
+    const barberId = id; // This is the barber's ID (from barbers table)
+    
+    console.log('🔌 Setting up barber real-time subscriptions');
+    console.log('Barber ID:', barberId);
+    console.log('Barber name:', barber.name);
+    console.log('Current isOnline:', barber.isOnline);
+    console.log('Current isAvailable:', barber.isAvailable);
+
+    // Create a single channel for both subscriptions
+    const channel = supabase
+      .channel(`barber-status-${barberId}`);
+
+    // Subscribe to barbers table changes (is_available)
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'barbers',
+        filter: `id=eq.${barberId}`,
+      },
+      (payload) => {
+        console.log('🔔 Barber table UPDATE received:', payload);
+        const newData = payload.new as any;
+        
+        console.log('New is_available:', newData?.is_available);
+        
+        // Refetch to update UI with latest data
+        console.log('🔄 Refetching barber profile...');
+        refetch();
+      }
+    );
+
+    // Also subscribe to profiles table changes (is_online)
+    // We need to get updates when the profile's online status changes
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${barberId}`,
+      },
+      (payload) => {
+        console.log('🔔 Profile table UPDATE received:', payload);
+        const newData = payload.new as any;
+        
+        console.log('Profile updated - is_online:', newData?.is_online);
+        
+        // Refetch to get latest barber data (which includes profile)
+        console.log('🔄 Refetching barber profile...');
+        refetch();
+      }
+    );
+
+    // Subscribe to the channel
+    channel.subscribe((status) => {
+      console.log('📡 Barber status channel:', status);
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Successfully subscribed to barber status updates');
+      }
+    });
+
+    return () => {
+      console.log('🔌 Cleaning up barber status subscriptions');
+      supabase.removeChannel(channel);
+    };
+  }, [id, barberResponse?.data, refetch]);
 
   const { data: reviewsResponse } = useQuery({
     queryKey: ['reviews', id],
@@ -27,6 +112,86 @@ export default function BarberProfileScreen() {
 
   const barber = barberResponse?.data;
   const reviews = reviewsResponse?.data || [];
+  
+  // Preload images for better performance
+  useEffect(() => {
+    if (barber?.photos && barber.photos.length > 0) {
+      // Preload portfolio images
+      Image.prefetch(barber.photos);
+    }
+    if (barber?.avatar) {
+      // Preload avatar
+      Image.prefetch(barber.avatar);
+    }
+  }, [barber?.photos, barber?.avatar]);
+  
+  // Handle gallery scroll
+  const handleGalleryScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollPosition = event.nativeEvent.contentOffset.x;
+    const imageWidth = width - 40; // Account for section padding (20px each side)
+    const index = Math.round(scrollPosition / imageWidth);
+    setActivePhotoIndex(index);
+  };
+  
+  // Open fullscreen gallery
+  const openFullscreen = (index: number) => {
+    setFullscreenIndex(index);
+    setFullscreenImage(photos[index]);
+    // Scroll to the correct image after modal opens
+    setTimeout(() => {
+      fullscreenFlatListRef.current?.scrollToIndex({
+        index: index,
+        animated: false,
+      });
+    }, 100);
+  };
+  
+  // Close fullscreen
+  const closeFullscreen = () => {
+    setFullscreenImage(null);
+  };
+  
+  // Handle fullscreen viewable items change
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setFullscreenIndex(viewableItems[0].index || 0);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  // Track when barber goes offline and show alert
+  useEffect(() => {
+    if (!barber) return;
+
+    const currentState = {
+      isOnline: barber.isOnline,
+      isAvailable: barber.isAvailable,
+    };
+
+    // Check if barber went offline (was available, now not)
+    if (previousBarberState) {
+      const wasAvailable = previousBarberState.isOnline && previousBarberState.isAvailable;
+      const isNowAvailable = currentState.isOnline && currentState.isAvailable;
+
+      if (wasAvailable && !isNowAvailable) {
+        console.log('⚠️ Barber became unavailable!');
+        Alert.alert(
+          'Barber Went Offline',
+          `${barber.name} is no longer available. You can still view their profile or come back later.`,
+          [
+            { text: 'View Profile', style: 'cancel' },
+            { text: 'Go Back', onPress: () => router.back() }
+          ]
+        );
+      }
+    }
+
+    // Update previous state
+    setPreviousBarberState(currentState);
+  }, [barber?.isOnline, barber?.isAvailable, barber?.name]);
 
   if (isLoading) {
     return (
@@ -152,16 +317,20 @@ export default function BarberProfileScreen() {
           <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Barber Profile</Text>
-        <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="share-outline" size={22} color="#1C1C1E" />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: barber.avatar }} style={styles.avatar} />
+            <Image 
+              source={{ uri: barber.avatar }} 
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
             {barber.isOnline && <View style={styles.onlineBadge} />}
           </View>
           
@@ -179,10 +348,10 @@ export default function BarberProfileScreen() {
               <Text style={styles.reviewCount}>({barber.totalReviews} reviews)</Text>
             </View>
 
-            {barber.distance && (
+            {(barber.distance || distance) && (
               <View style={styles.locationRow}>
                 <Ionicons name="navigate" size={16} color="#00B14F" />
-                <Text style={styles.distanceText}>{formatDistance(barber.distance)} away</Text>
+                <Text style={styles.distanceText}>{formatDistance(barber.distance || parseFloat(distance || '0'))} away</Text>
               </View>
             )}
 
@@ -238,31 +407,63 @@ export default function BarberProfileScreen() {
         {/* Photo Gallery */}
         {photos.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Portfolio</Text>
+            <View style={styles.portfolioHeader}>
+              <Text style={styles.sectionTitle}>Portfolio</Text>
+              <Text style={styles.photoCount}>{photos.length} photo{photos.length !== 1 ? 's' : ''}</Text>
+            </View>
             <ScrollView 
+              ref={galleryScrollRef}
               horizontal 
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.galleryContainer}
               pagingEnabled
+              onScroll={handleGalleryScroll}
+              scrollEventThrottle={16}
+              snapToInterval={width - 40}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingRight: 0 }}
             >
               {photos.map((photo: string, index: number) => (
-                <Image 
-                  key={index} 
-                  source={{ uri: photo }} 
-                  style={styles.galleryImage}
-                />
+                <TouchableOpacity 
+                  key={index}
+                  activeOpacity={0.9}
+                  onPress={() => openFullscreen(index)}
+                  style={{ marginRight: index < photos.length - 1 ? 0 : 0 }}
+                >
+                  <Image 
+                    source={{ uri: photo }} 
+                    style={styles.galleryImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                    onLoadStart={() => setImageLoading(prev => ({ ...prev, [index]: true }))}
+                    onLoad={() => setImageLoading(prev => ({ ...prev, [index]: false }))}
+                  />
+                  {imageLoading[index] && (
+                    <View style={styles.imageLoadingOverlay}>
+                      <ActivityIndicator size="small" color="#00B14F" />
+                    </View>
+                  )}
+                  <View style={styles.zoomHint}>
+                    <Ionicons name="expand-outline" size={20} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
-            <View style={styles.photoIndicators}>
-              {photos.map((_: string, index: number) => (
-                <View 
-                  key={index} 
-                  style={[
-                    styles.indicator,
-                    activePhotoIndex === index && styles.indicatorActive
-                  ]} 
-                />
-              ))}
+            <View style={styles.photoIndicatorsContainer}>
+              <View style={styles.photoIndicators}>
+                {photos.map((_: string, index: number) => (
+                  <View 
+                    key={index} 
+                    style={[
+                      styles.indicator,
+                      activePhotoIndex === index && styles.indicatorActive
+                    ]} 
+                  />
+                ))}
+              </View>
+              <Text style={styles.photoCounter}>
+                {activePhotoIndex + 1} / {photos.length}
+              </Text>
             </View>
           </View>
         )}
@@ -277,7 +478,15 @@ export default function BarberProfileScreen() {
             <View key={service.id} style={styles.serviceInfoCard}>
               <View style={styles.serviceContent}>
                 <View style={styles.serviceHeader}>
-                  <Text style={styles.serviceName}>{service.name}</Text>
+                  <View style={styles.serviceNameContainer}>
+                    <Text style={styles.serviceName}>{service.name}</Text>
+                    {service.is_popular && (
+                      <View style={styles.popularBadge}>
+                        <Ionicons name="flame" size={12} color="#FF6B35" />
+                        <Text style={styles.popularBadgeText}>Popular</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.servicePrice}>{formatCurrency(service.price)}</Text>
                 </View>
                 {service.description && (
@@ -299,24 +508,26 @@ export default function BarberProfileScreen() {
               <Text style={styles.sectionTitle}>Customer Reviews</Text>
               <Text style={styles.reviewsCount}>{reviews.length} review{reviews.length !== 1 ? 's' : ''}</Text>
             </View>
-            {reviews.slice(0, 5).map((review: any) => (
+            {reviews.slice(0, 3).map((review: any) => (
               <View key={review.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Image 
-                    source={{ uri: review.customerAvatar || 'https://via.placeholder.com/40' }} 
-                    style={styles.reviewAvatar} 
-                  />
-                  <View style={styles.reviewInfo}>
-                    <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
-                    <View style={styles.reviewRating}>
-                      {[...Array(5)].map((_, i) => (
-                        <Ionicons 
-                          key={i} 
-                          name={i < review.rating ? 'star' : 'star-outline'} 
-                          size={14} 
-                          color={i < review.rating ? '#FBBF24' : '#D1D5DB'} 
+                <View style={styles.reviewCardHeader}>
+                  <View style={styles.customerInfo}>
+                    <View style={styles.reviewAvatar}>
+                      {review.customerAvatar ? (
+                        <Image 
+                          source={{ uri: review.customerAvatar }} 
+                          style={styles.reviewAvatarImage}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
                         />
-                      ))}
+                      ) : (
+                        <Text style={styles.reviewAvatarText}>
+                          {(review.customerName || 'A').substring(0, 2).toUpperCase()}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.reviewCustomerDetails}>
+                      <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
                       <Text style={styles.reviewDate}>
                         {new Date(review.createdAt).toLocaleDateString('en-MY', { 
                           month: 'short', 
@@ -326,13 +537,44 @@ export default function BarberProfileScreen() {
                       </Text>
                     </View>
                   </View>
+                  <View style={[
+                    styles.reviewRatingBadge,
+                    review.rating >= 4 && styles.ratingGood,
+                    review.rating === 3 && styles.ratingNeutral,
+                    review.rating <= 2 && styles.ratingPoor,
+                  ]}>
+                    <Ionicons 
+                      name="star" 
+                      size={12} 
+                      color={review.rating >= 4 ? '#00C853' : review.rating === 3 ? '#FFB800' : '#FF3B30'} 
+                    />
+                    <Text style={styles.reviewRatingText}>{review.rating.toFixed(1)}</Text>
+                  </View>
                 </View>
                 {review.comment && (
                   <Text style={styles.reviewComment}>{review.comment}</Text>
                 )}
+                {review.response && (
+                  <View style={styles.responseContainer}>
+                    <View style={styles.responseBadge}>
+                      <View style={styles.responseBadgeLeft}>
+                        <Ionicons name="checkmark-circle" size={12} color="#00C853" />
+                        <Text style={styles.responseBadgeText}>{barber.name.toUpperCase()} REPLIED</Text>
+                      </View>
+                      <Text style={styles.responseDate}>
+                        {new Date(review.response.date).toLocaleDateString('en-MY', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </Text>
+                    </View>
+                    <Text style={styles.responseContent}>{review.response.text}</Text>
+                  </View>
+                )}
               </View>
             ))}
-            {reviews.length > 5 && (
+            {reviews.length > 3 && (
               <TouchableOpacity 
                 style={styles.viewAllReviews}
                 onPress={() => router.push(`/barber/reviews/${id}` as any)}
@@ -345,20 +587,68 @@ export default function BarberProfileScreen() {
           </View>
         )}
 
-        {/* Location */}
-        {barber.location && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current Location</Text>
-            <View style={styles.locationCard}>
-              <Ionicons name="location" size={20} color="#00B14F" />
-              <Text style={styles.locationAddress}>{barber.location.address}</Text>
-            </View>
-          </View>
-        )}
 
         {/* Bottom padding for fixed button */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* Fullscreen Gallery Modal */}
+      <Modal
+        visible={fullscreenImage !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeFullscreen}
+      >
+        <View style={styles.fullscreenContainer}>
+          {/* Close Button */}
+          <TouchableOpacity 
+            style={styles.fullscreenCloseButton}
+            onPress={closeFullscreen}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="close" size={32} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          {/* Photo Counter */}
+          <View style={styles.fullscreenCounter}>
+            <Text style={styles.fullscreenCounterText}>
+              {fullscreenIndex + 1} / {photos.length}
+            </Text>
+          </View>
+          
+          {/* Image Gallery */}
+          <FlatList
+            ref={fullscreenFlatListRef}
+            data={photos}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.fullscreenImageContainer}>
+                <Image
+                  source={{ uri: item }}
+                  style={styles.fullscreenImage}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  transition={200}
+                />
+              </View>
+            )}
+            getItemLayout={(data, index) => ({
+              length: width,
+              offset: width * index,
+              index,
+            })}
+            initialScrollIndex={fullscreenIndex}
+          />
+          
+          {/* Navigation Hint */}
+          <Text style={styles.swipeHint}>Swipe to see more photos</Text>
+        </View>
+      </Modal>
 
       {/* Fixed Bottom Book Button */}
       <View style={styles.bottomBar}>
@@ -369,18 +659,19 @@ export default function BarberProfileScreen() {
         <TouchableOpacity 
           style={[
             styles.bookButton,
-            !barber.isOnline && styles.bookButtonDisabled
+            (!barber.isOnline || !barber.isAvailable) && styles.bookButtonDisabled
           ]}
           onPress={() => {
-            if (barber.isOnline) {
+            const isAvailable = barber.isOnline && barber.isAvailable;
+            if (isAvailable) {
               router.push(`/booking/create?barberId=${barber.id}` as any);
             }
           }}
           activeOpacity={0.8}
-          disabled={!barber.isOnline}
+          disabled={!barber.isOnline || !barber.isAvailable}
         >
           <Text style={styles.bookButtonText}>
-            {!barber.isOnline ? 'Offline' : 'Book Now'}
+            {!barber.isOnline || !barber.isAvailable ? 'Offline' : 'Book Now'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -578,20 +869,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#00B14F',
   },
-  galleryContainer: {
-    gap: 12,
+  portfolioHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  photoCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+    fontWeight: '500',
   },
   galleryImage: {
     width: width - 40,
-    height: 240,
-    borderRadius: 12,
+    height: 280,
+    borderRadius: 16,
     backgroundColor: '#E5E5EA',
+  },
+  imageLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 16,
+  },
+  zoomHint: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoIndicatorsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 8,
   },
   photoIndicators: {
     flexDirection: 'row',
-    justifyContent: 'center',
     gap: 6,
-    marginTop: 12,
   },
   indicator: {
     width: 6,
@@ -602,6 +928,60 @@ const styles = StyleSheet.create({
   indicatorActive: {
     backgroundColor: '#00B14F',
     width: 20,
+  },
+  photoCounter: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  // Fullscreen Gallery
+  fullscreenContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  fullscreenCloseButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  fullscreenCounter: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  fullscreenCounterText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  fullscreenImageContainer: {
+    width: width,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenImage: {
+    width: width,
+    height: '100%',
+  },
+  swipeHint: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 60 : 40,
+    alignSelf: 'center',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
   },
   servicesHeader: {
     flexDirection: 'row',
@@ -665,11 +1045,35 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
+  serviceNameContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
   serviceName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1C1C1E',
-    flex: 1,
+  },
+  popularBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#FFF4ED',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FF6B3520',
+  },
+  popularBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FF6B35',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   servicePrice: {
     fontSize: 17,
@@ -691,21 +1095,53 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#8E8E93',
   },
-  locationCard: {
+  serviceAreaCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    overflow: 'hidden',
+  },
+  serviceAreaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#00B14F20',
   },
-  locationAddress: {
+  serviceAreaInfo: {
     flex: 1,
-    fontSize: 15,
+  },
+  serviceAreaLabel: {
+    fontSize: 13,
     fontWeight: '500',
+    color: '#8E8E93',
+    marginBottom: 4,
+  },
+  serviceAreaValue: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1C1C1E',
+  },
+  serviceAreaDivider: {
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    marginHorizontal: 16,
+  },
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+  },
+  privacyNoteText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 16,
   },
   reviewsHeader: {
     flexDirection: 'row',
@@ -719,46 +1155,122 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   reviewCard: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
-  reviewHeader: {
+  reviewCardHeader: {
     flexDirection: 'row',
-    marginBottom: 8,
-    gap: 12,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  customerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   reviewAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
   },
-  reviewInfo: {
+  reviewAvatarImage: {
+    width: 40,
+    height: 40,
+  },
+  reviewAvatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#00B14F',
+  },
+  reviewCustomerDetails: {
     flex: 1,
-    gap: 4,
   },
   reviewerName: {
     fontSize: 15,
     fontWeight: '600',
     color: '#1C1C1E',
-  },
-  reviewRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    marginBottom: 2,
   },
   reviewDate: {
     fontSize: 12,
-    color: '#8E8E93',
-    marginLeft: 4,
+    color: '#999',
+  },
+  reviewRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  ratingGood: {
+    backgroundColor: '#E8F5E9',
+  },
+  ratingNeutral: {
+    backgroundColor: '#FFF8E1',
+  },
+  ratingPoor: {
+    backgroundColor: '#FFEBEE',
+  },
+  reviewRatingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000',
   },
   reviewComment: {
     fontSize: 14,
+    color: '#333',
     lineHeight: 20,
-    color: '#3C3C43',
-    marginLeft: 52,
+    marginBottom: 8,
+  },
+  responseContainer: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  responseBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  responseBadgeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  responseBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#00C853',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  responseDate: {
+    fontSize: 11,
+    color: '#999',
+  },
+  responseContent: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
   viewAllReviews: {
     flexDirection: 'row',

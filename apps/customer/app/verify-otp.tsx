@@ -236,16 +236,6 @@ export default function VerifyOTPScreen() {
           ))}
         </View>
 
-        {/* Dev Mode Hint */}
-        {__DEV__ && (
-          <View style={styles.devHint}>
-            <Ionicons name="bug-outline" size={16} color="#F59E0B" />
-            <Text style={styles.devHintText}>
-              Dev Mode: Use OTP <Text style={styles.devOtp}>123456</Text>
-            </Text>
-          </View>
-        )}
-
         {/* Verify Button */}
         <TouchableOpacity
           style={[
@@ -376,25 +366,6 @@ const styles = StyleSheet.create({
   otpInputFilled: {
     borderColor: '#25D366',
     backgroundColor: '#FFFFFF',
-  },
-  devHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    gap: 6,
-  },
-  devHintText: {
-    fontSize: 13,
-    color: '#92400E',
-  },
-  devOtp: {
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   verifyButton: {
     flexDirection: 'row',

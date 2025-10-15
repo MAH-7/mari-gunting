@@ -37,21 +37,12 @@ export default function Index() {
 
     try {
       setIsCheckingVerification(true);
-      console.log('🔍 [ROUTING] Checking verification status for user:', currentUser.id);
 
       // Use currentUser.id directly (works in dev mode without auth session)
       const status = await verificationService.getVerificationStatus(currentUser.id);
-      console.log('📊 [ROUTING] Verification status retrieved:', {
-        status: status.status,
-        accountType: status.accountType,
-        isComplete: status.isComplete,
-        hasSubmittedOnboarding: status.hasSubmittedOnboarding,
-        canAcceptBookings: status.canAcceptBookings,
-      });
       
       setVerificationStatus(status);
     } catch (error) {
-      console.error('❌ [ROUTING] Error checking verification:', error);
       // On error, still mark as checked to prevent infinite loading
       setVerificationChecked(true);
     } finally {
@@ -87,45 +78,44 @@ export default function Index() {
   
   // Route based on verification status
   if (verificationStatus) {
-    console.log('🧭 [ROUTING] Making routing decision...');
-    
     // If account setup not complete (no barber/barbershop record)
     if (!verificationStatus.isComplete) {
       // Check if account type already selected (barber or barbershop record exists)
       if (verificationStatus.accountType) {
-        // Account type selected but onboarding not complete - continue onboarding
-        console.log('⚠️ [ROUTING] Account type selected but onboarding incomplete -> /onboarding/welcome');
-        return <Redirect href="/onboarding/welcome" />;
-      } else {
-        // No account type selected - go to selection screen
-        console.log('⚠️ [ROUTING] Account setup incomplete -> /select-account-type');
-        return <Redirect href="/select-account-type" />;
+        // Account type selected but onboarding not complete - route to appropriate onboarding screen
+        if (verificationStatus.accountType === 'freelance') {
+          return <Redirect href="/onboarding/barber/basic-info" />;
+        } else if (verificationStatus.accountType === 'barbershop') {
+          return <Redirect href="/onboarding/barbershop/business-info" />;
+        }
       }
+      // No account type selected - go to selection screen
+      return <Redirect href="/select-account-type" />;
     }
     
     // CRITICAL: Check if user has submitted onboarding for review
     // hasSubmittedOnboarding = true when verification_status is 'pending' or 'verified'
     if (verificationStatus.isComplete && !verificationStatus.hasSubmittedOnboarding) {
-      // Account exists but onboarding never submitted (status = 'unverified') - continue onboarding
-      console.log('⚠️ [ROUTING] Onboarding not submitted (status: unverified) -> /onboarding/welcome');
-      return <Redirect href="/onboarding/welcome" />;
+      // Account exists but onboarding never submitted (status = 'unverified') - route to appropriate onboarding screen
+      if (verificationStatus.accountType === 'freelance') {
+        return <Redirect href="/onboarding/barber/basic-info" />;
+      } else if (verificationStatus.accountType === 'barbershop') {
+        return <Redirect href="/onboarding/barbershop/business-info" />;
+      }
     }
     
     // If documents submitted but not yet approved (status = 'pending')
     if (verificationStatus.hasSubmittedOnboarding && !verificationStatus.canAcceptBookings) {
-      console.log('⌛ [ROUTING] Documents submitted, under review (status: pending) -> /pending-approval');
       return <Redirect href="/pending-approval" />;
     }
     
     // If verified and approved (status = 'verified')
     if (verificationStatus.canAcceptBookings) {
-      console.log('✅ [ROUTING] Verified! -> /(tabs)/dashboard');
       return <Redirect href="/(tabs)/dashboard" />;
     }
   }
 
   // Default fallback (shouldn't reach here if logic is correct)
-  console.log('⚠️ [ROUTING] Unexpected routing state, defaulting to dashboard');
   return <Redirect href="/(tabs)/dashboard" />;
 }
 

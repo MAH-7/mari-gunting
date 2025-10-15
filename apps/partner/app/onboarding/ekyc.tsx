@@ -8,10 +8,14 @@ import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@/store/useStore';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { VerificationStatus } from '@/types/onboarding';
+import { uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
+import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 
 type DocumentType = 'nricFront' | 'nricBack' | 'selfie';
 
 export default function EKYCScreen() {
+  const { user } = useAuth();
   const [fullName, setFullName] = useState('');
   const [nricNumber, setNricNumber] = useState('');
   const [documents, setDocuments] = useState({
@@ -19,9 +23,11 @@ export default function EKYCScreen() {
     nricBack: null as string | null,
     selfie: null as string | null,
   });
+  const [isLoadedFromProgress, setIsLoadedFromProgress] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [verificationStatus, setVerificationStatus] = useState<'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed'>('in_progress');
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('in_progress');
 
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
   const completeOnboardingStep = useStore((state) => state.completeOnboardingStep);
@@ -34,6 +40,16 @@ export default function EKYCScreen() {
       // Pre-fill if editing
       if (onboardingData.ekyc.fullName) setFullName(onboardingData.ekyc.fullName);
       if (onboardingData.ekyc.nricNumber) setNricNumber(onboardingData.ekyc.nricNumber);
+      // Load previously uploaded document URLs as display URIs
+      if (onboardingData.ekyc.nricFrontUrl || onboardingData.ekyc.nricBackUrl || onboardingData.ekyc.selfieUrl) {
+        setDocuments({
+          nricFront: onboardingData.ekyc.nricFrontUrl || null,
+          nricBack: onboardingData.ekyc.nricBackUrl || null,
+          selfie: onboardingData.ekyc.selfieUrl || null,
+        });
+        setIsLoadedFromProgress(true);
+        console.log('✅ Progress loaded - documents already uploaded');
+      }
     }
   }, [onboardingData]);
 
@@ -85,9 +101,18 @@ export default function EKYCScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        
+        // Validate URI
+        if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+          Alert.alert('Error', 'Failed to get image. Please try again.');
+          return;
+        }
+
+        // Store locally only (staged upload)
         setDocuments(prev => ({
           ...prev,
-          [type]: result.assets[0].uri,
+          [type]: uri,
         }));
         // Clear error for this field
         setErrors(prev => {
@@ -95,8 +120,11 @@ export default function EKYCScreen() {
           delete newErrors[type];
           return newErrors;
         });
+        console.log(`✅ ${type} stored locally - will upload on submit`);
       }
     } catch (error) {
+      console.error('Error picking image:', error);
+      setIsUploading(false);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -124,9 +152,18 @@ export default function EKYCScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        
+        // Validate URI
+        if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+          Alert.alert('Error', 'Failed to capture photo. Please try again.');
+          return;
+        }
+
+        // Store locally only (staged upload)
         setDocuments(prev => ({
           ...prev,
-          [type]: result.assets[0].uri,
+          [type]: uri,
         }));
         // Clear error for this field
         setErrors(prev => {
@@ -134,13 +171,41 @@ export default function EKYCScreen() {
           delete newErrors[type];
           return newErrors;
         });
+        console.log(`✅ ${type} photo stored locally - will upload on submit`);
       }
     } catch (error: any) {
       console.error('Camera error:', error);
+      setIsUploading(false);
       Alert.alert(
         'Camera Error', 
         error?.message || 'Failed to take photo. Please try choosing from gallery instead.'
       );
+    }
+  };
+
+  const uploadAllDocuments = async () => {
+    try {
+      console.log('📤 Starting batch upload...');
+      setIsUploading(true);
+
+      const [nricFrontUrl, nricBackUrl, selfieUrl] = await Promise.all([
+        uploadOnboardingImage(documents.nricFront!, 'ekyc-documents', user?.id || 'temp', `nricFront_${Date.now()}.jpg`),
+        uploadOnboardingImage(documents.nricBack!, 'ekyc-documents', user?.id || 'temp', `nricBack_${Date.now()}.jpg`),
+        uploadOnboardingImage(documents.selfie!, 'ekyc-documents', user?.id || 'temp', `selfie_${Date.now()}.jpg`),
+      ]);
+
+      if (!nricFrontUrl || !nricBackUrl || !selfieUrl) {
+        console.error('❌ Some uploads failed');
+        return null;
+      }
+
+      console.log('✅ All documents uploaded successfully!');
+      return { nricFrontUrl, nricBackUrl, selfieUrl };
+    } catch (error) {
+      console.error('❌ Batch upload error:', error);
+      return null;
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -153,8 +218,31 @@ export default function EKYCScreen() {
     setIsSubmitting(true);
 
     try {
+      let finalDocumentUrls;
+
+      // If loaded from progress, skip upload
+      if (isLoadedFromProgress) {
+        console.log('✅ Using previously uploaded data');
+        finalDocumentUrls = {
+          nricFrontUrl: documents.nricFront!,
+          nricBackUrl: documents.nricBack!,
+          selfieUrl: documents.selfie!,
+        };
+      } else {
+        // Upload all documents
+        console.log('🚀 Uploading all documents...');
+        const uploadedUrls = await uploadAllDocuments();
+
+        if (!uploadedUrls) {
+          Alert.alert('Upload Failed', 'Failed to upload documents. Please check your connection and try again.');
+          return;
+        }
+
+        finalDocumentUrls = uploadedUrls;
+      }
+
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Update store with eKYC data
       const currentData = onboardingData || {
@@ -173,9 +261,7 @@ export default function EKYCScreen() {
         ekyc: {
           fullName,
           nricNumber: `****${nricNumber.slice(-4)}`, // Store only last 4 digits
-          nricFrontUrl: documents.nricFront!,
-          nricBackUrl: documents.nricBack!,
-          selfieUrl: documents.selfie!,
+          ...finalDocumentUrls,
           verificationStatus: 'pending' as const,
         },
       };
@@ -416,11 +502,19 @@ export default function EKYCScreen() {
           </View>
         </View>
 
+        {/* Uploading indicator */}
+        {isUploading && (
+          <View style={styles.uploadingIndicator}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.uploadingText}>Uploading...</Text>
+          </View>
+        )}
+
         {/* Submit Button */}
         <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          style={[styles.submitButton, (isSubmitting || isUploading) && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isUploading}
           activeOpacity={0.8}
         >
           {isSubmitting ? (
@@ -606,5 +700,16 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body.large,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  uploadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+  },
+  uploadingText: {
+    ...TYPOGRAPHY.body.regular,
+    color: COLORS.text.secondary,
   },
 });

@@ -150,19 +150,28 @@ export const addressService = {
     updates: Partial<AddAddressParams>
   ): Promise<ApiResponse<CustomerAddress>> {
     try {
-      // Use RPC function to bypass RLS issues
-      const { data, error } = await supabase.rpc('update_customer_address_direct', {
+      // Use RPC function - note: lat/lng are accepted but ignored (generated columns)
+      const { data, error } = await supabase.rpc('update_customer_address', {
         p_address_id: addressId,
-        p_customer_id: updates.userId!,
-        p_label: updates.label || '',
-        p_address_line1: updates.addressLine1 || '',
-        p_address_line2: updates.addressLine2 || null,
-        p_city: updates.city || '',
-        p_state: updates.state || '',
-        p_postal_code: updates.postalCode || null,
-        p_latitude: updates.latitude || null,
-        p_longitude: updates.longitude || null,
-        p_is_default: updates.isDefault || false,
+        // Only send non-null values to avoid overwriting with nulls
+        ...(updates.label && { p_label: updates.label }),
+        ...(updates.addressLine1 && { p_address_line1: updates.addressLine1 }),
+        ...(updates.addressLine2 !== undefined && { p_address_line2: updates.addressLine2 }),
+        ...(updates.city && { p_city: updates.city }),
+        ...(updates.state && { p_state: updates.state }),
+        ...(updates.postalCode !== undefined && { p_postal_code: updates.postalCode }),
+        // ⚠️ lat/lng are passed but ignored - they're generated from location geography column
+        ...(updates.latitude !== undefined && { p_latitude: updates.latitude }),
+        ...(updates.longitude !== undefined && { p_longitude: updates.longitude }),
+        ...(updates.isDefault !== undefined && { p_is_default: updates.isDefault }),
+        // Enhanced Grab-style fields
+        ...(updates.buildingName !== undefined && { p_building_name: updates.buildingName }),
+        ...(updates.floor !== undefined && { p_floor: updates.floor }),
+        ...(updates.unitNumber !== undefined && { p_unit_number: updates.unitNumber }),
+        ...(updates.deliveryInstructions !== undefined && { p_delivery_instructions: updates.deliveryInstructions }),
+        ...(updates.contactNumber !== undefined && { p_contact_number: updates.contactNumber }),
+        ...(updates.addressType !== undefined && { p_address_type: updates.addressType }),
+        ...(updates.landmark !== undefined && { p_landmark: updates.landmark }),
       });
 
       if (error) {

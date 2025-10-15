@@ -7,6 +7,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@/store/useStore';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
+import { VerificationStatus } from '@/types/onboarding';
+import { uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
+import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 
 const MALAYSIAN_STATES = [
   'Johor', 'Kedah', 'Kelantan', 'Kuala Lumpur', 'Labuan', 'Malacca', 'Negeri Sembilan',
@@ -21,6 +24,7 @@ const BUSINESS_TYPES = [
 ];
 
 export default function BusinessScreen() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     ssmNumber: '',
     businessName: '',
@@ -34,19 +38,30 @@ export default function BusinessScreen() {
     registrationCert: null as string | null,
     businessLicense: null as string | null,
   });
+  const [isLoadedFromProgress, setIsLoadedFromProgress] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState<'not_started' | 'in_progress' | 'submitted' | 'verified' | 'failed'>('in_progress');
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('in_progress');
 
   const updateOnboardingProgress = useStore((state) => state.updateOnboardingProgress);
   const completeOnboardingStep = useStore((state) => state.completeOnboardingStep);
   const onboardingData = useStore((state) => state.onboardingData);
 
   useEffect(() => {
-    if (onboardingData?.business?.verificationStatus) {
-      setVerificationStatus(onboardingData.business.verificationStatus);
+    if (onboardingData?.business) {
+      setVerificationStatus(onboardingData.business.verificationStatus || 'in_progress');
+      // Load saved documents
+      if (onboardingData.business.registrationCertUrl || onboardingData.business.businessLicenseUrl) {
+        setDocuments({
+          registrationCert: onboardingData.business.registrationCertUrl || null,
+          businessLicense: onboardingData.business.businessLicenseUrl || null,
+        });
+        setIsLoadedFromProgress(true);
+        console.log('✅ Progress loaded - documents already uploaded');
+      }
     }
   }, [onboardingData]);
 
@@ -102,6 +117,7 @@ export default function BusinessScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
+        // Store locally only (staged upload)
         setDocuments(prev => ({
           ...prev,
           [type]: result.assets[0].uri,
@@ -113,9 +129,40 @@ export default function BusinessScreen() {
             return newErrors;
           });
         }
+        console.log(`✅ ${type} stored locally - will upload on submit`);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  const uploadAllDocuments = async () => {
+    try {
+      console.log('📤 Starting batch upload...');
+      setIsUploading(true);
+
+      const tasks: Promise<string | null>[] = [];
+      if (documents.registrationCert) {
+        tasks.push(uploadOnboardingImage(documents.registrationCert, 'business-documents', user?.id || 'temp', `ssm_cert_${Date.now()}.jpg`));
+      }
+      if (documents.businessLicense) {
+        tasks.push(uploadOnboardingImage(documents.businessLicense, 'business-documents', user?.id || 'temp', `license_${Date.now()}.jpg`));
+      }
+
+      const [registrationCertUrl, businessLicenseUrl] = await Promise.all(tasks);
+
+      if (!registrationCertUrl) {
+        console.error('❌ Registration cert upload failed');
+        return null;
+      }
+
+      console.log('✅ All documents uploaded successfully!');
+      return { registrationCertUrl, businessLicenseUrl: businessLicenseUrl || undefined };
+    } catch (error) {
+      console.error('❌ Batch upload error:', error);
+      return null;
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -128,7 +175,29 @@ export default function BusinessScreen() {
     setIsSubmitting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      let finalDocumentUrls;
+
+      // If loaded from progress, skip upload
+      if (isLoadedFromProgress) {
+        console.log('✅ Using previously uploaded data');
+        finalDocumentUrls = {
+          registrationCertUrl: documents.registrationCert!,
+          businessLicenseUrl: documents.businessLicense || undefined,
+        };
+      } else {
+        // Upload all documents
+        console.log('🚀 Uploading all documents...');
+        const uploadedUrls = await uploadAllDocuments();
+
+        if (!uploadedUrls) {
+          Alert.alert('Upload Failed', 'Failed to upload documents. Please check your connection and try again.');
+          return;
+        }
+
+        finalDocumentUrls = uploadedUrls;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const currentData = onboardingData || {
         progress: {
@@ -147,8 +216,7 @@ export default function BusinessScreen() {
           ssmNumber: formData.ssmNumber,
           businessName: formData.businessName,
           businessType: formData.businessType,
-          registrationCertUrl: documents.registrationCert!,
-          businessLicenseUrl: documents.businessLicense,
+          ...finalDocumentUrls,
           address: {
             street: formData.street,
             city: formData.city,

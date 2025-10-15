@@ -1,0 +1,167 @@
+=================================================================
+ADD THESE STYLES TO THE StyleSheet.create() in reviews.tsx
+Replace the old styles with these Grab-inspired modern styles
+=================================================================
+
+  // NEW GRAB-STYLE HEADER
+  header: {
+    backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#212121',
+    letterSpacing: -0.5,
+  },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  // COMPACT STATS ROW
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  ratingDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#212121',
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#757575',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 8,
+  },
+  needsReplyBadge: {
+    backgroundColor: '#FFE8E8',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+
+  // TABS CONTAINER
+  tabsContainer: {
+    backgroundColor: '#FFF',
+    paddingTop: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  tabsScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingBottom: 12,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: '#F5F5F5',
+  },
+  tabActive: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#757575',
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+  },
+  badge: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  
+  // STAR FILTERS
+  filterStars: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  starFilter: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  starFilterActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  starFilterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#757575',
+  },
+  starFilterTextActive: {
+    color: '#FFF',
+  },
+  
+  // REVIEWS LIST
+  reviewsList: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  listHeader: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#757575',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+=================================================================
+That's it! The rest of the review card styles stay the same.
+Just add these new styles to your StyleSheet.
+=================================================================

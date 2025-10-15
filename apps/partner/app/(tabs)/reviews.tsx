@@ -1,158 +1,194 @@
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
   TouchableOpacity,
   TextInput,
   Modal,
   Alert,
   RefreshControl,
-  Dimensions 
+  StatusBar,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { format, parseISO } from 'date-fns';
+import { formatDistanceToNow, parseISO } from 'date-fns';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/shared/constants';
 import { useStore } from '@/store/useStore';
+import { 
+  getPartnerReviews, 
+  getReviewStats, 
+  postReviewResponse,
+  type PartnerReview 
+} from '@mari-gunting/shared/services/reviewsService';
 
-const { width } = Dimensions.get('window');
-
-// Mock reviews data - in production, this would come from API
-const mockReviews = [
-  {
-    id: 'r1',
-    customerName: 'Ahmad Zaki',
-    customerAvatar: 'AZ',
-    rating: 5,
-    comment: 'Excellent service! Very professional and skilled. My fade looks perfect. Highly recommended!',
-    service: 'Modern Fade Cut',
-    date: '2025-01-07T14:30:00Z',
-    response: null,
-  },
-  {
-    id: 'r2',
-    customerName: 'Raj Kumar',
-    rating: 5,
-    customerAvatar: 'RK',
-    comment: "Best barber I've found in KL! Takes his time and really listens to what you want. Very professional.",
-    service: 'Classic Cut + Beard Trim',
-    date: '2025-01-04T16:45:00Z',
-    response: {
-      text: 'Thank you so much for your kind words! Looking forward to serving you again.',
-      date: '2025-01-04T18:00:00Z',
-    },
-  },
-  {
-    id: 'r3',
-    customerName: 'Tan Wei Ming',
-    customerAvatar: 'TW',
-    rating: 4,
-    comment: 'Great cut and friendly service. Would have given 5 stars but had to wait a bit longer than expected.',
-    service: 'Pompadour Style',
-    date: '2025-01-02T10:15:00Z',
-    response: null,
-  },
-  {
-    id: 'r4',
-    customerName: 'Sarah Lee',
-    customerAvatar: 'SL',
-    rating: 5,
-    comment: 'Amazing experience! Very skilled and professional. My husband is very happy with his haircut.',
-    service: 'Classic Haircut',
-    date: '2024-12-30T11:30:00Z',
-    response: {
-      text: 'Thank you Sarah! Glad your husband is happy with the result!',
-      date: '2024-12-30T12:00:00Z',
-    },
-  },
-  {
-    id: 'r5',
-    customerName: 'Daniel Wong',
-    customerAvatar: 'DW',
-    rating: 5,
-    comment: 'Superb service! Clean fade and very punctual. Will definitely book again.',
-    service: 'Fade + Line Up',
-    date: '2024-12-28T15:20:00Z',
-    response: null,
-  },
-  {
-    id: 'r6',
-    customerName: 'Ali Hassan',
-    customerAvatar: 'AH',
-    rating: 4,
-    comment: 'Good service overall. Professional and friendly. Only minor issue was slight delay.',
-    service: 'Beard Trim',
-    date: '2024-12-25T09:00:00Z',
-    response: null,
-  },
-];
-
-type FilterType = 'all' | '5' | '4' | '3' | '2' | '1';
+type TabType = 'all' | 'pending' | 'replied';
 
 export default function ReviewsScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<FilterType>('all');
-  const [selectedReview, setSelectedReview] = useState<typeof mockReviews[0] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState<PartnerReview[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [selectedReview, setSelectedReview] = useState<PartnerReview | null>(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [ratingFilter, setRatingFilter] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+  const scrollRef = useRef<FlatList>(null);
 
-  // Calculate rating statistics
-  const stats = useMemo(() => {
-    const total = mockReviews.length;
-    const avgRating = mockReviews.reduce((sum, r) => sum + r.rating, 0) / total;
-    
-    const distribution = {
-      5: mockReviews.filter(r => r.rating === 5).length,
-      4: mockReviews.filter(r => r.rating === 4).length,
-      3: mockReviews.filter(r => r.rating === 3).length,
-      2: mockReviews.filter(r => r.rating === 2).length,
-      1: mockReviews.filter(r => r.rating === 1).length,
-    };
-
-    const withResponse = mockReviews.filter(r => r.response).length;
-    const responseRate = (withResponse / total) * 100;
-
-    return {
-      total,
-      avgRating,
-      distribution,
-      responseRate,
-    };
+  useEffect(() => {
+    loadAccountType();
   }, []);
 
-  // Filter reviews
+  useEffect(() => {
+    if (accountType) {
+      loadReviews();
+    }
+  }, [currentUser?.id, accountType]);
+
+  const loadAccountType = async () => {
+    try {
+      const type = await AsyncStorage.getItem('partnerAccountType');
+      setAccountType((type === 'freelance' || type === 'barbershop') ? type : 'freelance');
+    } catch (error) {
+      setAccountType('freelance');
+    }
+  };
+
+  const loadReviews = async () => {
+    if (!currentUser?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await getPartnerReviews(currentUser.id, accountType);
+      setReviews(data);
+    } catch (error: any) {
+      console.error('[Reviews] Error loading reviews:', error.message);
+      Alert.alert('Error', error.message || 'Failed to load reviews');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stats = useMemo(() => getReviewStats(reviews), [reviews]);
+
+  const allFilteredReviews = useMemo(() => {
+    let filtered = reviews;
+
+    // Tab filter
+    if (activeTab === 'pending') {
+      filtered = filtered.filter(r => !r.response);
+    } else if (activeTab === 'replied') {
+      filtered = filtered.filter(r => r.response);
+    }
+
+    // Rating filter
+    if (ratingFilter !== null) {
+      filtered = filtered.filter(r => r.rating === ratingFilter);
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(r => 
+        r.customerName.toLowerCase().includes(query) ||
+        r.comment.toLowerCase().includes(query) ||
+        r.service.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort: pending low ratings first, then by date
+    return filtered.sort((a, b) => {
+      const aUrgent = !a.response && a.rating <= 3;
+      const bUrgent = !b.response && b.rating <= 3;
+      if (aUrgent && !bUrgent) return -1;
+      if (!aUrgent && bUrgent) return 1;
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+  }, [reviews, activeTab, searchQuery, ratingFilter]);
+
+  const totalPages = Math.ceil(allFilteredReviews.length / ITEMS_PER_PAGE);
+  
   const filteredReviews = useMemo(() => {
-    if (filter === 'all') return mockReviews;
-    return mockReviews.filter(r => r.rating === parseInt(filter));
-  }, [filter]);
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return allFilteredReviews.slice(startIndex, endIndex);
+  }, [allFilteredReviews, page]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
+    setPage(1);
+    await loadReviews();
     setRefreshing(false);
   };
 
-  const handleReply = (review: typeof mockReviews[0]) => {
+  const goToPage = (pageNum: number) => {
+    setPage(pageNum);
+    scrollRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, searchQuery, ratingFilter]);
+
+  const handleReply = (review: PartnerReview) => {
     setSelectedReview(review);
     setReplyText('');
     setShowReplyModal(true);
   };
 
-  const submitReply = () => {
-    if (!replyText.trim()) {
+  const submitReply = async () => {
+    if (!replyText.trim() || !selectedReview) {
       Alert.alert('Error', 'Please enter a reply');
       return;
     }
 
-    // In production, this would send to API
-    Alert.alert('Success', 'Reply posted successfully!');
-    setShowReplyModal(false);
-    setSelectedReview(null);
-    setReplyText('');
+    try {
+      setSubmitting(true);
+      await postReviewResponse(selectedReview.id, replyText.trim());
+      
+      // Update local state
+      setReviews(prevReviews =>
+        prevReviews.map(r =>
+          r.id === selectedReview.id
+            ? { ...r, response: { text: replyText.trim(), date: new Date().toISOString() } }
+            : r
+        )
+      );
+
+      // Close modal and reset state
+      setShowReplyModal(false);
+      setSelectedReview(null);
+      setReplyText('');
+      
+      // Switch to "All" tab to see the reply
+      if (activeTab === 'pending') {
+        setActiveTab('all');
+      }
+      
+      Alert.alert('Success', 'Reply posted! ✓');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to post reply');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!currentUser) {
@@ -160,265 +196,447 @@ export default function ReviewsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyState}>
           <Ionicons name="star-outline" size={64} color="#CCC" />
-          <Text style={styles.emptyText}>Please log in to view reviews</Text>
+          <Text style={styles.emptyText}>Please log in</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" />
+        {/* Skeleton Loading */}
+        <View style={styles.header}>
+          <View style={styles.skeleton} />
+          <View style={[styles.skeleton, { width: 60, height: 24 }]} />
+        </View>
+        <View style={styles.statsBar}>
+          {[1, 2, 3].map(i => (
+            <View key={i} style={[styles.statItem, { opacity: 0.3 }]}>
+              <View style={[styles.skeleton, { width: 40, height: 24, marginBottom: 4 }]} />
+              <View style={[styles.skeleton, { width: 50, height: 16 }]} />
+            </View>
+          ))}
+        </View>
+        <View style={styles.tabs}>
+          {[1, 2, 3].map(i => (
+            <View key={i} style={[styles.skeleton, { width: 60, height: 20, marginRight: 24 }]} />
+          ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const pendingCount = reviews.filter(r => !r.response).length;
+  const lastMonth = reviews.filter(r => {
+    const date = new Date(r.date);
+    const monthAgo = new Date();
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    return date >= monthAgo;
+  }).length;
+  const twoMonthsAgo = reviews.filter(r => {
+    const date = new Date(r.date);
+    const twoMonths = new Date();
+    twoMonths.setMonth(twoMonths.getMonth() - 2);
+    const oneMonth = new Date();
+    oneMonth.setMonth(oneMonth.getMonth() - 1);
+    return date >= twoMonths && date < oneMonth;
+  }).length;
+  const trend = twoMonthsAgo === 0 ? 0 : ((lastMonth - twoMonthsAgo) / twoMonthsAgo) * 100;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
-            tintColor="#FFF"
-          />
-        }
-      >
-        {/* Hero Rating Card */}
-        <LinearGradient
-          colors={[COLORS.primary, '#00A870']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
-          <View style={styles.heroContent}>
-            <Text style={styles.heroLabel}>Your Rating</Text>
-            <View style={styles.heroRating}>
-              <Text style={styles.ratingNumber}>{stats.avgRating.toFixed(1)}</Text>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Ionicons
-                    key={star}
-                    name={star <= Math.round(stats.avgRating) ? 'star' : 'star-outline'}
-                    size={20}
-                    color="#FFD700"
-                  />
-                ))}
-              </View>
-            </View>
-            <Text style={styles.heroSubtext}>Based on {stats.total} reviews</Text>
-
-            {/* Quick Stats */}
-            <View style={styles.quickStats}>
-              <View style={styles.quickStatItem}>
-                <Text style={styles.quickStatValue}>{stats.responseRate.toFixed(0)}%</Text>
-                <Text style={styles.quickStatLabel}>Response Rate</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.quickStatItem}>
-                <Text style={styles.quickStatValue}>
-                  {mockReviews.filter(r => !r.response).length}
-                </Text>
-                <Text style={styles.quickStatLabel}>Need Reply</Text>
-              </View>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* Rating Distribution */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rating Distribution</Text>
-          <View style={styles.distributionCard}>
-            {[5, 4, 3, 2, 1].map((rating) => {
-              const count = stats.distribution[rating as keyof typeof stats.distribution];
-              const percentage = (count / stats.total) * 100;
-              
-              return (
-                <View key={rating} style={styles.distributionRow}>
-                  <View style={styles.distributionLeft}>
-                    <Text style={styles.distributionRating}>{rating}</Text>
-                    <Ionicons name="star" size={14} color="#FFB800" />
-                  </View>
-                  <View style={styles.distributionBar}>
-                    <View 
-                      style={[
-                        styles.distributionBarFill, 
-                        { width: `${percentage}%` }
-                      ]} 
-                    />
-                  </View>
-                  <Text style={styles.distributionCount}>{count}</Text>
-                </View>
-              );
-            })}
-          </View>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Reviews</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.ratingText}>{stats.avgRating.toFixed(1)}</Text>
+          <Ionicons name="star" size={16} color="#FFB800" />
         </View>
+      </View>
 
-        {/* Filter Tabs */}
-        <View style={styles.filterContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
+      {/* Stats Bar with Trend */}
+      <View style={styles.statsBar}>
+        <View style={styles.statItem}>
+          <View style={styles.statWithTrend}>
+            <Text style={styles.statValue}>{stats.total}</Text>
+            {trend !== 0 && (
+              <View style={[styles.trendBadge, trend > 0 && styles.trendUp, trend < 0 && styles.trendDown]}>
+                <Ionicons 
+                  name={trend > 0 ? "trending-up" : "trending-down"} 
+                  size={10} 
+                  color={trend > 0 ? "#00C853" : "#FF3B30"} 
+                />
+                <Text style={[styles.trendText, { color: trend > 0 ? "#00C853" : "#FF3B30" }]}>
+                  {Math.abs(Math.round(trend))}%
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.statLabel}>Total</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{stats.responseRate.toFixed(0)}%</Text>
+          <Text style={styles.statLabel}>Response</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, pendingCount > 0 && { color: '#FF3B30' }]}>
+            {pendingCount}
+          </Text>
+          <Text style={styles.statLabel}>Pending</Text>
+        </View>
+      </View>
+
+      {/* Tabs with Filter Button */}
+      <View style={styles.tabsContainer}>
+        <View style={styles.tabs}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'all' && styles.tabActive]}
+            onPress={() => setActiveTab('all')}
           >
-            {(['all', '5', '4', '3', '2', '1'] as FilterType[]).map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterTab, filter === f && styles.filterTabActive]}
-                onPress={() => setFilter(f)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                  {f === 'all' ? 'All' : `${f} ⭐`}
-                </Text>
-                {f === 'all' && (
-                  <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>{stats.total}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+            <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
+              All
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
+            onPress={() => setActiveTab('pending')}
+          >
+            <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
+              Pending {pendingCount > 0 && `(${pendingCount})`}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'replied' && styles.tabActive]}
+            onPress={() => setActiveTab('replied')}
+          >
+            <Text style={[styles.tabText, activeTab === 'replied' && styles.tabTextActive]}>
+              Replied
+            </Text>
+          </TouchableOpacity>
         </View>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Ionicons name="options-outline" size={20} color={ratingFilter !== null ? COLORS.primary : '#666'} />
+          {ratingFilter !== null && <View style={styles.filterDot} />}
+        </TouchableOpacity>
+      </View>
 
-        {/* Reviews List */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Customer Reviews</Text>
-            <Text style={styles.reviewCount}>
-              {filteredReviews.length} {filteredReviews.length === 1 ? 'review' : 'reviews'}
+      {/* Search */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#999" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search reviews..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Reviews List */}
+      <FlatList
+        ref={scrollRef}
+        data={filteredReviews}
+        keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <View style={styles.emptyCircle}>
+              <Ionicons name="chatbubbles-outline" size={48} color="#CCC" />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {searchQuery ? 'No matching reviews' : activeTab === 'pending' ? 'All caught up!' : 'No reviews yet'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery ? 'Try different search terms' : activeTab === 'pending' ? 'You\'ve replied to all reviews' : 'Reviews will appear here'}
             </Text>
           </View>
-
-          {filteredReviews.length > 0 ? (
-            filteredReviews.map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
-                {/* Review Header */}
-                <View style={styles.reviewHeader}>
-                  <View style={styles.customerInfo}>
-                    <View style={styles.avatar}>
+        }
+        renderItem={({ item: review }) => {
+          const isUrgent = !review.response && review.rating <= 3;
+          const timeAgo = formatDistanceToNow(parseISO(review.date), { addSuffix: true });
+          
+          return (
+            <Pressable 
+              style={[styles.card, isUrgent && styles.cardUrgent]}
+              onPress={() => !review.response && handleReply(review)}
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.customerInfo}>
+                  <View style={styles.avatar}>
+                    {review.customerAvatarUrl ? (
+                      <Image 
+                        source={{ uri: review.customerAvatarUrl }} 
+                        style={styles.avatarImage}
+                      />
+                    ) : (
                       <Text style={styles.avatarText}>{review.customerAvatar}</Text>
-                    </View>
-                    <View style={styles.customerDetails}>
-                      <Text style={styles.customerName}>{review.customerName}</Text>
-                      <Text style={styles.reviewDate}>
-                        {format(parseISO(review.date), 'MMM dd, yyyy')}
-                      </Text>
-                    </View>
+                    )}
                   </View>
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={14} color="#FFB800" />
-                    <Text style={styles.ratingValue}>{review.rating.toFixed(1)}</Text>
+                  <View style={styles.customerDetails}>
+                    <Text style={styles.customerName}>{review.customerName}</Text>
+                    <Text style={styles.timeText}>{timeAgo}</Text>
                   </View>
                 </View>
-
-                {/* Service Badge */}
-                <View style={styles.serviceBadge}>
-                  <Ionicons name="cut-outline" size={12} color={COLORS.primary} />
-                  <Text style={styles.serviceBadgeText}>{review.service}</Text>
+                <View style={[
+                  styles.ratingBadge,
+                  review.rating >= 4 && styles.ratingGood,
+                  review.rating === 3 && styles.ratingNeutral,
+                  review.rating <= 2 && styles.ratingPoor,
+                ]}>
+                  <Ionicons 
+                    name="star" 
+                    size={12} 
+                    color={review.rating >= 4 ? '#00C853' : review.rating === 3 ? '#FFB800' : '#FF3B30'} 
+                  />
+                  <Text style={styles.ratingText}>{review.rating.toFixed(1)}</Text>
                 </View>
-
-                {/* Review Comment */}
-                <Text style={styles.reviewComment}>{review.comment}</Text>
-
-                {/* Response Section */}
-                {review.response ? (
-                  <View style={styles.responseCard}>
-                    <View style={styles.responseHeader}>
-                      <Ionicons name="arrow-undo" size={14} color={COLORS.primary} />
-                      <Text style={styles.responseLabel}>Your Response</Text>
-                      <Text style={styles.responseDate}>
-                        {format(parseISO(review.response.date), 'MMM dd')}
-                      </Text>
-                    </View>
-                    <Text style={styles.responseText}>{review.response.text}</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.replyButton}
-                    onPress={() => handleReply(review)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="chatbubble-outline" size={16} color={COLORS.primary} />
-                    <Text style={styles.replyButtonText}>Reply to Review</Text>
-                  </TouchableOpacity>
-                )}
               </View>
-            ))
-          ) : (
-            <View style={styles.emptyReviews}>
-              <Ionicons name="chatbubbles-outline" size={48} color="#CCC" />
-              <Text style={styles.emptyReviewsText}>No reviews in this filter</Text>
-            </View>
-          )}
-        </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
+              <Text style={styles.serviceText}>{review.service}</Text>
+              <Text style={styles.commentText}>{review.comment}</Text>
+
+              {review.response ? (
+                <View style={styles.responseContainer}>
+                  <View style={styles.responseBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color="#00C853" />
+                    <Text style={styles.responseBadgeText}>Replied</Text>
+                    <Text style={styles.responseTime}>
+                      • {formatDistanceToNow(parseISO(review.response.date), { addSuffix: true })}
+                    </Text>
+                  </View>
+                  <Text style={styles.responseContent}>{review.response.text}</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.replyButton, isUrgent && styles.replyButtonUrgent]}
+                  onPress={() => handleReply(review)}
+                >
+                  <Text style={styles.replyButtonText}>
+                    {isUrgent ? 'Reply Now' : 'Reply'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </Pressable>
+          );
+        }}
+        contentContainerStyle={styles.listContent}
+      />
+
+      {/* Pagination at Bottom */}
+      {totalPages > 1 && (
+        <View style={styles.paginationBottom}>
+          <View style={styles.pageInfo}>
+            <Text style={styles.pageInfoText}>
+              Showing {((page - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(page * ITEMS_PER_PAGE, allFilteredReviews.length)} of {allFilteredReviews.length}
+            </Text>
+          </View>
+          <View style={styles.pagination}>
+            <TouchableOpacity
+              style={[styles.pageButton, page === 1 && styles.pageButtonDisabled]}
+              onPress={() => page > 1 && goToPage(page - 1)}
+              disabled={page === 1}
+            >
+              <Ionicons name="chevron-back" size={20} color={page === 1 ? '#CCC' : COLORS.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.pageNumbers}>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (page <= 3) {
+                  pageNum = i + 1;
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = page - 2 + i;
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={pageNum}
+                    style={[styles.pageNumber, page === pageNum && styles.pageNumberActive]}
+                    onPress={() => goToPage(pageNum)}
+                  >
+                    <Text style={[styles.pageNumberText, page === pageNum && styles.pageNumberTextActive]}>
+                      {pageNum}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.pageButton, page === totalPages && styles.pageButtonDisabled]}
+              onPress={() => page < totalPages && goToPage(page + 1)}
+              disabled={page === totalPages}
+            >
+              <Ionicons name="chevron-forward" size={20} color={page === totalPages ? '#CCC' : COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Reply Modal */}
-      <Modal
-        visible={showReplyModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowReplyModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.replyModal}>
-            <View style={styles.replyModalHeader}>
-              <Text style={styles.replyModalTitle}>Reply to Review</Text>
-              <TouchableOpacity onPress={() => setShowReplyModal(false)}>
+      <Modal visible={showReplyModal} animationType="slide" transparent>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowReplyModal(false)}>
+            <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Reply to Review</Text>
+                <TouchableOpacity onPress={() => setShowReplyModal(false)}>
+                  <Ionicons name="close" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+
+              {selectedReview && (
+                <View style={styles.reviewPreview}>
+                  <Text style={styles.previewName}>{selectedReview.customerName}</Text>
+                  <Text style={styles.previewComment} numberOfLines={2}>
+                    {selectedReview.comment}
+                  </Text>
+                </View>
+              )}
+
+              <TextInput
+                style={styles.textArea}
+                placeholder="Write your response..."
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={6}
+                value={replyText}
+                onChangeText={setReplyText}
+                textAlignVertical="top"
+              />
+
+              {/* Quick Reply Templates */}
+              <Text style={styles.quickReplyLabel}>Quick replies:</Text>
+              <View style={styles.quickReplies}>
+                {[
+                  'Thank you for your feedback!',
+                  'We appreciate your business!',
+                  'Sorry for any inconvenience.',
+                ].map((template) => (
+                  <TouchableOpacity
+                    key={template}
+                    style={styles.quickReplyChip}
+                    onPress={() => setReplyText(template)}
+                  >
+                    <Text style={styles.quickReplyText}>{template}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowReplyModal(false)}
+                  disabled={submitting}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.submitButton, submitting && { opacity: 0.6 }]}
+                  onPress={submitReply}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>Send</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal visible={showFilterModal} animationType="fade" transparent>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)}>
+          <Pressable style={styles.filterModal} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter by Rating</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
 
-            {selectedReview && (
-              <View style={styles.reviewPreview}>
-                <View style={styles.previewHeader}>
-                  <Text style={styles.previewName}>{selectedReview.customerName}</Text>
-                  <View style={styles.previewRating}>
-                    {[...Array(selectedReview.rating)].map((_, i) => (
-                      <Ionicons key={i} name="star" size={12} color="#FFB800" />
+            <View style={styles.filterOptions}>
+              <TouchableOpacity
+                style={[styles.filterOption, ratingFilter === null && styles.filterOptionActive]}
+                onPress={() => {
+                  setRatingFilter(null);
+                  setShowFilterModal(false);
+                }}
+              >
+                <Ionicons 
+                  name={ratingFilter === null ? "radio-button-on" : "radio-button-off"} 
+                  size={24} 
+                  color={ratingFilter === null ? COLORS.primary : '#CCC'} 
+                />
+                <Text style={[styles.filterOptionText, ratingFilter === null && styles.filterOptionTextActive]}>
+                  All Ratings
+                </Text>
+              </TouchableOpacity>
+
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <TouchableOpacity
+                  key={rating}
+                  style={[styles.filterOption, ratingFilter === rating && styles.filterOptionActive]}
+                  onPress={() => {
+                    setRatingFilter(rating);
+                    setShowFilterModal(false);
+                  }}
+                >
+                  <Ionicons 
+                    name={ratingFilter === rating ? "radio-button-on" : "radio-button-off"} 
+                    size={24} 
+                    color={ratingFilter === rating ? COLORS.primary : '#CCC'} 
+                  />
+                  <View style={styles.filterStars}>
+                    {Array.from({ length: rating }, (_, i) => (
+                      <Ionicons key={i} name="star" size={16} color="#FFB800" />
                     ))}
                   </View>
-                </View>
-                <Text style={styles.previewComment} numberOfLines={2}>
-                  {selectedReview.comment}
-                </Text>
-              </View>
-            )}
-
-            <Text style={styles.replyLabel}>Your Response</Text>
-            <TextInput
-              style={styles.replyInput}
-              placeholder="Write a professional and friendly response..."
-              placeholderTextColor="#999"
-              multiline
-              numberOfLines={6}
-              value={replyText}
-              onChangeText={setReplyText}
-              textAlignVertical="top"
-            />
-
-            <View style={styles.replyTips}>
-              <Ionicons name="bulb-outline" size={16} color="#FF9800" />
-              <Text style={styles.replyTipsText}>
-                Tip: Thank the customer and address any concerns professionally
-              </Text>
+                  <Text style={[styles.filterOptionText, ratingFilter === rating && styles.filterOptionTextActive]}>
+                    ({rating} {rating === 1 ? 'star' : 'stars'})
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
-            <View style={styles.replyModalActions}>
-              <TouchableOpacity
-                style={styles.replyCancelButton}
-                onPress={() => setShowReplyModal(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.replyCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.replySubmitButton}
-                onPress={submitReply}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.replySubmitText}>Post Reply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+            <TouchableOpacity
+              style={styles.clearFilterButton}
+              onPress={() => {
+                setRatingFilter(null);
+                setShowFilterModal(false);
+              }}
+            >
+              <Text style={styles.clearFilterText}>Clear Filter</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -427,208 +645,276 @@ export default function ReviewsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8F8F8',
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    padding: 40,
   },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#999',
-  },
-  // Hero Card
-  heroCard: {
-    paddingTop: 32,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
-  },
-  heroContent: {
+  emptyCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#F0F0F0',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  heroLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 12,
-  },
-  heroRating: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ratingNumber: {
-    fontSize: 56,
-    fontWeight: '900',
-    color: '#FFF',
-    lineHeight: 64,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 8,
-  },
-  heroSubtext: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.85)',
-    marginBottom: 24,
-  },
-  quickStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 12,
-    padding: 16,
-    width: '100%',
-  },
-  quickStatItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  quickStatValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFF',
-    marginBottom: 4,
-  },
-  quickStatLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.85)',
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  // Section
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
+  emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#212121',
+    color: '#333',
+    marginBottom: 8,
   },
-  reviewCount: {
+  emptySubtitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#757575',
+    color: '#999',
+    textAlign: 'center',
   },
-  // Distribution Card
-  distributionCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+  emptyText: {
+    marginTop: 12,
+    fontSize: 15,
+    color: '#999',
   },
-  distributionRow: {
+  // SKELETON
+  skeleton: {
+    width: 100,
+    height: 20,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+  },
+  // HEADER
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  distributionLeft: {
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000',
+  },
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    width: 40,
   },
-  distributionRating: {
-    fontSize: 14,
+  ratingText: {
+    fontSize: 16,
     fontWeight: '700',
-    color: '#212121',
+    color: '#000',
   },
-  distributionBar: {
+  // STATS BAR
+  statsBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  statItem: {
     flex: 1,
-    height: 8,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 4,
-    marginHorizontal: 12,
-    overflow: 'hidden',
+    alignItems: 'center',
   },
-  distributionBarFill: {
-    height: '100%',
-    backgroundColor: '#FFB800',
-    borderRadius: 4,
-  },
-  distributionCount: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#757575',
-    width: 30,
-    textAlign: 'right',
-  },
-  // Filter
-  filterContainer: {
-    marginTop: 16,
-    paddingLeft: 16,
-  },
-  filterScroll: {
-    paddingRight: 16,
-    gap: 8,
-  },
-  filterTab: {
+  statWithTrend: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  trendUp: {
+    backgroundColor: '#E8F5E9',
+  },
+  trendDown: {
+    backgroundColor: '#FFEBEE',
+  },
+  trendText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  statDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: '#E0E0E0',
+  },
+  // TABS
+  tabsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
     backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  tabs: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  tab: {
+    marginRight: 24,
+    paddingBottom: 12,
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#666',
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  filterButton: {
+    paddingHorizontal: 8,
+    paddingBottom: 10,
+    position: 'relative',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 0,
+    right: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+  },
+  // SEARCH
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-  filterTabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+    color: '#000',
   },
-  filterText: {
+  resultsCount: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  resultsCountText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  // LIST
+  listContent: {
+    padding: 20,
+  },
+  // PAGINATION
+  paginationBottom: {
+    backgroundColor: '#FFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingVertical: 8,
+  },
+  pagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFF',
+  },
+  pageButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    backgroundColor: '#F8F8F8',
+  },
+  pageButtonDisabled: {
+    opacity: 0.3,
+  },
+  pageNumbers: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: 12,
+  },
+  pageNumber: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    backgroundColor: '#F8F8F8',
+  },
+  pageNumberActive: {
+    backgroundColor: COLORS.primary,
+  },
+  pageNumberText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#757575',
+    color: '#666',
   },
-  filterTextActive: {
+  pageNumberTextActive: {
     color: '#FFF',
   },
-  filterBadge: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  filterBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  // Review Card
-  reviewCard: {
+  pageInfo: {
+    alignItems: 'center',
+    paddingVertical: 6,
     backgroundColor: '#FFF',
-    borderRadius: 16,
+  },
+  pageInfoText: {
+    fontSize: 12,
+    color: '#999',
+  },
+  // CARD
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
-  reviewHeader: {
+  cardUrgent: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF3B30',
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -643,13 +929,18 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: '#E8F5E9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
   },
   avatarText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.primary,
   },
@@ -658,218 +949,250 @@ const styles = StyleSheet.create({
   },
   customerName: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#212121',
+    fontWeight: '600',
+    color: '#000',
     marginBottom: 2,
   },
-  reviewDate: {
+  timeText: {
     fontSize: 12,
-    fontWeight: '500',
     color: '#999',
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  ratingGood: {
+    backgroundColor: '#E8F5E9',
+  },
+  ratingNeutral: {
     backgroundColor: '#FFF8E1',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
   },
-  ratingValue: {
+  ratingPoor: {
+    backgroundColor: '#FFEBEE',
+  },
+  serviceText: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
+  },
+  commentText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  serviceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  serviceBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  reviewComment: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#616161',
+    color: '#333',
     lineHeight: 20,
     marginBottom: 12,
   },
-  // Response
-  responseCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
-  },
-  responseHeader: {
+  response: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
-  },
-  responseLabel: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  responseDate: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#999',
+    paddingVertical: 8,
   },
   responseText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#616161',
-    lineHeight: 18,
+    fontWeight: '600',
+    color: '#00C853',
   },
-  replyButton: {
+  responseContainer: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  responseBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    gap: 4,
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  responseBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#00C853',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  responseTime: {
+    fontSize: 11,
+    color: '#999',
+    marginLeft: 4,
+  },
+  responseContent: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  replyButton: {
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  replyButtonUrgent: {
+    backgroundColor: '#FF3B30',
   },
   replyButtonText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.primary,
+    fontWeight: '600',
+    color: '#FFF',
   },
-  // Empty
-  emptyReviews: {
-    paddingVertical: 60,
-    alignItems: 'center',
-  },
-  emptyReviewsText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#999',
-    marginTop: 16,
-  },
-  // Reply Modal
+  // MODAL
   modalOverlay: {
+    flex: 1,
+  },
+  modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  replyModal: {
+  modal: {
     backgroundColor: '#FFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    maxHeight: '80%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '85%',
   },
-  replyModalHeader: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  replyModalTitle: {
+  modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#212121',
+    color: '#000',
   },
   reviewPreview: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 8,
     padding: 12,
-    marginBottom: 20,
-  },
-  previewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   previewName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  previewRating: {
-    flexDirection: 'row',
-    gap: 2,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
   },
   previewComment: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#616161',
-    lineHeight: 18,
+    color: '#666',
   },
-  replyLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#212121',
-    marginBottom: 8,
-  },
-  replyInput: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
+  textArea: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 8,
     padding: 12,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#212121',
+    fontSize: 15,
     minHeight: 120,
     marginBottom: 12,
   },
-  replyTips: {
+  quickReplyLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  quickReplies: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
-    backgroundColor: '#FFF8E1',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  replyTipsText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#F57C00',
+  quickReplyChip: {
+    backgroundColor: '#F0F0F0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
   },
-  replyModalActions: {
+  quickReplyText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  modalActions: {
     flexDirection: 'row',
     gap: 12,
   },
-  replyCancelButton: {
+  cancelButton: {
     flex: 1,
     paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    backgroundColor: '#F0F0F0',
   },
-  replyCancelText: {
+  cancelButtonText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#757575',
+    fontWeight: '600',
+    color: '#666',
   },
-  replySubmitButton: {
+  submitButton: {
     flex: 1,
     paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: COLORS.primary,
   },
-  replySubmitText: {
+  submitButtonText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFF',
+  },
+  // FILTER MODAL
+  filterModal: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '60%',
+  },
+  filterOptions: {
+    gap: 12,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+    gap: 12,
+  },
+  filterOptionActive: {
+    backgroundColor: '#E8F5E9',
+  },
+  filterOptionText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#333',
+  },
+  filterOptionTextActive: {
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  filterStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  clearFilterButton: {
+    marginTop: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  clearFilterText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
   },
 });
