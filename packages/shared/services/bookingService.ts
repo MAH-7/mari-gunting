@@ -26,6 +26,9 @@ export interface CreateBookingParams {
     postalCode?: string;
   } | null;
   customerNotes?: string | null;
+  paymentMethod?: string;
+  travelFee?: number | null;
+  discountAmount?: number | null; // NEW: For voucher/promo discounts
 }
 
 export interface BookingResult {
@@ -51,6 +54,9 @@ export const bookingService = {
         p_barbershop_id: params.barbershopId || null,
         p_customer_address: params.customerAddress || null,
         p_customer_notes: params.customerNotes || null,
+        p_payment_method: params.paymentMethod || 'cash',
+        p_travel_fee: params.travelFee || null,
+        p_discount_amount: params.discountAmount || null,
       });
 
       if (error) {
@@ -196,10 +202,184 @@ export const bookingService = {
   },
 
   /**
+   * Get barber bookings (for partner app)
+   */
+  async getBarberBookings(
+    barberId: string,
+    status?: string | null,
+    limit: number = 50
+  ): Promise<ApiResponse<any[]>> {
+    try {
+      let query = supabase
+        .from('bookings')
+        .select(`
+          *,
+          customer:profiles!bookings_customer_id_fkey(
+            id,
+            full_name,
+            avatar_url,
+            phone_number
+          ),
+          barbershop:barbershops(
+            id,
+            name,
+            address_line1,
+            city
+          )
+        `)
+        .eq('barber_id', barberId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Get barber bookings error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      console.log(`✅ Fetched ${data?.length || 0} bookings for barber`);
+
+      // Transform data to match frontend expectations (camelCase)
+      const transformedData = (data || []).map((booking: any) => {
+        // Transform customer data
+        if (booking.customer && Array.isArray(booking.customer) && booking.customer.length > 0) {
+          const customerData = booking.customer[0];
+          booking.customer = {
+            id: customerData.id,
+            name: customerData.full_name,
+            avatar: customerData.avatar_url,
+            phone: customerData.phone_number,
+          };
+        }
+
+        // Transform booking fields to camelCase
+        booking.scheduledDate = booking.scheduled_date;
+        booking.scheduledTime = booking.scheduled_time;
+        booking.totalPrice = booking.total_price;
+        booking.travelCost = booking.travel_fee;
+        booking.duration = booking.estimated_duration_minutes;
+        booking.createdAt = booking.created_at;
+        booking.updatedAt = booking.updated_at;
+        booking.completedAt = booking.completed_at;
+
+        // Transform address from JSON to object with fullAddress
+        if (booking.customer_address) {
+          const addr = booking.customer_address;
+          booking.address = {
+            fullAddress: [
+              addr.line1,
+              addr.line2,
+              addr.city,
+              addr.state,
+              addr.postalCode
+            ].filter(Boolean).join(', '),
+            ...addr
+          };
+        }
+
+        return booking;
+      });
+
+      return {
+        success: true,
+        data: transformedData,
+      };
+    } catch (error: any) {
+      console.error('❌ Get barber bookings exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch barber bookings',
+      };
+    }
+  },
+
+  /**
+   * Confirm cash payment received (for barbers)
+   * NOTE: With the new trigger, payment_status is auto-updated to 'completed' when booking completes
+   * This function is kept for backwards compatibility but is mostly a no-op now
+   */
+  async confirmCashPayment(
+    bookingId: string,
+    barberId: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      // Check current booking status first
+      const { data: booking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('payment_status, status')
+        .eq('id', bookingId)
+        .eq('barber_id', barberId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Fetch booking error:', fetchError);
+        return {
+          success: false,
+          error: fetchError.message,
+        };
+      }
+
+      // If already completed, return success (trigger already handled it)
+      if (booking.payment_status === 'completed') {
+        console.log('✅ Payment already marked as completed (by trigger)');
+        return {
+          success: true,
+          data: booking,
+        };
+      }
+
+      // Otherwise, manually update (fallback for edge cases)
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ 
+          payment_status: 'completed',
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', bookingId)
+        .eq('barber_id', barberId)
+        .eq('payment_method', 'cash')
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Confirm cash payment error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      console.log('✅ Cash payment confirmed manually');
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error: any) {
+      console.error('❌ Confirm cash payment exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to confirm cash payment',
+      };
+    }
+  },
+
+  /**
    * Get booking by ID (direct table query)
    */
   async getBookingById(bookingId: string): Promise<ApiResponse<any>> {
     try {
+      console.log('🔍 Fetching booking by ID:', bookingId);
+      
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -207,6 +387,10 @@ export const bookingService = {
           barber:barbers(
             id,
             business_name,
+            rating,
+            completed_bookings,
+            total_reviews,
+            is_verified,
             barber_profile:profiles!barbers_user_id_fkey(
               full_name,
               avatar_url,
@@ -219,17 +403,66 @@ export const bookingService = {
             phone_number,
             address_line1,
             city
+          ),
+          review:reviews(
+            id,
+            rating,
+            comment
           )
         `)
         .eq('id', bookingId)
         .single();
 
       if (error) {
-        console.error('❌ Get booking by ID error:', error);
+        console.error('❌ Get booking by ID error:', { bookingId, error, code: error.code, details: error.details, hint: error.hint });
         return {
           success: false,
           error: error.message,
         };
+      }
+      
+      console.log('✅ Booking fetched successfully:', data?.id);
+
+      // Transform barber data structure for frontend
+      if (data && data.barber && data.barber.barber_profile) {
+        data.barber = {
+          id: data.barber.id,
+          name: data.barber.barber_profile.full_name,
+          avatar: data.barber.barber_profile.avatar_url,
+          phone: data.barber.barber_profile.phone_number,
+          businessName: data.barber.business_name,
+          rating: data.barber.rating || 0,
+          completedJobs: data.barber.completed_bookings || 0,
+          totalReviews: data.barber.total_reviews || 0,
+          isVerified: data.barber.is_verified || false,
+        };
+      }
+
+      // Transform booking fields to camelCase for frontend
+      if (data) {
+        data.scheduledDate = data.scheduled_date;
+        data.scheduledTime = data.scheduled_time;
+        data.duration = data.estimated_duration_minutes;
+        
+        // Transform address from JSON to object with fullAddress
+        if (data.customer_address) {
+          const addr = data.customer_address;
+          data.address = {
+            fullAddress: [
+              addr.line1,
+              addr.line2,
+              addr.city,
+              addr.state,
+              addr.postalCode
+            ].filter(Boolean).join(', '),
+            ...addr
+          };
+        }
+        
+        // Handle review - Supabase returns array, get first item
+        if (data.review && Array.isArray(data.review)) {
+          data.review = data.review.length > 0 ? data.review[0] : null;
+        }
       }
 
       return {

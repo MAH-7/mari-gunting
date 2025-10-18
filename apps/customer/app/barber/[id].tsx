@@ -346,19 +346,13 @@ export default function BarberProfileScreen() {
               <Ionicons name="star" size={18} color="#FBBF24" />
               <Text style={styles.ratingText}>{barber.rating.toFixed(1)}</Text>
               <Text style={styles.reviewCount}>({barber.totalReviews} reviews)</Text>
+              <Text style={styles.jobsCount}>• {barber.completedJobs} jobs</Text>
             </View>
 
             {(barber.distance || distance) && (
               <View style={styles.locationRow}>
                 <Ionicons name="navigate" size={16} color="#00B14F" />
                 <Text style={styles.distanceText}>{formatDistance(barber.distance || parseFloat(distance || '0'))} away</Text>
-              </View>
-            )}
-
-            {barber.isOnline && (
-              <View style={styles.statusBadge}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>Available Now</Text>
               </View>
             )}
           </View>
@@ -528,6 +522,14 @@ export default function BarberProfileScreen() {
                     </View>
                     <View style={styles.reviewCustomerDetails}>
                       <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
+                      {review.services && review.services.length > 0 && (
+                        <View style={styles.reviewServices}>
+                          <Ionicons name="cut" size={12} color="#00B14F" />
+                          <Text style={styles.reviewServicesText}>
+                            {review.services.map((s: any) => s.name).join(', ')}
+                          </Text>
+                        </View>
+                      )}
                       <Text style={styles.reviewDate}>
                         {new Date(review.createdAt).toLocaleDateString('en-MY', { 
                           month: 'short', 
@@ -740,11 +742,11 @@ const styles = StyleSheet.create({
   },
   onlineBadge: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    bottom: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#00B14F',
     borderWidth: 3,
     borderColor: '#FFFFFF',
@@ -779,6 +781,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8E8E93',
   },
+  jobsCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -787,27 +793,6 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#00B14F',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#D1FAE5',
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#00B14F',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
     color: '#00B14F',
   },
   statsContainer: {
@@ -1200,6 +1185,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1C1C1E',
     marginBottom: 2,
+  },
+  reviewServices: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  reviewServicesText: {
+    fontSize: 12,
+    color: '#00B14F',
+    fontWeight: '500',
   },
   reviewDate: {
     fontSize: 12,

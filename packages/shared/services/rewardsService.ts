@@ -46,6 +46,19 @@ export interface PointsTransaction {
   created_at: string;
 }
 
+export interface CreditTransaction {
+  id: string;
+  user_id: string;
+  type: 'add' | 'deduct';
+  source: 'refund' | 'compensation' | 'promo' | 'booking_payment' | 'admin' | 'referral' | 'welcome_bonus';
+  amount: number;
+  balance_after: number;
+  description: string;
+  booking_id?: string;
+  metadata?: any;
+  created_at: string;
+}
+
 export const rewardsService = {
   /**
    * Get all available vouchers (active and not expired)
@@ -398,5 +411,161 @@ export const rewardsService = {
    */
   isExpired(dateString: string): boolean {
     return this.getDaysUntilExpiry(dateString) < 0;
+  },
+
+  // =====================================================
+  // CREDITS SYSTEM
+  // =====================================================
+
+  /**
+   * Get user's credit balance
+   */
+  async getUserCredits(userId: string): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('customer_credits')
+        .select('balance')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        // If no record exists, return 0
+        if (error.code === 'PGRST116') {
+          return 0;
+        }
+        console.error('[rewardsService] getUserCredits error:', error);
+        throw error;
+      }
+
+      return data?.balance || 0;
+    } catch (error) {
+      console.error('[rewardsService] getUserCredits error:', error);
+      return 0;
+    }
+  },
+
+  /**
+   * Get user's credit transaction history
+   */
+  async getCreditTransactions(userId: string, limit: number = 50): Promise<CreditTransaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('credit_transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('[rewardsService] getCreditTransactions error:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('[rewardsService] getCreditTransactions error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Add credits to customer account
+   */
+  async addCredit(
+    userId: string,
+    amount: number,
+    source: CreditTransaction['source'],
+    description: string,
+    bookingId?: string,
+    metadata?: any
+  ): Promise<{ success: boolean; newBalance: number; transactionId?: string; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('add_customer_credit', {
+        p_user_id: userId,
+        p_amount: amount,
+        p_source: source,
+        p_description: description,
+        p_booking_id: bookingId || null,
+        p_metadata: metadata || {},
+      });
+
+      if (error) {
+        console.error('[rewardsService] addCredit error:', error);
+        return { success: false, newBalance: 0, error: error.message };
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      
+      return {
+        success: result.success,
+        newBalance: result.new_balance,
+        transactionId: result.transaction_id,
+      };
+    } catch (error: any) {
+      console.error('[rewardsService] addCredit error:', error);
+      return {
+        success: false,
+        newBalance: 0,
+        error: error.message || 'Failed to add credits',
+      };
+    }
+  },
+
+  /**
+   * Deduct credits from customer account
+   */
+  async deductCredit(
+    userId: string,
+    amount: number,
+    source: CreditTransaction['source'],
+    description: string,
+    bookingId?: string,
+    metadata?: any
+  ): Promise<{ success: boolean; newBalance: number; transactionId?: string; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('deduct_customer_credit', {
+        p_user_id: userId,
+        p_amount: amount,
+        p_source: source,
+        p_description: description,
+        p_booking_id: bookingId || null,
+        p_metadata: metadata || {},
+      });
+
+      if (error) {
+        console.error('[rewardsService] deductCredit error:', error);
+        return { success: false, newBalance: 0, error: error.message };
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      
+      if (!result.success) {
+        return {
+          success: false,
+          newBalance: result.new_balance,
+          error: result.error_message || 'Failed to deduct credits',
+        };
+      }
+
+      return {
+        success: true,
+        newBalance: result.new_balance,
+        transactionId: result.transaction_id,
+      };
+    } catch (error: any) {
+      console.error('[rewardsService] deductCredit error:', error);
+      return {
+        success: false,
+        newBalance: 0,
+        error: error.message || 'Failed to deduct credits',
+      };
+    }
+  },
+
+  /**
+   * Format credit amount for display
+   */
+  formatCreditAmount(amount: number): string {
+    return `RM ${amount.toFixed(2)}`;
   },
 };

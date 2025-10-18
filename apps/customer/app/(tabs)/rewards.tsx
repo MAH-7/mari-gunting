@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet, Animated, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Animated, Alert, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '@/store/useStore';
-import { rewardsService, type Voucher as DBVoucher, type UserVoucher, type PointsTransaction } from '@/services/rewardsService';
+import { rewardsService, type Voucher as DBVoucher, type UserVoucher, type PointsTransaction, type CreditTransaction } from '@/services/rewardsService';
 
 
 
@@ -15,12 +15,15 @@ export default function RewardsScreen() {
   
   // Local state - Data
   const [userPoints, setUserPoints] = useState(0);
+  const [userCredits, setUserCredits] = useState(0);
   const [availableVouchers, setAvailableVouchers] = useState<DBVoucher[]>([]);
   const [myVouchers, setMyVouchers] = useState<UserVoucher[]>([]);
   const [pointsHistory, setPointsHistory] = useState<PointsTransaction[]>([]);
+  const [creditsHistory, setCreditsHistory] = useState<CreditTransaction[]>([]);
   
   // Local state - UI
-  const [activeTab, setActiveTab] = useState<'vouchers' | 'myVouchers' | 'activity'>('vouchers');
+  const [activeTab, setActiveTab] = useState<'vouchers' | 'myVouchers' | 'history'>('vouchers');
+  const [historyFilter, setHistoryFilter] = useState<'points' | 'credits'>('points');
   const [selectedVoucher, setSelectedVoucher] = useState<DBVoucher | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -45,17 +48,21 @@ export default function RewardsScreen() {
       setIsLoading(true);
       
       // Load all data in parallel
-      const [points, vouchers, userVouchers, history] = await Promise.all([
+      const [points, credits, vouchers, userVouchers, history, creditHistory] = await Promise.all([
         rewardsService.getUserPoints(currentUser.id),
+        rewardsService.getUserCredits(currentUser.id),
         rewardsService.getAvailableVouchers(),
         rewardsService.getUserVouchers(currentUser.id),
         rewardsService.getPointsHistory(currentUser.id),
+        rewardsService.getCreditTransactions(currentUser.id),
       ]);
       
       setUserPoints(points);
+      setUserCredits(credits);
       setAvailableVouchers(vouchers);
       setMyVouchers(userVouchers);
       setPointsHistory(history);
+      setCreditsHistory(creditHistory);
     } catch (error) {
       console.error('[RewardsScreen] Error loading data:', error);
       Alert.alert('Error', 'Failed to load rewards data. Please try again.');
@@ -169,6 +176,11 @@ export default function RewardsScreen() {
     const voucherPoints = voucherData.points_cost;
     const voucherExpiry = rewardsService.formatExpiryDate(voucherData.valid_until);
     
+    // Extract discount value for hero display - from voucher.value
+    const discountValue = voucherType === 'percentage' 
+      ? `${voucherData.value}% OFF` 
+      : `RM${voucherData.value} OFF`;
+    
     return (
       <View
         key={voucherId}
@@ -191,16 +203,26 @@ export default function RewardsScreen() {
             )}
           </View>
           
-          <Text style={styles.voucherTitle}>{voucherTitle}</Text>
+          {/* Hero: Discount Value (24-26px) */}
+          <Text style={styles.voucherHero}>{discountValue}</Text>
+          
+          {/* Secondary info */}
           <Text style={styles.voucherDescription}>{voucherDescription}</Text>
           
           <View style={styles.voucherFooter}>
             <View style={styles.pointsRow}>
-              <Ionicons name="pricetag" size={14} color="#00B14F" />
-              <Text style={styles.pointsText}>{voucherPoints} points</Text>
+              <Ionicons name="pricetag" size={16} color="#00B14F" />
+              <Text style={styles.pointsText}>{voucherPoints} pts</Text>
             </View>
             <Text style={[styles.expiryText, expiringSoon && styles.expiryTextWarning]}>Exp: {voucherExpiry}</Text>
           </View>
+        </View>
+        
+        {/* Vertical Dotted Separator - Cross-platform */}
+        <View style={styles.voucherSeparatorContainer}>
+          {[...Array(8)].map((_, i) => (
+            <View key={i} style={styles.voucherSeparatorDot} />
+          ))}
         </View>
 
         <View style={[styles.voucherRight, isUsed ? styles.voucherRightUsed : isRedeemed ? styles.voucherRightActive : {}]}>
@@ -222,7 +244,7 @@ export default function RewardsScreen() {
             >
               <Ionicons
                 name="gift"
-                size={28}
+                size={26}
                 color={userPoints < voucherPoints ? '#FFFFFF80' : '#FFFFFF'}
               />
               <Text style={[styles.redeemText, userPoints < voucherPoints && styles.redeemTextLocked]}>
@@ -237,7 +259,7 @@ export default function RewardsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Points Card */}
+      {/* Rewards Card - Points & Credits */}
       <LinearGradient
         colors={['#00B14F', '#00A043']}
         start={{ x: 0, y: 0 }}
@@ -245,25 +267,35 @@ export default function RewardsScreen() {
         style={styles.pointsCard}
       >
         <View style={styles.pointsHeader}>
-          <Text style={styles.pointsLabel}>Your Points</Text>
+          <Text style={styles.pointsLabel}>Your Rewards</Text>
           <View style={styles.memberBadge}>
             <Text style={styles.memberText}>Gold Member</Text>
           </View>
         </View>
         
-        <View style={styles.pointsValueRow}>
-          <Text style={styles.pointsValue}>{userPoints}</Text>
-          <Text style={styles.pointsUnit}>pts</Text>
+        {/* Stacked Layout - Points Section (Secondary) */}
+        <View style={styles.pointsSection}>
+          <View style={styles.sectionRow}>
+            <Ionicons name="pricetag" size={18} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.smallLabel}>Points Balance</Text>
+          </View>
+          <View style={styles.valueRow}>
+            <Text style={styles.mediumValue}>{userPoints}</Text>
+            <Text style={styles.mediumUnit}>pts</Text>
+          </View>
         </View>
 
-        <View style={styles.pointsFooter}>
-          <View style={styles.pointsInfo}>
-            <Ionicons name="information-circle-outline" size={16} color="white" />
-            <Text style={styles.pointsInfoText}>Earn points with every booking</Text>
+        {/* Horizontal Divider */}
+        <View style={styles.horizontalDivider} />
+        
+        {/* Credits Section (Primary - More Prominent) */}
+        <View style={styles.creditsSection}>
+          <View style={styles.sectionRow}>
+            <Ionicons name="wallet" size={20} color="#FFFFFF" />
+            <Text style={styles.largeLabel}>Mari Credits</Text>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="chevron-forward" size={20} color="white" />
-          </TouchableOpacity>
+          <Text style={styles.largeValue}>{rewardsService.formatCreditAmount(userCredits)}</Text>
+          <Text style={styles.subtitle}>Use at checkout to pay for bookings</Text>
         </View>
       </LinearGradient>
 
@@ -286,105 +318,176 @@ export default function RewardsScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => setActiveTab('activity')}
-          style={[styles.tab, activeTab === 'activity' && styles.tabActive]}
+          onPress={() => setActiveTab('history')}
+          style={[styles.tab, activeTab === 'history' && styles.tabActive]}
         >
-          <Text style={[styles.tabText, activeTab === 'activity' && styles.tabTextActive]}>
-            Activity
+          <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
+            History
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Content */}
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollContent} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor="#00B14F"
-            colors={['#00B14F']}
-          />
-        }
-      >
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#00B14F" />
-            <Text style={styles.loadingText}>Loading rewards...</Text>
-          </View>
-        ) : (
-          <>
-            {activeTab === 'vouchers' && (
-              <View style={styles.contentSection}>
-                {availableForRedemption.length > 0 ? (
-                  availableForRedemption.map(voucher => renderVoucherCard(voucher, false))
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Ionicons name="gift-outline" size={64} color="#D1D5DB" />
-                    <Text style={styles.emptyTitle}>All Vouchers Redeemed!</Text>
-                    <Text style={styles.emptyText}>Check back later for new rewards</Text>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00B14F" />
+          <Text style={styles.loadingText}>Loading rewards...</Text>
+        </View>
+      ) : (
+        <>
+          {activeTab === 'vouchers' && (
+            <FlatList
+              data={availableForRedemption}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => renderVoucherCard(item, false)}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#00B14F"
+                  colors={['#00B14F']}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Ionicons name="gift-outline" size={64} color="#D1D5DB" />
+                  <Text style={styles.emptyTitle}>All Vouchers Redeemed!</Text>
+                  <Text style={styles.emptyText}>Check back later for new rewards</Text>
+                </View>
+              }
+            />
+          )}
+
+          {activeTab === 'myVouchers' && (
+            <FlatList
+              data={myVouchers}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => renderVoucherCard(item, true)}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#00B14F"
+                  colors={['#00B14F']}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Ionicons name="ticket-outline" size={64} color="#D1D5DB" />
+                  <Text style={styles.emptyTitle}>No Vouchers Yet</Text>
+                  <Text style={styles.emptyText}>Redeem vouchers to see them here</Text>
+                  <TouchableOpacity
+                    style={styles.emptyButton}
+                    onPress={() => setActiveTab('vouchers')}
+                  >
+                    <Text style={styles.emptyButtonText}>Browse Vouchers</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            />
+          )}
+
+          {activeTab === 'history' && (
+            <FlatList
+              data={historyFilter === 'points' ? pointsHistory : creditsHistory}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => {
+                const transaction = item as PointsTransaction | CreditTransaction;
+                const isPointsTransaction = 'type' in transaction && (transaction.type === 'earn' || transaction.type === 'spend');
+                const isAddition = isPointsTransaction 
+                  ? (transaction as PointsTransaction).type === 'earn'
+                  : (transaction as CreditTransaction).type === 'add';
+                
+                return (
+                  <View style={styles.activityCard}>
+                    <View style={[styles.activityIcon, isAddition ? styles.activityIconEarn : styles.activityIconRedeem]}>
+                      <Ionicons
+                        name={isAddition ? 'add-circle' : 'remove-circle'}
+                        size={22}
+                        color={isAddition ? '#00B14F' : '#EF4444'}
+                      />
+                    </View>
+
+                    <View style={styles.activityDetails}>
+                      <Text style={styles.activityDescription}>{transaction.description}</Text>
+                      <Text style={styles.activityDate}>{new Date(transaction.created_at).toLocaleDateString()}</Text>
+                    </View>
+
+                    <Text style={[styles.activityAmount, isAddition ? styles.activityAmountEarn : styles.activityAmountRedeem]}>
+                      {isPointsTransaction 
+                        ? `${transaction.amount > 0 ? '+' : ''}${transaction.amount} pts`
+                        : `${isAddition ? '+' : '-'}${rewardsService.formatCreditAmount(transaction.amount)}`
+                      }
+                    </Text>
                   </View>
-                )}
-              </View>
-            )}
-
-            {activeTab === 'myVouchers' && (
-          <View style={styles.contentSection}>
-            {myVouchers.length > 0 ? (
-              myVouchers.map(voucher => renderVoucherCard(voucher, true))
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="ticket-outline" size={64} color="#D1D5DB" />
-                <Text style={styles.emptyTitle}>No Vouchers Yet</Text>
-                <Text style={styles.emptyText}>Redeem vouchers to see them here</Text>
-                <TouchableOpacity
-                  style={styles.emptyButton}
-                  onPress={() => setActiveTab('vouchers')}
-                >
-                  <Text style={styles.emptyButtonText}>Browse Vouchers</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-            )}
-
-            {activeTab === 'activity' && (
-          <View style={styles.contentSection}>
-            {pointsHistory.length > 0 ? (
-              pointsHistory.map((transaction) => (
-                <View key={transaction.id} style={styles.activityCard}>
-                  <View style={[styles.activityIcon, transaction.type === 'earn' ? styles.activityIconEarn : styles.activityIconRedeem]}>
-                    <Ionicons
-                      name={transaction.type === 'earn' ? 'add-circle' : 'remove-circle'}
-                      size={24}
-                      color={transaction.type === 'earn' ? '#00B14F' : '#EF4444'}
-                    />
-                  </View>
-
-                  <View style={styles.activityDetails}>
-                    <Text style={styles.activityDescription}>{transaction.description}</Text>
-                    <Text style={styles.activityDate}>{new Date(transaction.created_at).toLocaleDateString()}</Text>
-                  </View>
-
-                  <Text style={[styles.activityAmount, transaction.type === 'earn' ? styles.activityAmountEarn : styles.activityAmountRedeem]}>
-                    {transaction.amount > 0 ? '+' : ''}{transaction.amount}
+                );
+              }}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#00B14F"
+                  colors={['#00B14F']}
+                />
+              }
+              ListHeaderComponent={
+                <View style={styles.historyToggle}>
+                  <TouchableOpacity
+                    style={[styles.toggleButton, historyFilter === 'points' && styles.toggleButtonActive]}
+                    onPress={() => setHistoryFilter('points')}
+                  >
+                <Ionicons 
+                  name="pricetag" 
+                  size={15} 
+                  color={historyFilter === 'points' ? '#FFFFFF' : '#6B7280'} 
+                />
+                <Text style={[styles.toggleText, historyFilter === 'points' && styles.toggleTextActive]}>
+                  Points
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleButton, historyFilter === 'credits' && styles.toggleButtonActive]}
+                onPress={() => setHistoryFilter('credits')}
+              >
+                <Ionicons 
+                  name="wallet" 
+                  size={15} 
+                  color={historyFilter === 'credits' ? '#FFFFFF' : '#6B7280'} 
+                />
+                    <Text style={[styles.toggleText, historyFilter === 'credits' && styles.toggleTextActive]}>
+                      Credits
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Ionicons 
+                    name={historyFilter === 'points' ? 'list-outline' : 'wallet-outline'} 
+                    size={64} 
+                    color="#D1D5DB" 
+                  />
+                  <Text style={styles.emptyTitle}>
+                    {historyFilter === 'points' ? 'No Points Activity' : 'No Credits History'}
+                  </Text>
+                  <Text style={styles.emptyText}>
+                    {historyFilter === 'points' 
+                      ? 'Start earning points with every booking'
+                      : 'Credits from refunds will appear here'
+                    }
                   </Text>
                 </View>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="list-outline" size={64} color="#D1D5DB" />
-                <Text style={styles.emptyTitle}>No Activity Yet</Text>
-                <Text style={styles.emptyText}>Start earning and redeeming to see your activity</Text>
-              </View>
-            )}
-          </View>
-            )}
-          </>
-        )}
-      </ScrollView>
+              }
+            />
+          )}
+        </>
+      )}
 
       {/* Confirmation Modal */}
       <Modal
@@ -489,36 +592,36 @@ const styles = StyleSheet.create({
   },
   pointsCard: {
     marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 24,
-    borderRadius: 24,
-    padding: 24,
+    marginTop: 12,
+    marginBottom: 16,
+    borderRadius: 20,
+    padding: 16,
     shadowColor: '#00B14F',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   pointsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   pointsLabel: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   memberBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   memberText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   pointsValueRow: {
@@ -592,21 +695,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  listContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,
+    gap: 12,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 80,
-  },
-  contentSection: {
-    gap: 12,
   },
   voucherCard: {
     backgroundColor: '#FFFFFF',
@@ -624,13 +722,21 @@ const styles = StyleSheet.create({
   },
   voucherLeft: {
     flex: 1,
-    padding: 16,
+    padding: 12,
+  },
+  voucherHero: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 3,
+    marginBottom: 4,
+    letterSpacing: -0.5,
   },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 3,
   },
   typeBadge: {
     paddingHorizontal: 8,
@@ -667,16 +773,11 @@ const styles = StyleSheet.create({
   typeBadgeTextBlue: {
     color: '#2563EB',
   },
-  voucherTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
   voucherDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
-    marginBottom: 12,
+    lineHeight: 17,
+    marginBottom: 8,
   },
   voucherFooter: {
     flexDirection: 'row',
@@ -689,20 +790,32 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   pointsText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#00B14F',
   },
   expiryText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#9CA3AF',
   },
   expiryTextWarning: {
     color: '#EF4444',
     fontWeight: '600',
   },
+  voucherSeparatorContainer: {
+    width: 2,
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  voucherSeparatorDot: {
+    width: 2,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 1,
+  },
   voucherRight: {
-    width: 96,
+    width: 80,
     backgroundColor: '#00B14F',
     alignItems: 'center',
     justifyContent: 'center',
@@ -717,10 +830,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   redeemText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 8,
+    marginTop: 6,
   },
   redeemTextLocked: {
     color: 'rgba(255,255,255,0.5)',
@@ -729,19 +842,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   usedText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 8,
+    marginTop: 6,
   },
   availableLabel: {
     alignItems: 'center',
   },
   availableText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 8,
+    marginTop: 6,
   },
   emptyState: {
     paddingVertical: 80,
@@ -771,8 +884,8 @@ const styles = StyleSheet.create({
   },
   activityCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
@@ -782,9 +895,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   activityIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -796,20 +909,21 @@ const styles = StyleSheet.create({
   },
   activityDetails: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 10,
   },
   activityDescription: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 2,
+    lineHeight: 18,
   },
   activityDate: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
   },
   activityAmount: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   activityAmountEarn: {
@@ -972,5 +1086,99 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+  },
+  // Stacked card layout styles
+  pointsSection: {
+    marginBottom: 10,
+  },
+  creditsSection: {
+    marginTop: 10,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 4,
+  },
+  smallLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 11,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  largeLabel: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  valueRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  mediumValue: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  mediumUnit: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 5,
+    marginBottom: 2,
+  },
+  largeValue: {
+    color: '#FFFFFF',
+    fontSize: 40,
+    fontWeight: 'bold',
+    letterSpacing: -1,
+    marginBottom: 3,
+  },
+  subtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  horizontalDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginVertical: 3,
+  },
+  // History toggle styles
+  historyToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 12,
+    gap: 3,
+  },
+  toggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 7,
+    gap: 5,
+  },
+  toggleButtonActive: {
+    backgroundColor: '#00B14F',
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
+  },
+  historyContent: {
+    gap: 12,
   },
 });

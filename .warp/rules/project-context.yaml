@@ -1,124 +1,255 @@
-# Mari Gunting - Project Context Rules
-# These rules complement production-frontend-first.json with project-specific context
-# Both rule files work together: production-frontend-first.json = HOW to code, this file = WHAT you're coding
+# Mari Gunting - Production Project Context
+# This file complements production-standards.json and backend-standards.json
+# production-standards.json = HOW to code frontend
+# backend-standards.json = HOW to code backend  
+# project-context.yaml = WHAT you're working on (this file)
 
-name: mari-gunting-project-context
-description: Project-specific context for Mari Gunting (works alongside production-frontend-first.json)
+name: mari-gunting-production-context
+description: Live production system context for Mari Gunting
 
 rules:
   # Project Identity
   - name: project_overview
-    description: Mari Gunting is a two-sided marketplace for on-demand barber services
+    description: Mari Gunting production system overview
     content: |
-      - Project name: Mari Gunting
-      - Type: React Native mobile app (iOS & Android)
-      - Architecture: Monorepo with 2 apps (Customer & Partner)
-      - Tech stack: Expo, TypeScript, Zustand, React Query, NativeWind
-      - Current status: 50% complete
+      - Project: Mari Gunting (on-demand barbershop booking platform)
+      - Status: LIVE PRODUCTION with REAL USERS
+      - Region: Malaysia (Southeast Asia)
+      - Type: React Native mobile apps (iOS & Android)
+      - Architecture: Monorepo with Customer & Partner apps
       - Location: /Users/bos/Desktop/ProjectSideIncome/mari-gunting
 
-  # Project Structure
-  - name: monorepo_structure
-    description: Project uses monorepo pattern with shared packages
+  # Tech Stack
+  - name: technology_stack
+    description: Full production tech stack
     content: |
-      - apps/customer/ - Customer-facing app (100% complete, 25 screens)
-      - apps/partner/ - Partner/barber app (50% complete)
-      - packages/shared/ - Shared code (types, services, utils)
-      - All apps share same mock data and business logic
-      - npm workspaces for dependency management
+      Frontend:
+      - React Native with Expo (SDK latest)
+      - TypeScript (strict mode, no 'any')
+      - NativeWind (Tailwind CSS for React Native)
+      - React Query (server state) + Zustand (client state)
+      - Expo Router (file-based navigation)
+      
+      Backend:
+      - Supabase (Production, Singapore region)
+      - PostgreSQL with PostGIS extension
+      - 29 tables, 75 RLS policies, 24 RPC functions
+      - 19 triggers, 103 indexes, 2 views
+      - 10 storage buckets with RLS
+      
+      Integrations:
+      - Twilio (SMS OTP authentication)
+      - Google Maps API (location services)
+      - Payment gateway (integration ready)
+      
+      Infrastructure:
+      - npm workspaces (monorepo management)
+      - Supabase Auth + custom RLS
+      - Real-time subscriptions for live tracking
 
-  # Key Files
-  - name: important_files
-    description: Critical files for understanding the project
+  # Project Structure
+  - name: project_structure
+    description: Monorepo organization
     content: |
-      Always check these files for context:
-      - PROJECT_CONTEXT.md - Main overview
-      - DEVELOPMENT_STATUS.md - Current progress
-      - ARCHITECTURE_GUIDE.md - System design
-      - COMMON_TASKS.md - Commands reference
-      - packages/shared/types/index.ts - All TypeScript types
-      - packages/shared/services/mockData.ts - Mock data
-      - packages/shared/services/api.ts - API layer
+      - apps/customer/ - Customer mobile app
+      - apps/partner/ - Partner/barber mobile app
+      - packages/shared/ - Shared code (types, services, utils)
+      - supabase/ - Database migrations and schema
+      - supabase-backup/ - Full production schema backup
+      - docs/ - Documentation folder
+      - .warp/rules/ - AI agent rules (this directory)
+
+  # Key Documentation Files
+  - name: important_files
+    description: Critical documentation files
+    content: |
+      Core documentation (check these first):
+      - PROJECT_OVERVIEW.md - Complete system overview
+      - DATABASE_SCHEMA.md - All 29 tables, relationships
+      - API_DOCUMENTATION.md - All RPC functions
+      - .env.example - Environment variable template
+      
+      Code structure:
+      - packages/shared/types/ - TypeScript types
+      - packages/shared/services/ - API client & services
+      - supabase/migrations/ - Database migration history
+      - supabase-backup/ - Production schema export
 
   # Development Commands
   - name: common_commands
-    description: Frequently used development commands
+    description: Development workflow commands
     content: |
-      Run Customer app: cd apps/customer && npm start
-      Run Partner app: cd apps/partner && npm start
+      Customer app: npm run customer (or cd apps/customer && npm start)
+      Partner app: npm run partner (or cd apps/partner && npm start)
       Clear cache: npm start -- --clear
       Type check: npx tsc --noEmit
-      Test logins: Customer (11-111 1111), Partner (22-222 2222)
+      Install deps: npm run install:all
+      
+      Database:
+      - Access: Supabase Dashboard (Singapore region)
+      - Backup: Check supabase-backup/ folder
+      - IPv6 required or use Session Pooler connection
 
-  # Current Focus
-  - name: current_work
-    description: What's being worked on now
+  # Database Architecture
+  - name: database_overview
+    description: Production database structure
     content: |
-      - Customer app: ✅ Complete (25 screens, all features done)
-      - Partner app: ⏳ 50% complete
-      - Next task: Schedule Management (Week 5)
-      - Remaining: Earnings (Week 6), Customers (Week 7), Profile (Week 8)
-      - Backend: Not started (Phase 3)
+      Core Tables (29 total):
+      - User: profiles, barbers, barbershops, barber_onboarding, barbershop_onboarding
+      - Booking: bookings, services, booking_vouchers
+      - Payment: payments, payouts, customer_credits, credit_transactions
+      - Loyalty: user_points, points_transactions, vouchers, user_vouchers
+      - Social: reviews, messages, notifications
+      - Location: customer_addresses, active_tracking_sessions
+      - Auth: otp_requests
+      
+      Security:
+      - 75 RLS policies enforced across 23 tables
+      - Role-based access: customer, barber, barbershop_owner, admin
+      - All tables have RLS enabled
+      
+      Performance:
+      - 103 indexes for query optimization
+      - PostGIS for location queries (ST_DWithin, ST_Distance)
+      - 24 RPC functions for complex operations
+      - 19 triggers for automation (updated_at, auditing)
+
+  # Key RPC Functions
+  - name: rpc_functions
+    description: Main backend functions
+    content: |
+      Booking operations:
+      - create_booking, update_booking_status, cancel_booking
+      - get_customer_bookings, get_barber_bookings
+      
+      Location services:
+      - get_nearby_barbers, search_nearby_barbershops
+      - update_service_radius, update_tracking_metrics
+      
+      Customer features:
+      - add_customer_address, add_customer_credit
+      - redeem_voucher, submit_review
+      
+      Partner features:
+      - update_barber_availability, get_barber_earnings
+      
+      Check API_DOCUMENTATION.md for complete list and usage
 
   # Coding Conventions
   - name: code_standards
-    description: Project coding conventions
+    description: Project coding standards
     content: |
-      - TypeScript: Strict mode, 100% typed, no 'any'
-      - Components: Functional with hooks
-      - Styling: NativeWind (Tailwind CSS classes)
-      - State: React Query (server) + Zustand (client)
-      - Navigation: Expo Router (file-based)
-      - Files: PascalCase for components, camelCase for utils
-      - All shared code in packages/shared/
+      Frontend:
+      - TypeScript strict mode, no 'any' types
+      - Functional components with hooks
+      - NativeWind for styling (Tailwind classes)
+      - React Query for server state, Zustand for client state
+      - Expo Router for navigation (file-based routing)
+      - PascalCase for components, camelCase for utilities
+      
+      Backend:
+      - snake_case for database objects (tables, columns, functions)
+      - RLS policies on ALL tables
+      - Input validation at API and database layers
+      - Proper error handling with meaningful messages
+      - Comments on complex RPC functions
+      - Transaction handling for multi-step operations
 
   # Data Flow
   - name: data_architecture
-    description: How data flows through the app
+    description: How data flows through the system
     content: |
-      UI → React Query → API Service → Mock Data
-      - Mock data simulates backend (500-1000ms delays)
-      - Ready to swap with real API (only 1 file to change)
-      - Types shared between apps via packages/shared/types/
-      - State: Zustand for UI, React Query for data
+      Production flow:
+      UI → React Query → Supabase Client → PostgreSQL → RLS → Data
+      
+      Authentication:
+      Twilio OTP → Supabase Auth → JWT → RLS auth.uid()
+      
+      Real-time features:
+      PostgreSQL triggers → Supabase Realtime → React Query → UI updates
+      
+      Location tracking:
+      GPS → Google Maps → PostGIS ST_DWithin → Nearby results
+      
+      State management:
+      - Server state: React Query (bookings, services, user data)
+      - Client state: Zustand (UI state, form data, temp values)
+      - Persistent: AsyncStorage (auth tokens, user preferences)
+
+  # Critical Production Notes
+  - name: production_warnings
+    description: Important production considerations
+    content: |
+      CRITICAL REMINDERS:
+      - This is a LIVE PRODUCTION system with REAL USERS
+      - Test ALL changes thoroughly before deploying
+      - Database changes require migration scripts
+      - Never edit production database directly
+      - Always backup before major changes
+      - RLS policies protect user data - test them carefully
+      - Breaking changes affect active users immediately
+      - Monitor Supabase dashboard after deployments
+      
+      IPv6 Requirement:
+      - Production database requires IPv6 or Session Pooler
+      - Use Session Pooler connection string if on IPv4 network
+      - Check .env.example for connection string format
 
   # Troubleshooting
   - name: common_issues
     description: Common problems and solutions
     content: |
+      Frontend issues:
       - Module not found: npm start -- --clear
       - App won't start: killall -9 node && npm start -- --clear
-      - Outdated deps: rm -rf node_modules && npm install
-      - Wrong directory: Always check you're in apps/customer or apps/partner
-      - Context lost: Read PROJECT_CONTEXT.md for quick refresh
+      - Stale deps: rm -rf node_modules package-lock.json && npm install
+      - TypeScript errors: npx tsc --noEmit (check for type issues)
+      
+      Backend issues:
+      - RLS blocking query: Check policies with SELECT * FROM pg_policies
+      - Function not found: Verify function exists in Supabase SQL Editor
+      - Connection error: Check internet, verify .env credentials
+      - IPv6 error: Switch to Session Pooler connection string
+      
+      Development:
+      - Check PROJECT_OVERVIEW.md for system architecture
+      - Check DATABASE_SCHEMA.md for table structures
+      - Check API_DOCUMENTATION.md for available RPCs
 
-  # When Context is Lost
+  # Quick Context Recovery
   - name: context_recovery
-    description: Quick facts to remember when context is full
+    description: Essential facts when starting fresh
     content: |
-      Remember these key facts:
-      1. Project: Mari Gunting (barber marketplace)
-      2. Structure: Monorepo, 2 apps (Customer 100%, Partner 50%)
-      3. Tech: React Native, Expo, TypeScript, Mock data
+      Core facts:
+      1. Project: Mari Gunting (on-demand barber booking, Malaysia)
+      2. Status: LIVE PRODUCTION with real users
+      3. Stack: React Native + Expo + Supabase (PostgreSQL)
       4. Location: /Users/bos/Desktop/ProjectSideIncome/mari-gunting
-      5. Shared code: packages/shared/ (types, services, utils)
-      6. Test logins: 11-111 1111 (customer), 22-222 2222 (partner)
-      7. Next task: Partner Schedule Management (Week 5)
-      8. Check PROJECT_CONTEXT.md for full context
+      5. Database: 29 tables, 75 RLS policies, 24 RPCs, PostGIS enabled
+      6. Structure: Monorepo (apps/customer, apps/partner, packages/shared)
+      7. Auth: Twilio SMS OTP + Supabase Auth
+      8. Region: Singapore (Supabase), Malaysia (target market)
+      
+      Read these for full context:
+      - PROJECT_OVERVIEW.md
+      - DATABASE_SCHEMA.md
+      - API_DOCUMENTATION.md
 
   # User Preferences
   - name: user_workflow
-    description: User's preferred development workflow
+    description: Developer (bos) preferences
     content: |
-      - User is "bos" on MacOS
-      - Working on mari-gunting project at 50% completion
-      - Prefers step-by-step guidance when adding features
-      - Wants AI to remember project context across sessions
-      - Uses Warp terminal for development
-      - Testing: Customer app on MacBook simulator, Partner on phone
+      - User: bos on MacOS
+      - Terminal: Warp with AI agent
+      - Development style: Full-stack (frontend + backend)
+      - Prefers: Clear explanations, production-quality code
+      - Testing: iOS Simulator (Customer), Physical device (Partner)
+      - Documentation: Keep organized, update existing files
+      - Commits: Test thoroughly before committing
 
 metadata:
   project: mari-gunting
-  version: "2.0"
-  last_updated: "2025-10-07"
+  version: "3.0"
+  last_updated: "2025-10-18"
+  status: production
   mcp_enabled: true

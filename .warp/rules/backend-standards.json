@@ -1,0 +1,82 @@
+{
+  "name": "Production Backend & Database Standards",
+  "description": "Backend development standards for Supabase/PostgreSQL production systems",
+  "rules": [
+    {
+      "title": "Database-First Mindset",
+      "content": "PostgreSQL is your source of truth. Think database-first:\n- Design schema with scalability in mind (indexes, constraints, foreign keys)\n- Use proper data types (TIMESTAMPTZ, UUID, JSONB where appropriate)\n- Normalize data properly, denormalize strategically for performance\n- Plan for data growth (partitioning, archival strategies)\n- Every table needs: id (primary key), created_at, updated_at\n- Use descriptive column names (no abbreviations unless standard)\n- Document schema changes in migration files with comments"
+    },
+    {
+      "title": "Row Level Security (RLS) is Mandatory",
+      "content": "NEVER create tables without RLS policies:\n- Enable RLS on ALL tables: ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;\n- Write policies for SELECT, INSERT, UPDATE, DELETE separately\n- Test policies thoroughly - wrong policy = data breach\n- Use auth.uid() to identify current user\n- Policy naming: {table}_{operation}_{role} (e.g., bookings_select_customer)\n- Policies should be restrictive by default, permissive only when needed\n- Document complex policies with comments\n- Test with different user roles before deploying"
+    },
+    {
+      "title": "RPC Functions Best Practices",
+      "content": "Write clean, performant PostgreSQL functions:\n- Function naming: snake_case, verb_noun pattern (get_nearby_barbers)\n- Always specify SECURITY DEFINER or INVOKER appropriately\n- Use SECURITY INVOKER by default (respects RLS)\n- Use SECURITY DEFINER only when bypassing RLS is necessary (with extreme caution)\n- Return proper types (TABLE, JSON, JSONB, or specific types)\n- Handle errors gracefully with RAISE EXCEPTION\n- Add input validation inside functions\n- Use transactions (BEGIN/COMMIT/ROLLBACK) for multi-step operations\n- Optimize queries (use EXPLAIN ANALYZE)\n- Add comments describing function purpose, parameters, return values"
+    },
+    {
+      "title": "Index Strategy",
+      "content": "Indexes are critical for production performance:\n- Index foreign keys (automatic performance boost)\n- Index columns used in WHERE, JOIN, ORDER BY\n- Composite indexes for common query patterns\n- Use partial indexes for filtered queries\n- B-tree (default) for equality/range, GiST for geo/JSONB\n- Monitor index usage: unused indexes waste space and slow writes\n- Use EXPLAIN ANALYZE to verify indexes are used\n- For geography: CREATE INDEX USING GIST (geography_column)\n- Name indexes: idx_{table}_{column(s)} (e.g., idx_bookings_customer_id)"
+    },
+    {
+      "title": "PostGIS for Location Features",
+      "content": "Leverage PostGIS properly:\n- Use GEOGRAPHY type for lat/lng (earth's curvature matters)\n- Create GiST indexes on geography columns for performance\n- Use ST_DWithin for radius queries (meters)\n- ST_Distance returns meters for GEOGRAPHY\n- Query pattern: ST_DWithin(point1, point2, distance_in_meters)\n- Set proper SRID (4326 for WGS84 - standard GPS coordinates)\n- Cache expensive geo calculations in materialized views if needed"
+    },
+    {
+      "title": "Triggers and Automation",
+      "content": "Use triggers for automatic data management:\n- updated_at: Trigger to auto-update on row changes\n- Audit logging: Track who changed what and when\n- Data validation: Enforce complex business rules\n- Trigger naming: trigger_{table}_{purpose} (e.g., trigger_bookings_update_timestamp)\n- Keep triggers fast - avoid heavy computation\n- Be cautious with cascading triggers (can cause performance issues)\n- Test trigger behavior thoroughly (unexpected side effects)\n- Document trigger logic in comments"
+    },
+    {
+      "title": "Transaction Management",
+      "content": "Handle multi-step operations safely:\n- Wrap related operations in transactions (BEGIN/COMMIT/ROLLBACK)\n- Use savepoints for partial rollbacks (SAVEPOINT, ROLLBACK TO)\n- Lock rows when needed (SELECT FOR UPDATE) to prevent race conditions\n- Keep transactions short - long transactions block other queries\n- Handle deadlocks gracefully with retry logic\n- Critical operations: payments, booking confirmations, balance updates\n- Never leave transactions open (always COMMIT or ROLLBACK)"
+    },
+    {
+      "title": "API Design Patterns",
+      "content": "Consistent API patterns across the application:\n- RESTful for simple CRUD, RPC functions for complex operations\n- Return consistent response format: {success: boolean, data: any, error: string}\n- Use proper HTTP status codes (even with RPC)\n- Handle pagination: limit, offset, total_count\n- Implement filtering and sorting in RPC functions\n- Validate inputs at API layer AND database layer\n- Return user-friendly error messages\n- Log errors server-side with request context"
+    },
+    {
+      "title": "Supabase Storage Best Practices",
+      "content": "Manage file uploads securely:\n- Organize buckets by purpose (avatars, documents, media)\n- Enable RLS on storage buckets\n- Write storage policies (similar to table RLS)\n- Validate file types and sizes before upload\n- Generate unique filenames (UUID + extension)\n- Use signed URLs for private content\n- Optimize images before storage (resize, compress)\n- Set proper MIME types\n- Implement cleanup for orphaned files"
+    },
+    {
+      "title": "Real-time Subscriptions",
+      "content": "Implement real-time features properly:\n- Subscribe to specific rows/filters (not entire tables)\n- Unsubscribe when component unmounts (prevent memory leaks)\n- Handle connection drops gracefully (reconnection logic)\n- Use channels for custom real-time events\n- Be mindful of payload size (affects performance)\n- Real-time is great for: notifications, chat, live tracking\n- Not for: bulk data, reports, analytics (use regular queries)"
+    },
+    {
+      "title": "Authentication & Authorization",
+      "content": "Security cannot be compromised:\n- Use Supabase Auth properly (JWT tokens, refresh tokens)\n- Never trust client-side data - always verify server-side\n- Implement role-based access control (customer, barber, admin)\n- Store user metadata in profiles table, not auth.users\n- Validate JWT tokens on every request\n- Implement proper session management\n- Rate limit authentication endpoints (prevent brute force)\n- Use secure password policies\n- Implement 2FA for sensitive operations"
+    },
+    {
+      "title": "Error Handling Strategy",
+      "content": "Production-grade error handling:\n- Catch and log all errors (never expose internal errors to users)\n- Use Sentry or similar for error tracking\n- Error levels: debug, info, warning, error, critical\n- Include context: user_id, request_id, timestamp, stack trace\n- Database errors: map to user-friendly messages\n- Network errors: implement retry logic with exponential backoff\n- Validation errors: return specific field-level errors\n- Handle edge cases: concurrent updates, race conditions, deadlocks"
+    },
+    {
+      "title": "Performance Optimization",
+      "content": "Keep the backend fast:\n- Use connection pooling (Supabase handles this)\n- Implement caching strategies (Redis, in-memory)\n- Optimize queries: EXPLAIN ANALYZE before production\n- Avoid N+1 queries (join data properly)\n- Use database views for complex repeated queries\n- Materialized views for expensive aggregations\n- Pagination for large datasets (never SELECT * without limits)\n- Monitor slow queries and optimize them\n- Set appropriate statement timeouts"
+    },
+    {
+      "title": "Database Migrations",
+      "content": "Manage schema changes safely:\n- Never edit production database directly\n- Write migration scripts (up and down)\n- Test migrations on staging first\n- Migrations should be idempotent (safe to run multiple times)\n- Version control all migrations\n- Document breaking changes clearly\n- Plan for zero-downtime migrations (for 24/7 systems)\n- Backup before major migrations\n- Migration naming: YYYYMMDD_HHMM_description.sql"
+    },
+    {
+      "title": "Data Validation",
+      "content": "Validate at multiple layers:\n- Client-side: UX feedback (not security)\n- API layer: Validate before database operations\n- Database layer: Constraints, check conditions, triggers\n- Check constraints for business rules (e.g., price > 0)\n- Foreign key constraints for referential integrity\n- Unique constraints where appropriate\n- NOT NULL for required fields\n- Use ENUM types for fixed option sets\n- Validate dates: booking date must be in future"
+    },
+    {
+      "title": "Backup and Recovery",
+      "content": "Production requires bulletproof backups:\n- Supabase provides automated daily backups\n- Export critical data regularly (additional safety)\n- Test restore procedures (backups are useless if you can't restore)\n- Document recovery procedures\n- Keep backup scripts version controlled\n- Monitor backup success/failure\n- Plan for disaster recovery scenarios\n- Backup includes: schema, data, storage files, configurations"
+    },
+    {
+      "title": "Environment Management",
+      "content": "Separate environments properly:\n- Use separate Supabase projects: dev, staging, production\n- Never test on production database\n- Environment variables for all configs (DATABASE_URL, API_KEYS)\n- Never commit secrets to git (.env in .gitignore)\n- Use different API keys per environment\n- Test thoroughly in staging before production\n- Production credentials: restricted access only"
+    },
+    {
+      "title": "Monitoring and Observability",
+      "content": "Know what's happening in production:\n- Monitor database performance (Supabase dashboard)\n- Track query performance and slow queries\n- Set up alerts: high CPU, connection limits, disk space\n- Monitor RPC function execution times\n- Track error rates and patterns\n- User activity metrics\n- Database connection pool usage\n- Storage usage trends\n- Log important events: auth, payments, bookings"
+    },
+    {
+      "title": "Code Review Checklist",
+      "content": "Before deploying backend changes:\n- [ ] RLS policies enabled and tested?\n- [ ] Indexes created for new queries?\n- [ ] Migration script tested on staging?\n- [ ] Error handling implemented?\n- [ ] Input validation at all layers?\n- [ ] Functions have proper SECURITY settings?\n- [ ] Performance tested with realistic data volume?\n- [ ] Rollback plan documented?\n- [ ] Breaking changes communicated?\n- [ ] Documentation updated?"
+    }
+  ]
+}

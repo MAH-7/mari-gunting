@@ -161,25 +161,29 @@ export default function MapPickerScreen() {
     // Address saved successfully!
     setShowBottomSheet(false);
     
-    // If in booking flow, set the address in context
+    // If in booking flow, only auto-select if no address was previously selected
+    // This respects the default address auto-selection
     if (booking) {
-      const fullAddress = [
-        savedAddress.address_line1,
-        savedAddress.address_line2,
-        savedAddress.city,
-        savedAddress.state,
-        savedAddress.postal_code
-      ].filter(Boolean).join(', ');
+      // Only auto-select the new address if user had no address selected
+      if (!booking.selectedAddress) {
+        const fullAddress = [
+          savedAddress.address_line1,
+          savedAddress.address_line2,
+          savedAddress.city,
+          savedAddress.state,
+          savedAddress.postal_code
+        ].filter(Boolean).join(', ');
+        
+        booking.setSelectedAddress({
+          id: savedAddress.id,
+          label: savedAddress.label,
+          fullAddress: fullAddress,
+          latitude: savedAddress.latitude,
+          longitude: savedAddress.longitude,
+        });
+      }
       
-      booking.setSelectedAddress({
-        id: savedAddress.id,
-        label: savedAddress.label,
-        fullAddress: fullAddress,
-        latitude: savedAddress.latitude,
-        longitude: savedAddress.longitude,
-      });
-      
-      // Return to booking
+      // Return to booking - user can manually select the new address if they want
       booking.returnToBooking();
     } else {
       // Normal flow: go back to addresses screen

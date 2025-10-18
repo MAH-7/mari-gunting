@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useLocation } from '@/hooks/useLocation';
 import { batchCalculateDistances, formatDuration } from '@mari-gunting/shared/utils/directions';
 import { ENV } from '@mari-gunting/shared/config/env';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function BarbersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,9 +43,22 @@ export default function BarbersScreen() {
       } : undefined,
     }),
     enabled: !!location, // Only fetch when location is available
-    refetchOnMount: true,
+    refetchOnMount: 'always', // Always refetch on mount
     refetchOnWindowFocus: false, // Disable auto-refetch, use real-time updates instead
+    staleTime: 0, // No cache
+    cacheTime: 0, // Don't keep in cache
   });
+
+  // Refetch when screen comes into focus (after viewing barber profile)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 Available Barbers screen focused - refreshing list');
+      // AGGRESSIVE: Remove all cached barber data
+      queryClient.removeQueries({ queryKey: ['barbers'] });
+      queryClient.invalidateQueries({ queryKey: ['barbers'] });
+      refetch();
+    }, [refetch, queryClient])
+  );
 
   // Local state for real-time updates (Grab's pattern)
   const [realtimeBarbers, setRealtimeBarbers] = useState<typeof rawBarbers>([]);
@@ -132,11 +146,44 @@ export default function BarbersScreen() {
         console.log('📡 Barbers channel status:', status);
       });
 
+    // Subscribe to bookings table changes (active booking status changes)
+    const bookingsChannel = supabase
+      .channel('bookings-changes-barbers')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'bookings',
+        },
+        (payload) => {
+          const newStatus = payload.new?.status;
+          const oldStatus = (payload.old as any)?.status;
+          const barberId = payload.new?.barber_id || (payload.old as any)?.barber_id;
+          
+          // Active booking statuses that make a barber busy
+          const activeStatuses = ['accepted', 'on_the_way', 'arrived', 'in_progress'];
+          const wasActive = oldStatus && activeStatuses.includes(oldStatus);
+          const isActive = newStatus && activeStatuses.includes(newStatus);
+          
+          // Refetch if booking status changed to/from active
+          if (wasActive !== isActive) {
+            console.log(`⚡ Booking status changed for barber ${barberId}: ${oldStatus} → ${newStatus}`);
+            console.log('🔄 Refetching barbers list...');
+            queryClient.invalidateQueries({ queryKey: ['barbers'] });
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Bookings channel status:', status);
+      });
+
     // Cleanup subscriptions on unmount
     return () => {
       console.log('🔌 Cleaning up subscriptions...');
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(barbersChannel);
+      supabase.removeChannel(bookingsChannel);
     };
   }, []); // No dependencies - set up once!
 
@@ -499,7 +546,10 @@ function BarberCard({ barber }: { barber: Barber }) {
       activeOpacity={0.7}
     >
       <View style={styles.cardInner}>
-        <Image source={{ uri: barber.avatar }} style={styles.avatar} />
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: barber.avatar }} style={styles.avatar} />
+          <View style={styles.onlineDot} />
+        </View>
         
         <View style={styles.info}>
           {/* Section 1: Identity */}
@@ -522,7 +572,7 @@ function BarberCard({ barber }: { barber: Barber }) {
             <View style={styles.metaRow}>
               <Ionicons name="star" size={14} color="#FBBF24" />
               <Text style={styles.rating}>{barber.rating.toFixed(1)}</Text>
-              <Text style={styles.reviewCount}>({barber.totalReviews})</Text>
+              <Text style={styles.reviewCount}>({barber.totalReviews} reviews)</Text>
               <Text style={styles.meta}>• {barber.completedJobs} jobs</Text>
             </View>
 
@@ -684,11 +734,25 @@ const styles = StyleSheet.create({
     gap: 14,
     alignItems: 'center',
   },
+  avatarContainer: {
+    position: 'relative',
+  },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 12,
     backgroundColor: '#F2F2F7',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#00B14F',
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
   },
   info: {
     flex: 1,
@@ -706,8 +770,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1C1C1E',
-    flex: 1,
     letterSpacing: -0.3,
+    flexShrink: 1,
   },
   // Section Divider
   sectionDivider: {

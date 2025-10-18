@@ -1,21 +1,25 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router } from 'expo-router';
+import { useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { addressService, CustomerAddress } from '@mari-gunting/shared/services/addressService';
 import { useStore } from '@/store/useStore';
-import { useBookingIfActive } from '@/contexts/BookingContext';
 
 export default function AddressesScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const queryClient = useQueryClient();
-  const params = useLocalSearchParams<{ fromBooking?: string }>();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
-  // Check if we're in booking flow via explicit param
-  const booking = useBookingIfActive();
-  const isFromBooking = params.fromBooking === 'true' && !!booking;
+  // Fade in animation
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   // Option C: No need to handle return from map - it all happens there!
 
@@ -86,32 +90,7 @@ export default function AddressesScreen() {
   };
 
   const handleAddNew = () => {
-    // Option C: Go to map picker (no special params needed!)
     router.push('/profile/map-picker');
-  };
-
-  const handleSelectAddress = (address: CustomerAddress) => {
-    if (booking) {
-      // We're in booking flow - use context!
-      const fullAddress = [
-        address.address_line1,
-        address.address_line2,
-        address.city,
-        address.state,
-        address.postal_code
-      ].filter(Boolean).join(', ');
-      
-      booking.setSelectedAddress({
-        id: address.id,
-        label: address.label,
-        fullAddress: fullAddress,
-        latitude: address.latitude,
-        longitude: address.longitude,
-      });
-      
-      // Return to booking (clean!)
-      booking.returnToBooking();
-    }
   };
 
   return (
@@ -121,50 +100,77 @@ export default function AddressesScreen() {
         <TouchableOpacity 
           onPress={() => router.back()}
           style={styles.backButton}
+          activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isFromBooking ? 'Select Address' : 'My Addresses'}
-        </Text>
-        <TouchableOpacity onPress={handleAddNew} style={styles.addButton}>
-          <Ionicons name="add" size={24} color="#00B14F" />
-        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>My Addresses</Text>
+          {addresses.length > 0 && (
+            <Text style={styles.headerSubtitle}>{addresses.length} saved</Text>
+          )}
+        </View>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading ? (
           <View style={styles.loadingContainer}>
+            <Ionicons name="location-outline" size={48} color="#D1D5DB" />
             <Text style={styles.loadingText}>Loading addresses...</Text>
           </View>
         ) : addresses.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="location-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No Addresses</Text>
+          <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="location" size={56} color="#00B14F" />
+            </View>
+            <Text style={styles.emptyTitle}>No Saved Addresses</Text>
             <Text style={styles.emptySubtext}>
-              Add your first address to get started
+              Add your home, work, or favorite locations{' \n'}for faster booking
             </Text>
-            <TouchableOpacity style={styles.emptyButton} onPress={handleAddNew}>
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.emptyButtonText}>Add Address</Text>
+            <TouchableOpacity 
+              style={styles.emptyButton} 
+              onPress={handleAddNew}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle" size={22} color="#FFFFFF" />
+              <Text style={styles.emptyButtonText}>Add New Address</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ) : (
-          addresses.map((address) => (
-            <AddressCard
-              key={address.id}
-              address={address}
-              onSetDefault={() => handleSetDefault(address)}
-              onEdit={() => handleEdit(address)}
-              onDelete={() => handleDelete(address)}
-              onSelect={isFromBooking ? () => handleSelectAddress(address) : undefined}
-              isFromBooking={isFromBooking}
-            />
-          ))
+          <Animated.View style={{ opacity: fadeAnim }}>
+            {addresses.map((address, index) => (
+              <AddressCard
+                key={address.id}
+                address={address}
+                onSetDefault={() => handleSetDefault(address)}
+                onEdit={() => handleEdit(address)}
+                onDelete={() => handleDelete(address)}
+                index={index}
+              />
+            ))}
+            
+            {/* Add New Address Card */}
+            <TouchableOpacity 
+              style={styles.addNewCard} 
+              onPress={handleAddNew}
+              activeOpacity={0.7}
+            >
+              <View style={styles.addNewIconContainer}>
+                <Ionicons name="add" size={24} color="#00B14F" />
+              </View>
+              <Text style={styles.addNewText}>Add New Address</Text>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </Animated.View>
         )}
+        
+        <View style={{ height: 24 }} />
       </ScrollView>
-
-      {/* Option C: No modal needed! Everything happens on map screen */}
     </SafeAreaView>
   );
 }
@@ -174,106 +180,94 @@ function AddressCard({
   onSetDefault,
   onEdit,
   onDelete,
-  onSelect,
-  isFromBooking,
+  index,
 }: {
   address: CustomerAddress;
   onSetDefault: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onSelect?: () => void;
-  isFromBooking?: boolean;
+  index: number;
 }) {
-  const [showActions, setShowActions] = useState(false);
+  // Icon based on label
+  const getIconName = () => {
+    const label = address.label.toLowerCase();
+    if (label.includes('home')) return 'home';
+    if (label.includes('work') || label.includes('office')) return 'briefcase';
+    return 'location';
+  };
+  
+  const iconName = getIconName();
 
   const CardContent = (
     <>
-      {/* Header */}
-      <View style={styles.addressHeader}>
-        <View style={styles.addressHeaderLeft}>
-          <View style={styles.locationIconContainer}>
-            <Ionicons name="location" size={18} color="#00B14F" />
+      <View style={styles.cardTop}>
+        {/* Icon and Label */}
+        <View style={styles.cardTopLeft}>
+          <View style={[styles.iconCircle, address.is_default && styles.iconCircleDefault]}>
+            <Ionicons 
+              name={iconName as any} 
+              size={18} 
+              color={address.is_default ? '#FFFFFF' : '#00B14F'} 
+            />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={styles.labelContainer}>
             <Text style={styles.addressLabel}>{address.label}</Text>
-          </View>
-        </View>
-        {address.is_default && (
-          <View style={styles.defaultBadge}>
-            <Ionicons name="star" size={10} color="#00B14F" />
-            <Text style={styles.defaultBadgeText}>Default</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Address Text */}
-      <View style={styles.addressDetailsContainer}>
-        <Text style={styles.addressText} numberOfLines={2}>
-          {address.address_line1}
-          {address.address_line2 && `, ${address.address_line2}`}
-        </Text>
-        <Text style={styles.addressCity}>
-          {address.city}, {address.state} {address.postal_code}
-        </Text>
-      </View>
-
-      {/* Actions */}
-      {isFromBooking ? (
-        <View style={styles.selectContainer}>
-          <View style={styles.selectDivider} />
-          <View style={styles.selectRow}>
-            <Text style={styles.selectHintText}>Tap to select</Text>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.addressActions}>
-          <View style={styles.actionsDivider} />
-          <View style={styles.actionsRow}>
-            {!address.is_default && (
-              <TouchableOpacity 
-                style={styles.actionButton} 
-                onPress={onSetDefault}
-                activeOpacity={0.6}
-              >
-                <Ionicons name="star-outline" size={20} color="#00B14F" />
-                <Text style={[styles.actionButtonText, { color: '#00B14F' }]}>Default</Text>
-              </TouchableOpacity>
+            {address.is_default && (
+              <View style={styles.defaultBadgeInline}>
+                <Ionicons name="star" size={12} color="#F59E0B" />
+                <Text style={styles.defaultBadgeText}>Default</Text>
+              </View>
             )}
-            <TouchableOpacity 
-              style={styles.actionButton} 
-              onPress={onEdit}
-              activeOpacity={0.6}
-            >
-              <Ionicons name="create-outline" size={20} color="#6B7280" />
-              <Text style={styles.actionButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.actionButton} 
-              onPress={onDelete}
-              activeOpacity={0.6}
-            >
-              <Ionicons name="trash-outline" size={20} color="#EF4444" />
-              <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Delete</Text>
-            </TouchableOpacity>
           </View>
         </View>
-      )}
+      </View>
+
+      {/* Full Address */}
+      <View style={styles.addressContent}>
+        <Text style={styles.addressTextMain} numberOfLines={1}>
+          {address.address_line1}
+        </Text>
+        <Text style={styles.addressTextSecondary} numberOfLines={1}>
+          {[
+            address.address_line2,
+            address.city,
+            address.state,
+            address.postal_code
+          ].filter(Boolean).join(', ')}
+        </Text>
+      </View>
+
+      {/* Actions Bottom */}
+      <View style={styles.cardActions}>
+        {!address.is_default && (
+          <TouchableOpacity 
+            style={styles.cardActionButton}
+            onPress={onSetDefault}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="star-outline" size={16} color="#6B7280" />
+            <Text style={styles.cardActionText}>Set Default</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity 
+          style={styles.cardActionButton}
+          onPress={onEdit}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="create-outline" size={16} color="#6B7280" />
+          <Text style={styles.cardActionText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.cardActionButton}
+          onPress={onDelete}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="trash-outline" size={16} color="#EF4444" />
+          <Text style={[styles.cardActionText, { color: '#EF4444' }]}>Delete</Text>
+        </TouchableOpacity>
+      </View>
     </>
   );
-
-  // In booking mode, make entire card tappable
-  if (isFromBooking) {
-    return (
-      <TouchableOpacity 
-        style={styles.addressCard} 
-        onPress={onSelect}
-        activeOpacity={0.7}
-      >
-        {CardContent}
-      </TouchableOpacity>
-    );
-  }
 
   return (
     <View style={styles.addressCard}>
@@ -287,202 +281,241 @@ function AddressCard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E7EB',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    letterSpacing: -0.4,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#D1FAE5',
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#8E8E93',
+    marginTop: 2,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   loadingContainer: {
-    paddingVertical: 60,
+    paddingVertical: 80,
     alignItems: 'center',
+    gap: 16,
   },
   loadingText: {
     fontSize: 15,
-    color: '#6B7280',
+    fontWeight: '500',
+    color: '#8E8E93',
   },
   emptyState: {
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: 32,
     alignItems: 'center',
-    gap: 20,
+  },
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginBottom: 12,
+    letterSpacing: -0.5,
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: '#8E8E93',
     textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
   },
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    gap: 10,
+    paddingHorizontal: 28,
+    paddingVertical: 15,
     backgroundColor: '#00B14F',
-    borderRadius: 12,
-    marginTop: 16,
+    borderRadius: 14,
+    shadowColor: '#00B14F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   emptyButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   addressCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  addressHeader: {
+  // Card Top Section
+  cardTop: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 10,
   },
-  addressHeaderLeft: {
+  cardTopLeft: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
     flex: 1,
+    gap: 10,
   },
-  locationIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#F0FDF4',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+  },
+  iconCircleDefault: {
+    backgroundColor: '#00B14F',
+    borderColor: '#00B14F',
+  },
+  labelContainer: {
+    flex: 1,
+    paddingTop: 0,
   },
   addressLabel: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '600',
+    color: '#1C1C1E',
     letterSpacing: -0.3,
-    marginTop: 6,
+    marginBottom: 3,
   },
-  defaultBadge: {
+  defaultBadgeInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#F0FDF4',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+    gap: 3,
+    alignSelf: 'flex-start',
   },
   defaultBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#00B14F',
-    letterSpacing: 0.3,
-  },
-  addressDetailsContainer: {
-    marginLeft: 42, // Align with label (icon width + gap)
-    marginBottom: 14,
-  },
-  addressText: {
-    fontSize: 15,
-    color: '#374151',
-    lineHeight: 22,
-    marginBottom: 4,
-  },
-  addressCity: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 20,
-  },
-  // Booking mode - Selection UI
-  selectContainer: {
-    marginTop: 4,
-  },
-  selectDivider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginBottom: 12,
-  },
-  selectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-  },
-  selectHintText: {
-    fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#F59E0B',
   },
-  // Management mode - Actions
-  addressActions: {
-    marginTop: 4,
+  // Address Content
+  addressContent: {
+    paddingLeft: 46, // Icon size + gap
+    marginBottom: 10,
   },
-  actionsDivider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginBottom: 12,
+  addressTextMain: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    lineHeight: 19,
+    marginBottom: 3,
   },
-  actionsRow: {
+  addressTextSecondary: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    lineHeight: 17,
+  },
+  // Card Actions
+  cardActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 10,
+    marginTop: 2,
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+  },
+  cardActionButton: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+  },
+  cardActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  // Add New Card
+  addNewCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  addNewIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  actionButtonText: {
+  addNewText: {
+    flex: 1,
     fontSize: 14,
     fontWeight: '600',
     color: '#6B7280',
   },
-  // Option C: All form/modal styles moved to AddressFormBottomSheet component
 });

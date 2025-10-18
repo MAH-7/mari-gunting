@@ -7,6 +7,7 @@ import { api } from '@/services/api';
 import SuccessModal from '@/components/SuccessModal';
 import { rewardsService, type UserVoucher } from '@/services/rewardsService';
 import { supabase } from '@mari-gunting/shared';
+import { bookingService } from '@mari-gunting/shared/services/bookingService';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -92,6 +93,8 @@ export default function PaymentMethodScreen() {
   const [userVouchers, setUserVouchers] = useState<UserVoucher[]>([]);
   const [isLoadingVouchers, setIsLoadingVouchers] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userCredits, setUserCredits] = useState(0);
+  const [useCredits, setUseCredits] = useState(false);
 
   // Load current user and their vouchers
   useEffect(() => {
@@ -114,10 +117,15 @@ export default function PaymentMethodScreen() {
 
       setCurrentUserId(user.id);
       
-      // Fetch active vouchers from Supabase
-      const vouchers = await rewardsService.getActiveUserVouchers(user.id);
+      // Fetch active vouchers and credits from Supabase
+      const [vouchers, credits] = await Promise.all([
+        rewardsService.getActiveUserVouchers(user.id),
+        rewardsService.getUserCredits(user.id),
+      ]);
       console.log('[payment-method] Loaded vouchers:', vouchers.length);
+      console.log('[payment-method] User credits:', credits);
       setUserVouchers(vouchers);
+      setUserCredits(credits);
     } catch (error) {
       console.error('[payment-method] Error loading vouchers:', error);
       setUserVouchers([]);
@@ -138,7 +146,11 @@ export default function PaymentMethodScreen() {
   };
   
   const discount = calculateDiscount();
-  const totalAmount = subtotal + travelCost + bookingFee - discount;
+  
+  // Calculate credits to apply
+  const creditsToApply = useCredits ? Math.min(userCredits, subtotal + travelCost + bookingFee - discount) : 0;
+  
+  const totalAmount = subtotal + travelCost + bookingFee - discount - creditsToApply;
   
   // Filter usable vouchers (not expired, not used, meets minimum spend)
   const usableVouchers = userVouchers.filter(uv => {
@@ -186,87 +198,108 @@ export default function PaymentMethodScreen() {
           
           console.log('🔄 Creating booking...');
           
-          // Fetch barber details to include in booking
-          const barberResponse = await api.getBarberById(params.barberId);
-          const barber = barberResponse.data;
-          
-          if (!barber) {
-            throw new Error('Barber not found');
+          if (!currentUserId) {
+            throw new Error('User not authenticated');
           }
-          
-          console.log('✅ Barber fetched:', barber.name);
           
           // Determine booking type
           const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
+          const isBarbershop = bookingType === 'scheduled-shop';
           
-          // Create booking with type-specific fields
-          const bookingPayload: any = {
-            type: bookingType as any,  // NEW: Include booking type
+          // Prepare booking params for Supabase RPC
+          const scheduledDate = isBarbershop && params.scheduledDate 
+            ? params.scheduledDate 
+            : new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+          
+          const scheduledTime = isBarbershop && params.scheduledTime
+            ? params.scheduledTime
+            : new Date().toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+          
+          const customerAddress = !isBarbershop ? {
+            line1: address.address_line1 || address.line1 || '',
+            line2: address.address_line2 || address.line2 || '',
+            city: address.city || '',
+            state: address.state || '',
+            postalCode: address.postal_code || address.postalCode || '',
+          } : null;
+          
+          // Create booking using Supabase RPC function
+          const createBookingResponse = await bookingService.createBooking({
+            customerId: currentUserId,
             barberId: params.barberId,
-            barberName: params.barberName,
-            barberAvatar: params.barberAvatar,
-            barber: barber,
-            customerId: currentUserId || 'user123', // Use authenticated user ID
             services: services,
-            serviceName: params.serviceName,
-            price: parseFloat(params.subtotal || '0'),
-            travelCost: parseFloat(params.travelCost || '0'),
-            platformFee: parseFloat(params.bookingFee || '0'), // Map bookingFee param to platformFee for API
-            serviceCommission: parseFloat(params.serviceCommission || '0'),
-            barberServiceEarning: parseFloat(params.barberServiceEarning || '0'),
-            totalPrice: totalAmount,
-            duration: parseInt(params.totalDuration || '0'),
+            scheduledDate: scheduledDate,
+            scheduledTime: scheduledTime,
+            serviceType: isBarbershop ? 'walk_in' : 'home_service',
+            barbershopId: params.shopId || null,
+            customerAddress: customerAddress,
+            customerNotes: params.serviceNotes || null,
             paymentMethod: 'cash',
-            status: 'pending',
-          };
+            travelFee: parseFloat(params.travelCost || '0'),
+            discountAmount: discount, // Pass voucher discount to apply to booking
+          });
           
-          // Add type-specific fields
-          if (bookingType === 'scheduled-shop') {
-            // Barbershop booking
-            bookingPayload.shopId = params.shopId;
-            bookingPayload.shopName = params.shopName;
-            bookingPayload.shopAddress = params.shopAddress;
-            bookingPayload.shopPhone = params.shopPhone;
-            bookingPayload.scheduledDate = params.scheduledDate;
-            bookingPayload.scheduledTime = params.scheduledTime;
-          } else {
-            // Freelance/on-demand booking
-            bookingPayload.addressId = params.addressId;
-            bookingPayload.address = address;
-            bookingPayload.distance = parseFloat(params.distance || '0');
-            bookingPayload.scheduledAt = new Date().toISOString();
+          if (!createBookingResponse.success || !createBookingResponse.data) {
+            throw new Error(createBookingResponse.error || 'Failed to create booking');
           }
-          
-          const createBookingResponse = await api.createBooking(bookingPayload);
           
           setIsProcessing(false);
           
-          const createdBookingId = createBookingResponse.data?.id;
+          // Supabase RPC returns { booking_id, booking_number, total_price, message }
+          const createdBookingId = createBookingResponse.data.booking_id;
           
           if (createdBookingId) {
             console.log('✅ Booking created with ID:', createdBookingId);
+            console.log('📋 Booking number:', createBookingResponse.data.booking_number);
             
             // Apply voucher to booking if one was selected
-            if (selectedVoucher && currentUserId) {
+            if (selectedVoucher && currentUserId && discount > 0) {
               try {
+                // Since we already passed discount to create_booking,
+                // we just need to mark the voucher as used and create booking_vouchers record
                 const result = await rewardsService.applyVoucherToBooking(
                   createdBookingId,
                   selectedVoucher.id,
                   subtotal + travelCost + bookingFee, // original total
                   discount, // discount applied
-                  totalAmount // final total
+                  totalAmount // final total (already has discount applied)
                 );
                 
                 if (!result.success) {
                   console.error('Failed to apply voucher:', result.error);
-                  Alert.alert(
-                    'Voucher Application Failed',
-                    'Your booking was created but the voucher could not be applied. Please contact support.',
-                    [{ text: 'OK' }]
-                  );
+                  // Important: The discount was already applied in create_booking,
+                  // this just tracks voucher usage for audit purposes
                 }
               } catch (voucherError) {
                 console.error('Error applying voucher:', voucherError);
+                // The discount is already applied, this is just for tracking
+              }
+            }
+            
+            // Deduct credits if used
+            if (useCredits && creditsToApply > 0 && currentUserId) {
+              try {
+                const result = await rewardsService.deductCredit(
+                  currentUserId,
+                  creditsToApply,
+                  'booking_payment',
+                  `Payment for booking #${createBookingResponse.data.booking_number}`,
+                  createdBookingId,
+                  {
+                    booking_number: createBookingResponse.data.booking_number,
+                    original_amount: subtotal + travelCost + bookingFee,
+                    discount_amount: discount,
+                    credits_used: creditsToApply,
+                    final_amount: totalAmount,
+                  }
+                );
+                
+                if (!result.success) {
+                  console.error('Failed to deduct credits:', result.error);
+                  // Note: Booking already created, so we log but don't fail
+                }
+              } catch (creditError) {
+                console.error('Error deducting credits:', creditError);
                 // Don't block the booking flow, just log the error
               }
             }
@@ -402,6 +435,40 @@ export default function PaymentMethodScreen() {
                 </View>
               )}
             </TouchableOpacity>
+          )}
+          
+          {/* Credits section */}
+          {userCredits > 0 && (
+            <TouchableOpacity 
+              style={[styles.creditsButton, useCredits && styles.creditsButtonActive]}
+              onPress={() => setUseCredits(!useCredits)}
+            >
+              <View style={styles.creditsButtonLeft}>
+                <Ionicons name="wallet-outline" size={20} color={useCredits ? '#00B14F' : '#6B7280'} />
+                <View>
+                  <Text style={[styles.creditsButtonText, useCredits && styles.creditsButtonTextActive]}>
+                    Use Mari Credits
+                  </Text>
+                  <Text style={styles.creditsAvailable}>
+                    Available: {rewardsService.formatCreditAmount(userCredits)}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.checkbox, useCredits && styles.checkboxActive]}>
+                {useCredits && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+              </View>
+            </TouchableOpacity>
+          )}
+          
+          {/* Credits applied */}
+          {creditsToApply > 0 && (
+            <View style={[styles.priceRow, styles.discountRow]}>
+              <View style={styles.discountLeft}>
+                <Ionicons name="wallet" size={14} color="#00B14F" />
+                <Text style={styles.discountLabel}>Credits Applied</Text>
+              </View>
+              <Text style={styles.discountValue}>-{rewardsService.formatCreditAmount(creditsToApply)}</Text>
+            </View>
           )}
           
           <View style={styles.divider} />
@@ -990,5 +1057,53 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#6B7280',
     marginTop: 16,
+  },
+  // Credits button styles
+  creditsButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    padding: 14,
+    borderRadius: 12,
+    marginVertical: 8,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+  },
+  creditsButtonActive: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#00B14F',
+  },
+  creditsButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  creditsButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  creditsButtonTextActive: {
+    color: '#00B14F',
+  },
+  creditsAvailable: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: '#00B14F',
+    borderColor: '#00B14F',
   },
 });

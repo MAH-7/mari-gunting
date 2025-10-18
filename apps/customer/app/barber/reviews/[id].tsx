@@ -219,6 +219,14 @@ export default function BarberReviewsScreen() {
                     </View>
                     <View style={styles.reviewCustomerDetails}>
                       <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
+                      {review.services && review.services.length > 0 && (
+                        <View style={styles.reviewServices}>
+                          <Ionicons name="cut" size={12} color="#00B14F" />
+                          <Text style={styles.reviewServicesText}>
+                            {review.services.map((s: any) => s.name).join(', ')}
+                          </Text>
+                        </View>
+                      )}
                       <Text style={styles.reviewDate}>
                         {new Date(review.createdAt).toLocaleDateString('en-MY', { 
                           month: 'short', 
@@ -491,6 +499,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1C1C1E',
     marginBottom: 2,
+  },
+  reviewServices: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  reviewServicesText: {
+    fontSize: 12,
+    color: '#00B14F',
+    fontWeight: '500',
   },
   reviewDate: {
     fontSize: 12,

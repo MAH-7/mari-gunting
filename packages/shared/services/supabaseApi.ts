@@ -225,6 +225,21 @@ export const supabaseApi = {
         const result = await query;
         barbersData = result.data;
         error = result.error;
+        
+        // Client-side filter: Exclude barbers with active bookings
+        if (barbersData && barbersData.length > 0) {
+          const barberIds = barbersData.map((b: any) => b.id);
+          const { data: activeBookings } = await supabase
+            .from('bookings')
+            .select('barber_id')
+            .in('barber_id', barberIds)
+            .in('status', ['accepted', 'on_the_way', 'arrived', 'in_progress']);
+          
+          const busyBarberIds = new Set((activeBookings || []).map((b: any) => b.barber_id));
+          barbersData = barbersData.filter((b: any) => !busyBarberIds.has(b.id));
+          
+          console.log(`🚫 Filtered out ${busyBarberIds.size} busy barbers`);
+        }
       }
 
       if (error) {
@@ -281,7 +296,7 @@ export const supabaseApi = {
             bio: barber.bio || '',
             rating: barber.average_rating || 0,
             totalReviews: barber.total_reviews || 0,
-            completedJobs: 0,
+            completedJobs: barber.completed_bookings || 0,
             services: (servicesByBarber[barber.id] || []).map((s: any) => ({
               id: s.id,
               name: s.name,
@@ -584,6 +599,7 @@ export const supabaseApi = {
           bookings (
             id,
             customer_id,
+            services,
             profiles (
               full_name,
               avatar_url
@@ -615,6 +631,7 @@ export const supabaseApi = {
         customerAvatar: review.bookings?.profiles?.avatar_url || null,
         rating: review.rating,
         comment: review.comment,
+        services: review.bookings?.services || [],
         createdAt: review.created_at,
         response: review.response ? {
           text: review.response,

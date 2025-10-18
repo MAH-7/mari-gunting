@@ -22,7 +22,6 @@ export default function CreateBookingScreen() {
   
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [serviceNotes, setServiceNotes] = useState<string>('');
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMinutes: number } | null>(null);
 
@@ -153,14 +152,7 @@ export default function CreateBookingScreen() {
       return;
     }
 
-    // Show confirmation modal instead of navigating directly
-    setShowConfirmModal(true);
-  };
-  
-  const handleConfirmBooking = () => {
-    setShowConfirmModal(false);
-    
-    // Navigate to payment method selection with complete booking data
+    // Navigate directly to payment screen
     router.push({
       pathname: '/payment-method',
       params: {
@@ -352,7 +344,10 @@ export default function CreateBookingScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Barber</Text>
           <View style={styles.barberCard}>
-            <Image source={{ uri: barber.avatar }} style={styles.barberAvatar} />
+            <View style={styles.barberAvatarContainer}>
+              <Image source={{ uri: barber.avatar }} style={styles.barberAvatar} />
+              <View style={styles.barberOnlineDot} />
+            </View>
             <View style={styles.barberInfo}>
               <View style={styles.barberNameRow}>
                 <Text style={styles.barberName}>{barber.name}</Text>
@@ -364,6 +359,7 @@ export default function CreateBookingScreen() {
                 <Ionicons name="star" size={14} color="#FBBF24" />
                 <Text style={styles.ratingText}>{barber.rating.toFixed(1)}</Text>
                 <Text style={styles.reviewsText}>({barber.totalReviews} reviews)</Text>
+                <Text style={styles.jobsText}>• {barber.completedJobs} jobs</Text>
               </View>
               <View style={styles.distanceRow}>
                 <Ionicons name="location" size={14} color="#00B14F" />
@@ -504,10 +500,10 @@ export default function CreateBookingScreen() {
 
         {/* Service Notes */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Special Requests (Optional)</Text>
+          <Text style={styles.sectionTitle}>Add Note for Barber (Optional)</Text>
           <TextInput
             style={styles.notesInput}
-            placeholder="E.g., Please bring extra hair product, specific haircut style..."
+            placeholder='E.g., "Prefer fade style", "Need quick service", "First time customer"'
             placeholderTextColor="#9CA3AF"
             value={serviceNotes}
             onChangeText={setServiceNotes}
@@ -575,107 +571,6 @@ export default function CreateBookingScreen() {
           )}
         </TouchableOpacity>
       </View>
-      
-      {/* Confirmation Modal */}
-      <Modal
-        visible={showConfirmModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowConfirmModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Confirm Your Request</Text>
-              <TouchableOpacity 
-                onPress={() => setShowConfirmModal(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Barber Info */}
-            <View style={styles.modalSection}>
-              <View style={styles.modalRow}>
-                <Ionicons name="person" size={20} color="#6B7280" />
-                <View style={styles.modalRowContent}>
-                  <Text style={styles.modalLabel}>Barber</Text>
-                  <Text style={styles.modalValue}>{barber.name}</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Services */}
-            <View style={styles.modalSection}>
-              <View style={styles.modalRow}>
-                <Ionicons name="cut" size={20} color="#6B7280" />
-                <View style={styles.modalRowContent}>
-                  <Text style={styles.modalLabel}>Services</Text>
-                  <Text style={styles.modalValue}>
-                    {selectedServices.map(s => s.name).join(', ')}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Location */}
-            <View style={styles.modalSection}>
-              <View style={styles.modalRow}>
-                <Ionicons name="location" size={20} color="#6B7280" />
-                <View style={styles.modalRowContent}>
-                  <Text style={styles.modalLabel}>Location</Text>
-                  <Text style={styles.modalValue}>
-                    {selectedAddr?.label || 'Selected Address'}
-                  </Text>
-                  <Text style={styles.modalSubValue}>{selectedAddr?.fullAddress}</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* ETA */}
-            <View style={styles.modalSection}>
-              <View style={styles.modalRow}>
-                <Ionicons name="time" size={20} color="#6B7280" />
-                <View style={styles.modalRowContent}>
-                  <Text style={styles.modalLabel}>Estimated Arrival</Text>
-                  <Text style={styles.modalValue}>~{estimatedETA} minutes</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Total */}
-            <View style={styles.modalTotalSection}>
-              <View style={styles.modalRow}>
-                <Ionicons name="cash" size={20} color="#00B14F" />
-                <View style={styles.modalRowContent}>
-                  <Text style={styles.modalLabel}>Total Payment</Text>
-                  <Text style={styles.modalTotalValue}>{formatPrice(total)}</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Action Buttons */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalBackButton}
-                onPress={() => setShowConfirmModal(false)}
-                activeOpacity={ACTIVE_OPACITY.SECONDARY}
-              >
-                <Text style={styles.modalBackButtonText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.modalConfirmButton}
-                onPress={handleConfirmBooking}
-                activeOpacity={ACTIVE_OPACITY.PRIMARY}
-              >
-                <Text style={styles.modalConfirmButtonText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -789,11 +684,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  barberAvatarContainer: {
+    position: 'relative',
+  },
   barberAvatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: '#E5E5EA',
+  },
+  barberOnlineDot: {
+    position: 'absolute',
+    bottom: 1,
+    right: 1,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#00B14F',
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
   },
   barberInfo: {
     flex: 1,
@@ -821,6 +730,10 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   reviewsText: {
+    fontSize: 13,
+    color: '#8E8E93',
+  },
+  jobsText: {
     fontSize: 13,
     color: '#8E8E93',
   },

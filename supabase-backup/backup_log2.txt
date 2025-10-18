@@ -1,0 +1,6 @@
+pg_dump: error: connection to server at "aws-0-ap-southeast-1.pooler.supabase.com" (52.74.252.201), port 6543 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "aws-0-ap-southeast-1.pooler.supabase.com" (54.255.219.82), port 6543 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "aws-0-ap-southeast-1.pooler.supabase.com" (52.77.146.31), port 6543 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?

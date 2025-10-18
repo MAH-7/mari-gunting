@@ -1,0 +1,28 @@
+-- ============================================
+-- TABLES WITH ROW LEVEL SECURITY ENABLED
+-- Total: 23 tables
+-- ============================================
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.barbershops ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payouts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.otp_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.barbershop_onboarding ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.customer_credits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.credit_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.barbers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.points_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.booking_vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.onboarding_verification_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.barber_onboarding ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.customer_addresses ENABLE ROW LEVEL SECURITY;

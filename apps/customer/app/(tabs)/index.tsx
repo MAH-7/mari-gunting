@@ -92,11 +92,25 @@ export default function HomeScreen() {
         isOnline: selectedFilter === "online" ? true : undefined,
         isAvailable: selectedFilter === "online" ? true : undefined,
       }),
-    refetchOnMount: true,
+    refetchOnMount: 'always', // Always refetch on mount
     refetchOnWindowFocus: true,
+    staleTime: 0, // Don't cache - always fetch fresh data
+    cacheTime: 0, // Don't keep in cache
   });
 
-  // Real-time subscription for barber availability changes
+  // Refetch barbers when screen comes into focus (after completing a booking)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 Home screen focused - refreshing barbers list');
+      // AGGRESSIVE: Remove all cached barber data
+      queryClient.removeQueries({ queryKey: ['barbers'] });
+      queryClient.invalidateQueries({ queryKey: ['barbers'] });
+      // Force immediate refetch
+      refetch();
+    }, [refetch, queryClient])
+  );
+
+  // Real-time subscription for barber availability changes AND booking completions
   useEffect(() => {
     // Subscribe to profiles table changes (is_online)
     const profilesChannel = supabase
@@ -117,7 +131,7 @@ export default function HomeScreen() {
       )
       .subscribe();
 
-    // Subscribe to barbers table changes (is_available)
+    // Subscribe to barbers table changes (is_available, total_bookings)
     const barbersChannel = supabase
       .channel('home-barbers-changes')
       .on(
@@ -126,11 +140,29 @@ export default function HomeScreen() {
           event: 'UPDATE',
           schema: 'public',
           table: 'barbers',
-          filter: 'is_available=neq.null',
         },
         (payload) => {
-          console.log('🔔 Barber availability changed:', payload);
-          // Force immediate refetch
+          console.log('🔔 Barber data changed:', payload);
+          // Force immediate refetch to get updated stats
+          refetch();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to bookings completion to refresh barber stats
+    const bookingsChannel = supabase
+      .channel('home-bookings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bookings',
+          filter: 'status=eq.completed',
+        },
+        (payload) => {
+          console.log('🔔 Booking completed, refreshing barber stats:', payload);
+          // Refetch barbers to get updated completedJobs count
           refetch();
         }
       )
@@ -140,6 +172,7 @@ export default function HomeScreen() {
     return () => {
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(barbersChannel);
+      supabase.removeChannel(bookingsChannel);
     };
   }, [queryClient, refetch]);
 

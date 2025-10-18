@@ -1,15 +1,17 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
 import { useStore } from '@/store/useStore';
-import { mockBookings } from '@/services/mockData';
 import { Booking, BookingStatus } from '@/types';
 import * as ImagePicker from 'expo-image-picker';
 import * as Device from 'expo-device';
 import { locationTrackingService } from '@mari-gunting/shared/services/locationTrackingService';
+import { bookingService } from '@mari-gunting/shared/services/bookingService';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'completed';
 
@@ -21,13 +23,13 @@ type ChecklistItem = {
 
 export default function PartnerJobsScreen() {
   const currentUser = useStore((state) => state.currentUser);
+  const queryClient = useQueryClient();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedJob, setSelectedJob] = useState<Booking | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Job status overrides (simulating backend updates)
-  const [jobStatusOverrides, setJobStatusOverrides] = useState<Record<string, BookingStatus>>({});
+  const [showNewBookingAlert, setShowNewBookingAlert] = useState(false);
+  const [barberId, setBarberId] = useState<string | null>(null);
   
   // Completion flow state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -35,21 +37,144 @@ export default function PartnerJobsScreen() {
     { id: '1', label: 'Service completed to satisfaction', checked: false },
     { id: '2', label: 'Area cleaned up', checked: false },
     { id: '3', label: 'Customer happy with result', checked: false },
-    { id: '4', label: 'Payment confirmed', checked: false },
+    { id: '4', label: 'Payment confirmed (Cash collected)', checked: false },
   ]);
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
 
-  // Filter jobs by partner and apply status overrides
-  const partnerJobs = useMemo(() => {
-    if (!currentUser) return [];
-    return mockBookings
-      .filter(b => b.barberId === currentUser.id)
-      .map(job => ({
-        ...job,
-        status: jobStatusOverrides[job.id] || job.status
-      }));
-  }, [currentUser, jobStatusOverrides]);
+  // Fetch barber ID from barbers table using user_id
+  useEffect(() => {
+    const fetchBarberId = async () => {
+      if (!currentUser?.id) return;
+      
+      const { data, error } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .single();
+      
+      if (error) {
+        console.error('❌ Error fetching barber ID:', error);
+        return;
+      }
+      
+      console.log('✅ Barber ID found:', data.id);
+      setBarberId(data.id);
+    };
+    
+    fetchBarberId();
+  }, [currentUser?.id]);
+
+  // REAL SUPABASE QUERY - Fetch barber bookings
+  const { data: bookingsResponse, isLoading } = useQuery({
+    queryKey: ['barber-bookings', barberId],
+    queryFn: async () => {
+      console.log('🔍 Fetching bookings for barber ID:', barberId);
+      const result = await bookingService.getBarberBookings(barberId || '');
+      console.log('📦 Bookings response:', result);
+      return result;
+    },
+    enabled: !!barberId,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const partnerJobs = bookingsResponse?.data || [];
+  
+  // Debug: Log current state
+  useEffect(() => {
+    console.log('👤 Current User ID:', currentUser?.id);
+    console.log('👨‍🦰 Barber ID:', barberId);
+    console.log('📊 Partner Jobs Count:', partnerJobs.length);
+    console.log('📋 Partner Jobs:', partnerJobs);
+  }, [currentUser?.id, barberId, partnerJobs]);
+
+  // CRITICAL: Auto-update selectedJob when data refreshes from backend
+  useEffect(() => {
+    if (selectedJob && partnerJobs.length > 0) {
+      const updatedJob = partnerJobs.find(j => j.id === selectedJob.id);
+      if (updatedJob) {
+        // Check if status changed
+        if (updatedJob.status !== selectedJob.status) {
+          console.log('🔄 Auto-updating selectedJob status:', selectedJob.status, '→', updatedJob.status);
+          setSelectedJob(updatedJob);
+        }
+        // Also update if other fields changed (e.g., timestamps)
+        else if (JSON.stringify(updatedJob) !== JSON.stringify(selectedJob)) {
+          console.log('🔄 Refreshing selectedJob data');
+          setSelectedJob(updatedJob);
+        }
+      }
+    }
+  }, [partnerJobs, selectedJob?.id]); // Watch partnerJobs changes for this specific job
+
+  // Real-time subscription for new bookings
+  useEffect(() => {
+    if (!barberId) return;
+
+    console.log('🔊 Setting up realtime subscription for barber:', barberId);
+
+    const channel = supabase
+      .channel('new-bookings')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'bookings',
+          filter: `barber_id=eq.${barberId}`,
+        },
+        (payload) => {
+          console.log('🔔 New booking received!', payload);
+          
+          Alert.alert(
+            '🔔 New Booking Request!',
+            'You have a new booking request. Tap to view.',
+            [
+              { text: 'Later', style: 'cancel' },
+              { 
+                text: 'View Now', 
+                onPress: () => {
+                  queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+                  setFilterStatus('pending');
+                }
+              }
+            ]
+          );
+          
+          queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [barberId, queryClient]);
+
+  // Mutation for updating booking status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ bookingId, newStatus }: { bookingId: string; newStatus: string }) =>
+      bookingService.updateBookingStatus(bookingId, newStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.message || 'Failed to update status');
+    },
+  });
+
+  // Mutation for confirming cash payment
+  const confirmCashMutation = useMutation({
+    mutationFn: ({ bookingId, barberId }: { bookingId: string; barberId: string }) => 
+      bookingService.confirmCashPayment(bookingId, barberId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+      Alert.alert('✅ Payment Confirmed', 'Cash payment has been recorded.');
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.message || 'Failed to confirm payment');
+    },
+  });
 
   // Apply filters and search
   const filteredJobs = useMemo(() => {
@@ -59,7 +184,7 @@ export default function PartnerJobsScreen() {
     if (filterStatus === 'pending') {
       jobs = jobs.filter(j => j.status === 'pending');
     } else if (filterStatus === 'active') {
-      jobs = jobs.filter(j => ['accepted', 'on-the-way', 'in-progress'].includes(j.status));
+      jobs = jobs.filter(j => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(j.status));
     } else if (filterStatus === 'completed') {
       jobs = jobs.filter(j => ['completed', 'cancelled'].includes(j.status));
     }
@@ -81,7 +206,7 @@ export default function PartnerJobsScreen() {
   const filterCounts = useMemo(() => ({
     all: partnerJobs.length,
     pending: partnerJobs.filter(j => j.status === 'pending').length,
-    active: partnerJobs.filter(j => ['accepted', 'on-the-way', 'in-progress'].includes(j.status)).length,
+    active: partnerJobs.filter(j => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(j.status)).length,
     completed: partnerJobs.filter(j => ['completed', 'cancelled'].includes(j.status)).length,
   }), [partnerJobs]);
 
@@ -113,30 +238,42 @@ export default function PartnerJobsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
     await new Promise(resolve => setTimeout(resolve, 1000));
     setRefreshing(false);
-  };
-
-  const updateJobStatus = (jobId: string, newStatus: BookingStatus) => {
-    setJobStatusOverrides(prev => ({ ...prev, [jobId]: newStatus }));
-    // Update selectedJob if it's the current one
-    if (selectedJob?.id === jobId) {
-      setSelectedJob({ ...selectedJob, status: newStatus });
-    }
   };
 
   const handleAcceptJob = (job: Booking) => {
     Alert.alert(
       'Accept Job',
-      `Accept booking from ${job.customer?.name}?`,
+      `Accept booking from ${job.customer?.full_name || job.customer?.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Accept',
-          onPress: () => {
-            updateJobStatus(job.id, 'accepted');
-            Alert.alert('Success', 'Job accepted successfully!');
-            // Don't close modal, let user see updated status
+          onPress: async () => {
+            try {
+              // Optimistic update - Update UI immediately for smooth UX
+              const updatedJob = { ...job, status: 'accepted' as BookingStatus };
+              setSelectedJob(updatedJob);
+              
+              // Update backend
+              await updateStatusMutation.mutateAsync({ 
+                bookingId: job.id, 
+                newStatus: 'accepted' 
+              });
+              
+              // Keep modal open - show success and next action
+              Alert.alert(
+                '✅ Job Accepted', 
+                'Great! You can now start heading to the customer location.',
+                [{ text: 'OK' }]
+              );
+            } catch (error: any) {
+              // Rollback on error
+              setSelectedJob(job);
+              Alert.alert('Error', error.message || 'Failed to accept job');
+            }
           },
         },
       ]
@@ -152,8 +289,11 @@ export default function PartnerJobsScreen() {
         {
           text: 'Reject',
           style: 'destructive',
-          onPress: () => {
-            updateJobStatus(job.id, 'cancelled');
+          onPress: async () => {
+            await updateStatusMutation.mutateAsync({ 
+              bookingId: job.id, 
+              newStatus: 'rejected' 
+            });
             Alert.alert('Job Rejected', 'You can still view this in your history.');
             setSelectedJob(null);
           },
@@ -165,14 +305,21 @@ export default function PartnerJobsScreen() {
   const handleOnTheWay = async (job: Booking) => {
     Alert.alert(
       "I'm on the way",
-      `Let ${job.customer?.name} know you're heading to their location?`,
+      `Let ${job.customer?.full_name || job.customer?.name} know you're heading to their location?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: "I'm on the way",
           onPress: async () => {
             try {
-              updateJobStatus(job.id, 'on-the-way');
+              // Optimistic update
+              const updatedJob = { ...job, status: 'on_the_way' as BookingStatus };
+              setSelectedJob(updatedJob);
+              
+              await updateStatusMutation.mutateAsync({ 
+                bookingId: job.id, 
+                newStatus: 'on_the_way' 
+              });
               
               // Switch location tracking to on-the-way mode (frequent updates)
               if (currentUser?.id) {
@@ -180,11 +327,15 @@ export default function PartnerJobsScreen() {
                 console.log('📍 Switched to on-the-way tracking mode');
               }
               
-              Alert.alert('Status Updated', 'Customer has been notified that you\'re on the way!\n\nLocation tracking: Every 1.5 minutes');
-              // Don't close modal, let user see updated status and timeline
+              Alert.alert(
+                '🚗 On The Way', 
+                'Customer notified! Location tracking active.\n\nTip: Use GPS for accurate navigation.',
+                [{ text: 'OK' }]
+              );
             } catch (err) {
-              console.error('❌ Error switching tracking mode:', err);
-              Alert.alert('Status Updated', 'Customer notified, but location tracking may need attention.');
+              console.error('❌ Error:', err);
+              setSelectedJob(job); // Rollback
+              Alert.alert('Error', 'Failed to update status. Please try again.');
             }
           },
         },
@@ -195,14 +346,21 @@ export default function PartnerJobsScreen() {
   const handleArrived = async (job: Booking) => {
     Alert.alert(
       'Arrived at Location',
-      `Confirm you've arrived at ${job.customer?.name}'s location?`,
+      `Confirm you've arrived at ${job.customer?.full_name || job.customer?.name}'s location?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm Arrival',
           onPress: async () => {
             try {
-              updateJobStatus(job.id, 'arrived');
+              // Optimistic update
+              const updatedJob = { ...job, status: 'arrived' as BookingStatus };
+              setSelectedJob(updatedJob);
+              
+              await updateStatusMutation.mutateAsync({ 
+                bookingId: job.id, 
+                newStatus: 'arrived' 
+              });
               
               // Switch back to idle mode (less frequent updates) when arrived
               if (currentUser?.id && locationTrackingService.isCurrentlyTracking()) {
@@ -210,11 +368,15 @@ export default function PartnerJobsScreen() {
                 console.log('📍 Switched back to idle tracking mode');
               }
               
-              Alert.alert('Arrival Confirmed', 'Customer notified of your arrival!');
-              // Don't close modal
+              Alert.alert(
+                '📍 Arrival Confirmed', 
+                'Customer notified! Ready to start the service.',
+                [{ text: 'OK' }]
+              );
             } catch (err) {
-              console.error('❌ Error switching tracking mode:', err);
-              Alert.alert('Arrival Confirmed', 'Customer notified!');
+              console.error('❌ Error:', err);
+              setSelectedJob(job); // Rollback
+              Alert.alert('Error', 'Failed to confirm arrival. Please try again.');
             }
           },
         },
@@ -230,10 +392,26 @@ export default function PartnerJobsScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Start Service',
-          onPress: () => {
-            updateJobStatus(job.id, 'in-progress');
-            Alert.alert('Service Started', 'Timer started. Good luck!');
-            // Don't close modal
+          onPress: async () => {
+            try {
+              // Optimistic update
+              const updatedJob = { ...job, status: 'in_progress' as BookingStatus };
+              setSelectedJob(updatedJob);
+              
+              await updateStatusMutation.mutateAsync({ 
+                bookingId: job.id, 
+                newStatus: 'in_progress' 
+              });
+              
+              Alert.alert(
+                '✂️ Service Started', 
+                'Timer started. Take your time and do great work!',
+                [{ text: 'OK' }]
+              );
+            } catch (error: any) {
+              setSelectedJob(job); // Rollback
+              Alert.alert('Error', error.message || 'Failed to start service');
+            }
           },
         },
       ]
@@ -283,35 +461,54 @@ export default function PartnerJobsScreen() {
     finalizeJobCompletion();
   };
   
-  const finalizeJobCompletion = () => {
-    // Update job status to completed
-    if (selectedJob) {
-      updateJobStatus(selectedJob.id, 'completed');
-    }
-    
-    // TODO: Submit completion data to backend
-    Alert.alert(
-      'Job Completed! 🎉',
-      `Great work! RM ${selectedJob?.totalPrice} will be credited to your account.`,
-      [
-        {
-          text: 'Done',
-          onPress: () => {
-            setShowCompletionModal(false);
-            setSelectedJob(null);
-            // Reset completion state
-            setCompletionChecklist([
-              { id: '1', label: 'Service completed to satisfaction', checked: false },
-              { id: '2', label: 'Area cleaned up', checked: false },
-              { id: '3', label: 'Customer happy with result', checked: false },
-              { id: '4', label: 'Payment confirmed', checked: false },
-            ]);
-            setBeforePhotos([]);
-            setAfterPhotos([]);
+  const finalizeJobCompletion = async () => {
+    if (!selectedJob) return;
+
+    try {
+      // Update job status to completed
+      await updateStatusMutation.mutateAsync({ 
+        bookingId: selectedJob.id, 
+        newStatus: 'completed' 
+      });
+
+      // If cash payment, confirm it was collected
+      if (selectedJob.payment_method === 'cash' && currentUser?.id) {
+        await confirmCashMutation.mutateAsync({
+          bookingId: selectedJob.id,
+          barberId: currentUser.id,
+        });
+      }
+
+      const paymentMessage = selectedJob.payment_method === 'cash' 
+        ? 'Cash payment has been recorded' 
+        : 'will be credited to your account';
+
+      Alert.alert(
+        'Job Completed! 🎉',
+        `Great work! RM ${selectedJob.total_price || selectedJob.totalPrice} ${paymentMessage}.`,
+        [
+          {
+            text: 'Done',
+            onPress: () => {
+              setShowCompletionModal(false);
+              setSelectedJob(null);
+              // Reset completion state
+              setCompletionChecklist([
+                { id: '1', label: 'Service completed to satisfaction', checked: false },
+                { id: '2', label: 'Area cleaned up', checked: false },
+                { id: '3', label: 'Customer happy with result', checked: false },
+                { id: '4', label: 'Payment confirmed (Cash collected)', checked: false },
+              ]);
+              setBeforePhotos([]);
+              setAfterPhotos([]);
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } catch (error: any) {
+      console.error('❌ Error completing job:', error);
+      Alert.alert('Error', error.message || 'Failed to complete job. Please try again.');
+    }
   };
   
   const toggleChecklistItem = (id: string) => {
@@ -733,10 +930,31 @@ export default function PartnerJobsScreen() {
                     {job.address?.fullAddress || 'Location'}
                   </Text>
                 </View>
+                {/* Payment Method Badge */}
+                <View style={styles.paymentMethodContainer}>
+                  <View style={[
+                    styles.paymentMethodBadge,
+                    job.payment_method === 'cash' && styles.paymentMethodCash
+                  ]}>
+                    <Ionicons 
+                      name={job.payment_method === 'cash' ? 'cash-outline' : 'card-outline'} 
+                      size={14} 
+                      color={job.payment_method === 'cash' ? '#F59E0B' : '#00B14F'} 
+                    />
+                    <Text style={styles.paymentMethodText}>
+                      {job.payment_method === 'cash' ? 'CASH' : 'CARD'}
+                    </Text>
+                  </View>
+                  {job.payment_method === 'cash' && job.payment_status === 'pending' && (
+                    <Text style={styles.paymentInstructionText}>
+                      💵 Collect after service
+                    </Text>
+                  )}
+                </View>
               </View>
 
               <View style={styles.jobCardFooter}>
-                <Text style={styles.jobPrice}>RM {job.totalPrice}</Text>
+                <Text style={styles.jobPrice}>RM {job.total_price || job.totalPrice}</Text>
                 <Ionicons name="chevron-forward" size={20} color={COLORS.text.tertiary} />
               </View>
             </TouchableOpacity>
@@ -771,8 +989,9 @@ export default function PartnerJobsScreen() {
                 <Text style={[styles.statusBannerText, { color: getStatusColor(selectedJob.status) }]}>
                   {selectedJob.status === 'pending' && 'Waiting for your response'}
                   {selectedJob.status === 'accepted' && 'Job accepted, ready to start'}
-                  {selectedJob.status === 'on-the-way' && 'On the way to customer'}
-                  {selectedJob.status === 'in-progress' && 'Job in progress'}
+                  {selectedJob.status === 'on_the_way' && 'On the way to customer'}
+                  {selectedJob.status === 'arrived' && 'Arrived at customer location'}
+                  {selectedJob.status === 'in_progress' && 'Job in progress'}
                   {selectedJob.status === 'completed' && 'Job completed successfully'}
                   {selectedJob.status === 'cancelled' && 'This job was cancelled'}
                 </Text>
@@ -802,19 +1021,19 @@ export default function PartnerJobsScreen() {
                       <View style={styles.timelineIndicator}>
                         <View style={[
                           styles.timelineDot,
-                          ['on-the-way', 'in-progress'].includes(selectedJob.status) && styles.timelineDotCompleted,
+                          ['on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && styles.timelineDotCompleted,
                           selectedJob.status === 'accepted' && styles.timelineDotPending
                         ]}>
-                          {['on-the-way', 'in-progress'].includes(selectedJob.status) && (
+                          {['on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && (
                             <Ionicons name="checkmark" size={12} color={COLORS.background.primary} />
                           )}
                         </View>
-                        {selectedJob.status !== 'on-the-way' && <View style={styles.timelineLine} />}
+                        {selectedJob.status !== 'on_the_way' && <View style={styles.timelineLine} />}
                       </View>
                       <View style={styles.timelineContent}>
                         <Text style={styles.timelineLabel}>On the way</Text>
                         <Text style={styles.timelineTime}>
-                          {['on-the-way', 'in-progress'].includes(selectedJob.status) ? 'Heading to location' : 'Pending'}
+                          {['on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) ? 'Heading to location' : 'Pending'}
                         </Text>
                       </View>
                     </View>
@@ -824,8 +1043,8 @@ export default function PartnerJobsScreen() {
                       <View style={styles.timelineIndicator}>
                         <View style={[
                           styles.timelineDot,
-                          selectedJob.status === 'in-progress' && styles.timelineDotActive,
-                          !['accepted', 'on-the-way'].includes(selectedJob.status) && styles.timelineDotPending
+                          selectedJob.status === 'in_progress' && styles.timelineDotActive,
+                          !['accepted', 'on_the_way', 'arrived'].includes(selectedJob.status) && styles.timelineDotPending
                         ]}>
                           {selectedJob.status === 'in-progress' && (
                             <View style={styles.timelineDotPulse} />
@@ -947,10 +1166,10 @@ export default function PartnerJobsScreen() {
               </View>
 
               {/* Notes */}
-              {selectedJob.notes && (
+              {(selectedJob.customer_notes || selectedJob.notes) && (
                 <View style={styles.detailSection}>
                   <Text style={styles.detailSectionTitle}>Customer Notes</Text>
-                  <Text style={styles.notesText}>{selectedJob.notes}</Text>
+                  <Text style={styles.notesText}>{selectedJob.customer_notes || selectedJob.notes}</Text>
                 </View>
               )}
 
@@ -1009,7 +1228,7 @@ export default function PartnerJobsScreen() {
                     <Text style={styles.primaryButtonText}>I'm on the way</Text>
                   </TouchableOpacity>
                 )}
-                {selectedJob.status === 'on-the-way' && (
+                {selectedJob.status === 'on_the_way' && (
                   <TouchableOpacity
                     style={styles.primaryButton}
                     onPress={() => handleArrived(selectedJob)}
@@ -1027,7 +1246,7 @@ export default function PartnerJobsScreen() {
                     <Text style={styles.primaryButtonText}>Start Service</Text>
                   </TouchableOpacity>
                 )}
-                {selectedJob.status === 'in-progress' && (
+                {selectedJob.status === 'in_progress' && (
                   <TouchableOpacity
                     style={styles.primaryButton}
                     onPress={() => handleCompleteJob(selectedJob)}
@@ -2018,5 +2237,35 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     marginTop: 8,
     marginBottom: 12,
+  },
+  // Payment Method Badge Styles
+  paymentMethodContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paymentMethodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
+    backgroundColor: '#E8F5E9',
+  },
+  paymentMethodCash: {
+    backgroundColor: '#FFF4E5',
+  },
+  paymentMethodText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#00B14F',
+    letterSpacing: 0.5,
+  },
+  paymentInstructionText: {
+    ...TYPOGRAPHY.body.small,
+    color: '#F59E0B',
+    fontWeight: '600',
+    fontStyle: 'italic',
   },
 });

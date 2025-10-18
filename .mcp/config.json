@@ -42,44 +42,53 @@
     }
   },
   "contextFiles": [
-    "PROJECT_CONTEXT.md",
-    "DEVELOPMENT_STATUS.md",
-    "ARCHITECTURE_GUIDE.md",
-    "COMMON_TASKS.md",
-    "README.md",
-    "START_HERE.md",
-    "PROJECT_SUMMARY.md",
-    "STRUCTURE.md",
-    "README_MONOREPO.md"
+    "PROJECT_OVERVIEW.md",
+    "DATABASE_SCHEMA.md",
+    "API_DOCUMENTATION.md"
   ],
   "projectInfo": {
     "name": "Mari Gunting",
-    "type": "React Native Monorepo",
-    "description": "On-demand barber marketplace with Customer and Partner apps",
-    "status": "50% complete",
+    "type": "React Native Monorepo + Supabase Backend",
+    "description": "On-demand barber booking platform for Malaysia - LIVE PRODUCTION",
+    "status": "production",
+    "region": "Malaysia (target market), Singapore (Supabase)",
     "apps": {
       "customer": {
         "path": "apps/customer",
-        "status": "100% complete",
-        "screens": 25
+        "description": "Customer booking app",
+        "platform": "iOS & Android"
       },
       "partner": {
         "path": "apps/partner",
-        "status": "50% complete",
-        "currentFocus": "Schedule Management (Week 5)"
+        "description": "Partner/barber management app",
+        "platform": "iOS & Android"
       }
     },
-    "sharedCode": "packages/shared",
-    "testLogins": {
-      "customer": "11-111 1111",
-      "partner": "22-222 2222"
-    }
+    "backend": {
+      "provider": "Supabase",
+      "database": "PostgreSQL with PostGIS",
+      "tables": 29,
+      "rlsPolicies": 75,
+      "rpcFunctions": 24,
+      "triggers": 19,
+      "indexes": 103,
+      "storageBuckets": 10
+    },
+    "techStack": {
+      "frontend": "React Native + Expo + TypeScript + NativeWind",
+      "backend": "Supabase (PostgreSQL + PostGIS)",
+      "stateManagement": "React Query + Zustand",
+      "authentication": "Twilio SMS OTP + Supabase Auth",
+      "maps": "Google Maps API"
+    },
+    "sharedCode": "packages/shared"
   },
   "keyPaths": {
-    "mockData": "packages/shared/services/mockData.ts",
-    "types": "packages/shared/types/index.ts",
-    "api": "packages/shared/services/api.ts",
-    "store": "packages/shared/store/useStore.ts",
-    "utils": "packages/shared/utils/format.ts"
+    "types": "packages/shared/types/",
+    "services": "packages/shared/services/",
+    "supabaseBackup": "supabase-backup/",
+    "migrations": "supabase/migrations/",
+    "documentation": "docs/",
+    "rules": ".warp/rules/"
   }
 }

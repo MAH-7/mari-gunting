@@ -1,0 +1,112 @@
+[
+  {
+    "id": "barbershop-media",
+    "name": "barbershop-media",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-12T07:42:32.207Z",
+    "updated_at": "2025-10-12T07:42:32.207Z"
+  },
+  {
+    "id": "avatars",
+    "name": "avatars",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-09T04:32:40.327Z",
+    "updated_at": "2025-10-09T04:32:40.327Z"
+  },
+  {
+    "id": "barber-documents",
+    "name": "barber-documents",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-12T07:41:39.455Z",
+    "updated_at": "2025-10-12T07:41:39.455Z"
+  },
+  {
+    "id": "barbershop-documents",
+    "name": "barbershop-documents",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-12T07:42:15.806Z",
+    "updated_at": "2025-10-12T07:42:15.806Z"
+  },
+  {
+    "id": "documents",
+    "name": "documents",
+    "owner": "",
+    "public": false,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-09T04:33:51.380Z",
+    "updated_at": "2025-10-09T04:33:51.380Z"
+  },
+  {
+    "id": "portfolios",
+    "name": "portfolios",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-09T04:32:54.153Z",
+    "updated_at": "2025-10-09T04:32:54.153Z"
+  },
+  {
+    "id": "barbershops",
+    "name": "barbershops",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-09T04:33:06.336Z",
+    "updated_at": "2025-10-09T04:33:06.336Z"
+  },
+  {
+    "id": "services",
+    "name": "services",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-09T04:33:24.535Z",
+    "updated_at": "2025-10-09T04:33:24.535Z"
+  },
+  {
+    "id": "reviews",
+    "name": "reviews",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-09T04:33:39.986Z",
+    "updated_at": "2025-10-09T04:33:39.986Z"
+  },
+  {
+    "id": "barber-portfolios",
+    "name": "barber-portfolios",
+    "owner": "",
+    "public": true,
+    "type": "STANDARD",
+    "file_size_limit": null,
+    "allowed_mime_types": null,
+    "created_at": "2025-10-12T07:41:58.759Z",
+    "updated_at": "2025-10-12T07:41:58.759Z"
+  }
+]

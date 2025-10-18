@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@/store/useStore';
-import { formatCurrency, formatShortDate, formatTime } from '@/utils/format';
+import { formatPrice, formatShortDate, formatTime } from '@/utils/format';
 import { Booking, BookingStatus } from '@/types';
 import BookingFilterModal, { BookingFilterOptions } from '@/components/BookingFilterModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
@@ -69,15 +69,14 @@ export default function BookingsScreen() {
           // Refetch bookings list
           refetch();
           
-          // Show notification for specific events
+          // Log events for debugging
           if (payload.eventType === 'INSERT') {
-            Alert.alert('New Booking', 'A new booking has been created!');
+            console.log('New booking created');
           } else if (payload.eventType === 'UPDATE') {
             const newData = payload.new as any;
             const oldData = payload.old as any;
             
             if (oldData?.status !== newData?.status) {
-              // Status changed - handled by booking details screen
               console.log('Booking status changed:', newData?.id);
             }
           }
@@ -109,11 +108,11 @@ export default function BookingsScreen() {
   const bookings = bookingsResponse?.data || [];
 
   const activeBookings = bookings.filter(
-    (b: any) => ['pending', 'accepted', 'confirmed', 'ready', 'on-the-way', 'in-progress'].includes(b.booking_status)
+    (b: any) => ['pending', 'accepted', 'confirmed', 'ready', 'on_the_way', 'on-the-way', 'arrived', 'in_progress', 'in-progress'].includes(b.status)
   );
 
   const completedBookings = bookings.filter(
-    (b: any) => ['completed', 'cancelled'].includes(b.booking_status)
+    (b: any) => ['completed', 'cancelled'].includes(b.status)
   );
 
   // Apply filters
@@ -121,7 +120,7 @@ export default function BookingsScreen() {
   
   // Filter by status
   if (filters.filterStatus !== 'all') {
-    filteredBookings = filteredBookings.filter((b: any) => b.booking_status === filters.filterStatus);
+    filteredBookings = filteredBookings.filter((b: any) => b.status === filters.filterStatus);
   }
   
   // Sort bookings
@@ -145,7 +144,7 @@ export default function BookingsScreen() {
         'completed': 7,
         'cancelled': 8,
       };
-      return (statusOrder[a.booking_status as BookingStatus] || 99) - (statusOrder[b.booking_status as BookingStatus] || 99);
+      return (statusOrder[a.status as BookingStatus] || 99) - (statusOrder[b.status as BookingStatus] || 99);
     }
   });
   
@@ -341,20 +340,30 @@ export default function BookingsScreen() {
 }
 
 function BookingCard({ booking }: { booking: any }) {
+  const currentUser = useStore((state) => state.currentUser);
+  const [isCancelling, setIsCancelling] = useState(false);
+  
+  // Debug: Check what booking data looks like
+  console.log('📋 Booking data:', { id: booking.id, booking_number: booking.booking_number, keys: Object.keys(booking) });
+  
   // Map database booking to UI format
   const mappedBooking: Booking = {
-    id: booking.booking_id,
-    status: booking.booking_status,
+    id: booking.id,
+    status: booking.status,
     totalPrice: booking.total_price,
     scheduledDate: booking.scheduled_date,
     scheduledTime: booking.scheduled_time,
     createdAt: booking.created_at,
+    bookingNumber: booking.booking_number,
+    paymentMethod: booking.payment_method,
     barber: booking.barber_name ? {
       id: booking.barber_id,
       name: booking.barber_name,
       avatar: booking.barber_avatar || 'https://via.placeholder.com/150',
       rating: booking.barber_rating || 0,
+      totalReviews: booking.barber_total_reviews || 0,
       completedJobs: booking.barber_completed_jobs || 0,
+      isVerified: booking.barber_is_verified || false,
     } : undefined,
     services: booking.services || [],
     address: booking.customer_address ? {
@@ -367,8 +376,8 @@ function BookingCard({ booking }: { booking: any }) {
   const getStatusConfig = (status: BookingStatus) => {
     const configs = {
       pending: { 
-        color: '#F59E0B', 
-        bg: '#FEF3C7', 
+        color: '#6B7280', 
+        bg: '#F3F4F6', 
         label: 'Pending',
         iconName: 'time-outline' as const,
         progress: 25
@@ -396,14 +405,35 @@ function BookingCard({ booking }: { booking: any }) {
       },
       'on-the-way': {
         color: '#8B5CF6', 
-        bg: '#EDE9FE', 
+        bg: '#F3E8FF', 
         label: 'On The Way',
         iconName: 'car' as const,
-        progress: 75
+        progress: 65
+      },
+      on_the_way: {
+        color: '#8B5CF6', 
+        bg: '#F3E8FF', 
+        label: 'On The Way',
+        iconName: 'car' as const,
+        progress: 65
+      },
+      arrived: { 
+        color: '#F97316', 
+        bg: '#FFEDD5', 
+        label: 'Arrived',
+        iconName: 'location' as const,
+        progress: 80
       },
       'in-progress': { 
-        color: '#00B14F', 
-        bg: '#D1FAE5', 
+        color: '#0EA5E9', 
+        bg: '#E0F2FE', 
+        label: 'In Progress',
+        iconName: 'cut' as const,
+        progress: 90
+      },
+      in_progress: { 
+        color: '#0EA5E9', 
+        bg: '#E0F2FE', 
         label: 'In Progress',
         iconName: 'cut' as const,
         progress: 90
@@ -442,7 +472,7 @@ function BookingCard({ booking }: { booking: any }) {
             {statusConfig.label}
           </Text>
         </View>
-        <Text style={styles.bookingId}>#{mappedBooking.id.slice(-4).toUpperCase()}</Text>
+        <Text style={styles.bookingId}>#{mappedBooking.bookingNumber || mappedBooking.id.slice(-4).toUpperCase()}</Text>
       </View>
 
       {/* Progress Indicator */}
@@ -467,16 +497,28 @@ function BookingCard({ booking }: { booking: any }) {
         {/* Barber Row */}
         {mappedBooking.barber && (
           <View style={styles.barberRow}>
-            <Image
-              source={{ uri: mappedBooking.barber.avatar }}
-              style={styles.barberAvatar}
-            />
+            <View style={styles.barberAvatarContainer}>
+              <Image
+                source={{ uri: mappedBooking.barber.avatar }}
+                style={styles.barberAvatar}
+              />
+              {/* Show green dot only for active bookings */}
+              {['accepted', 'on_the_way', 'on-the-way', 'arrived', 'in_progress', 'in-progress'].includes(mappedBooking.status) && (
+                <View style={styles.barberOnlineDot} />
+              )}
+            </View>
             <View style={styles.barberInfo}>
-              <Text style={styles.barberName}>{mappedBooking.barber.name}</Text>
+              <View style={styles.barberNameRow}>
+                <Text style={styles.barberName}>{mappedBooking.barber.name}</Text>
+                {mappedBooking.barber.isVerified && (
+                  <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
+                )}
+              </View>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={14} color="#FBBF24" style={styles.starIcon} />
                 <Text style={styles.ratingText}>{mappedBooking.barber.rating.toFixed(1)}</Text>
-                <View style={styles.divider} />
+                <Text style={styles.reviewsText}>({mappedBooking.barber.totalReviews || 0} reviews)</Text>
+                <Text style={styles.jobsTextSeparator}>•</Text>
                 <Text style={styles.jobsText}>{mappedBooking.barber.completedJobs} jobs</Text>
               </View>
             </View>
@@ -493,7 +535,7 @@ function BookingCard({ booking }: { booking: any }) {
                   <View style={styles.serviceDot} />
                   <Text style={styles.serviceName}>{service.name}</Text>
                 </View>
-                <Text style={styles.servicePrice}>{formatCurrency(service.price)}</Text>
+                <Text style={styles.servicePrice}>{formatPrice(service.price)}</Text>
               </View>
             ))}
           </View>
@@ -524,18 +566,94 @@ function BookingCard({ booking }: { booking: any }) {
         {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.totalSection}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatCurrency(mappedBooking.totalPrice || 0)}</Text>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              {/* Payment Method Badge */}
+              <View style={styles.paymentMethodBadgeSmall}>
+                <Ionicons 
+                  name={mappedBooking.paymentMethod === 'cash' ? 'cash-outline' : 'card-outline'} 
+                  size={12} 
+                  color={mappedBooking.paymentMethod === 'cash' ? '#F59E0B' : '#00B14F'} 
+                />
+                <Text style={styles.paymentMethodTextSmall}>
+                  {(mappedBooking.paymentMethod || 'cash').toUpperCase()}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.totalValue}>{formatPrice(mappedBooking.totalPrice || 0)}</Text>
           </View>
-          {(mappedBooking.status === 'pending' || mappedBooking.status === 'accepted') && (
-            <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
-              <Text style={styles.actionButtonText}>Cancel</Text>
+          
+          {/* Track Button for On The Way */}
+          {(mappedBooking.status === 'on_the_way' || mappedBooking.status === 'on-the-way' || mappedBooking.status === 'arrived') && (
+            <TouchableOpacity 
+              style={styles.trackButton}
+              onPress={() => router.push(`/booking/track-barber?bookingId=${mappedBooking.id}` as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="navigate" size={16} color="#FFFFFF" />
+              <Text style={styles.trackButtonText}>Track</Text>
             </TouchableOpacity>
           )}
+          
+          {/* Cancel Button */}
+          {(mappedBooking.status === 'pending' || mappedBooking.status === 'accepted') && (
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              activeOpacity={0.8}
+              disabled={isCancelling}
+              onPress={async () => {
+                Alert.alert(
+                  'Cancel Booking?',
+                  mappedBooking.status === 'accepted' 
+                    ? 'Barber has accepted your booking. Are you sure you want to cancel?'
+                    : 'Are you sure you want to cancel this booking?',
+                  [
+                    { text: 'Keep Booking', style: 'cancel' },
+                    { 
+                      text: 'Yes, Cancel', 
+                      style: 'destructive',
+                      onPress: async () => {
+                        if (!currentUser?.id) return;
+                        
+                        setIsCancelling(true);
+                        try {
+                          const result = await bookingService.cancelBooking(
+                            mappedBooking.id,
+                            currentUser.id,
+                            'Customer requested cancellation'
+                          );
+                          
+                          if (result.success) {
+                            Alert.alert('Cancelled', 'Booking cancelled successfully');
+                            // List will auto-update via real-time subscription
+                          } else {
+                            Alert.alert('Error', result.error || 'Failed to cancel booking');
+                          }
+                        } catch (error) {
+                          Alert.alert('Error', 'Failed to cancel booking. Please try again.');
+                        } finally {
+                          setIsCancelling(false);
+                        }
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
+              {isCancelling ? (
+                <ActivityIndicator size="small" color="#6B7280" />
+              ) : (
+                <Text style={styles.actionButtonText}>Cancel</Text>
+              )}
+            </TouchableOpacity>
+          )}
+          
+          {/* Rate Button */}
           {mappedBooking.status === 'completed' && !mappedBooking.review && (
             <TouchableOpacity 
               style={[styles.actionButton, styles.actionButtonPrimary]} 
               activeOpacity={0.8}
+              onPress={() => router.push(`/booking/review/${mappedBooking.id}` as any)}
             >
               <Text style={styles.actionButtonTextPrimary}>Rate</Text>
             </TouchableOpacity>
@@ -739,22 +857,41 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
+  barberAvatarContainer: {
+    position: 'relative',
+  },
   barberAvatar: {
     width: 56,
     height: 56,
     borderRadius: 12,
     backgroundColor: '#F3F4F6',
   },
+  barberOnlineDot: {
+    position: 'absolute',
+    bottom: 1,
+    right: 1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#00B14F',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
   barberInfo: {
     flex: 1,
     marginLeft: 12,
     justifyContent: 'center',
   },
+  barberNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   barberName: {
     fontSize: 17,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 4,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -768,17 +905,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
+  reviewsText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  jobsTextSeparator: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginHorizontal: 6,
+  },
+  jobsText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
   divider: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
     backgroundColor: '#D1D5DB',
     marginHorizontal: 8,
-  },
-  jobsText: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
   },
   servicesSection: {
     marginBottom: 16,
@@ -843,16 +990,51 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
   },
   totalSection: {},
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   totalLabel: {
     fontSize: 12,
     color: '#9CA3AF',
     fontWeight: '600',
-    marginBottom: 4,
   },
   totalValue: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#00B14F',
+  },
+  paymentMethodBadgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  paymentMethodTextSmall: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  trackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#0EA5E9',
+  },
+  trackButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   actionButton: {
     paddingHorizontal: 20,

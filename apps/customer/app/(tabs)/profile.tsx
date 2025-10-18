@@ -134,9 +134,6 @@ export default function ProfileScreen() {
       case 'addresses':
         router.push('/profile/addresses');
         break;
-      case 'payment':
-        Alert.alert('Coming Soon', 'Payment methods feature is coming soon!');
-        break;
       case 'favorites':
         Alert.alert('Coming Soon', 'Favorites feature is coming soon!');
         break;
@@ -168,7 +165,6 @@ export default function ProfileScreen() {
       title: 'Account',
       items: [
         { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.role === 'customer' ? currentUser.savedAddresses?.length : 0, color: '#00B14F' },
-        { id: 'payment', icon: 'card', label: 'Payment Methods', badge: null, color: '#3B82F6' },
         { id: 'favorites', icon: 'heart', label: 'Favorite Barbers', badge: null, color: '#EF4444' },
       ]
     },
