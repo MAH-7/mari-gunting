@@ -171,19 +171,14 @@ export default function PaymentMethodScreen() {
 
     try {
       // Handle different payment methods
-      // Card and FPX now use Billplz
       if (selectedMethod === 'card' || selectedMethod === 'fpx') {
         setIsProcessing(false);
-        router.push({
-          pathname: '/payment-billplz',
-          params: {
-            ...params,
-            paymentMethod: selectedMethod, // Pass actual method: 'card' or 'fpx'
-            discount: discount.toString(),
-            creditsUsed: creditsToApply.toString(),
-            voucherId: selectedVoucher?.id || '',
-          },
-        } as any);
+        Alert.alert(
+          'Coming Soon',
+          'Card and online banking payments will be available soon. Please use cash payment for now.',
+          [{ text: 'OK' }]
+        );
+        return;
       } else if (selectedMethod === 'ewallet') {
         setIsProcessing(false);
         router.push({

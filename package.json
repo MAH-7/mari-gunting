@@ -9,10 +9,10 @@
   "scripts": {
     "customer": "cd apps/customer && npm start",
     "partner": "cd apps/partner && npm start",
-    "install:all": "npm install && npm run install:customer && npm run install:partner && npm run install:shared",
-    "install:customer": "cd apps/customer && npm install",
-    "install:partner": "cd apps/partner && npm install",
-    "install:shared": "cd packages/shared && npm install",
+    "install:all": "npm install --legacy-peer-deps && npm run install:customer && npm run install:partner && npm run install:shared",
+    "install:customer": "cd apps/customer && npm install --legacy-peer-deps",
+    "install:partner": "cd apps/partner && npm install --legacy-peer-deps",
+    "install:shared": "cd packages/shared && npm install --legacy-peer-deps",
     "android": "expo run:android",
     "ios": "expo run:ios"
   },

@@ -21,7 +21,7 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = MariGuntingPartnerDev/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = MariGuntingPartnerDev/Info.plist; sourceTree = "<group>"; };
 		172A323CC1BFB7EBA74741FD /* Pods-MariGuntingPartnerDev.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.debug.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.debug.xcconfig"; sourceTree = "<group>"; };
-		4311415BB91E2E51255322C2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = MariGuntingPartnerDev/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		4311415BB91E2E51255322C2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = MariGuntingPartnerDev/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		6BA41600DB1645A071124133 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-MariGuntingPartnerDev/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		829A8EDA2D4C7F6E4A853488 /* libPods-MariGuntingPartnerDev.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MariGuntingPartnerDev.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		999CBDA7C2412D55475A23CD /* Pods-MariGuntingPartnerDev.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.release.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.release.xcconfig"; sourceTree = "<group>"; };
@@ -128,7 +128,6 @@
 				172A323CC1BFB7EBA74741FD /* Pods-MariGuntingPartnerDev.debug.xcconfig */,
 				999CBDA7C2412D55475A23CD /* Pods-MariGuntingPartnerDev.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -167,9 +166,7 @@
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
-						DevelopmentTeam = C45922S8T9;
 						LastSwiftMigration = 1250;
-						ProvisioningStyle = Automatic;
 					};
 				};
 			};
