@@ -150,10 +150,16 @@ export async function batchCalculateDistances(
   origin: { latitude: number; longitude: number },
   destinations: Array<{ id: string; latitude: number; longitude: number }>,
   accessToken: string,
-  options?: { useCache?: boolean; supabase?: any }
+  options?: { 
+    useCache?: boolean; 
+    supabase?: any;
+    cacheTTL?: number; // Cache TTL in seconds (default: 1 hour)
+    warmCache?: boolean; // Pre-warm cache for popular routes
+  }
 ): Promise<Map<string, RouteInfo>> {
   const results = new Map<string, RouteInfo>();
   const useCache = options?.useCache !== false; // Default to true
+  const cacheTTL = options?.cacheTTL || 3600; // Default 1 hour (in seconds)
 
   if (!accessToken) {
     console.error('❌ Mapbox access token is required');
@@ -162,43 +168,68 @@ export async function batchCalculateDistances(
 
   let cacheHits = 0;
   let cacheMisses = 0;
+  let staleHits = 0;
   const uncachedDestinations: typeof destinations = [];
 
   // Step 1: Check cache for all destinations (if enabled and supabase available)
   if (useCache && options?.supabase) {
-    for (const dest of destinations) {
-      try {
-        const { data: cachedRoute } = await options.supabase
-          .rpc('get_cached_route', {
-            p_origin_lat: origin.latitude,
-            p_origin_lng: origin.longitude,
-            p_destination_lat: dest.latitude,
-            p_destination_lng: dest.longitude,
-            p_profile: 'driving'
-          })
-          .single();
-
+    // Batch cache lookup for better performance
+    const cacheKeys = destinations.map(dest => 
+      `route_${origin.latitude}_${origin.longitude}_${dest.latitude}_${dest.longitude}`
+    );
+    
+    try {
+      const { data: cachedRoutes } = await options.supabase
+        .from('route_cache')
+        .select('cache_key, distance_km, duration_minutes, cached_at')
+        .in('cache_key', cacheKeys);
+      
+      const cacheMap = new Map(
+        (cachedRoutes || []).map((r: any) => [r.cache_key, r])
+      );
+      
+      for (const dest of destinations) {
+        const cacheKey = `route_${origin.latitude}_${origin.longitude}_${dest.latitude}_${dest.longitude}`;
+        const cachedRoute = cacheMap.get(cacheKey);
+        
         if (cachedRoute) {
-          // Cache hit!
-          results.set(dest.id, {
-            distanceKm: cachedRoute.distance_km,
-            durationMinutes: cachedRoute.duration_minutes,
-          });
-          cacheHits++;
+          // Check if cache is still fresh
+          const cacheAge = (Date.now() - new Date(cachedRoute.cached_at).getTime()) / 1000; // in seconds
+          
+          if (cacheAge < cacheTTL) {
+            // Fresh cache hit!
+            results.set(dest.id, {
+              distanceKm: cachedRoute.distance_km,
+              durationMinutes: cachedRoute.duration_minutes,
+            });
+            cacheHits++;
+          } else if (cacheAge < cacheTTL * 2) {
+            // Stale but usable - use it but also refresh
+            results.set(dest.id, {
+              distanceKm: cachedRoute.distance_km,
+              durationMinutes: cachedRoute.duration_minutes,
+            });
+            uncachedDestinations.push(dest); // Refresh in background
+            staleHits++;
+          } else {
+            // Too stale - fetch fresh
+            uncachedDestinations.push(dest);
+            cacheMisses++;
+          }
         } else {
           // Cache miss - need to fetch from Mapbox
           uncachedDestinations.push(dest);
           cacheMisses++;
         }
-      } catch (error) {
-        // Cache lookup failed - fall back to Mapbox
-        console.warn('⚠️ Cache lookup failed for destination:', dest.id);
-        uncachedDestinations.push(dest);
-        cacheMisses++;
       }
+    } catch (error) {
+      // Cache lookup failed - fall back to Mapbox
+      console.warn('⚠️ Cache lookup failed:', error);
+      uncachedDestinations.push(...destinations);
+      cacheMisses = destinations.length;
     }
 
-    console.log(`💾 Cache stats: ${cacheHits} hits, ${cacheMisses} misses (${Math.round((cacheHits / destinations.length) * 100)}% hit rate)`);
+    console.log(`💾 Cache: ${cacheHits} fresh, ${staleHits} stale, ${cacheMisses} misses (${Math.round(((cacheHits + staleHits) / destinations.length) * 100)}% hit rate)`);
   } else {
     // Cache disabled or supabase not available - fetch all from Mapbox
     uncachedDestinations.push(...destinations);
@@ -224,19 +255,26 @@ export async function batchCalculateDistances(
 
           // Step 3: Store in cache (fire and forget)
           if (useCache && options?.supabase) {
+            const cacheKey = `route_${origin.latitude}_${origin.longitude}_${dest.latitude}_${dest.longitude}`;
+            
+            // Use upsert for better performance and avoid duplicates
             options.supabase
-              .rpc('cache_route', {
-                p_origin_lat: origin.latitude,
-                p_origin_lng: origin.longitude,
-                p_destination_lat: dest.latitude,
-                p_destination_lng: dest.longitude,
-                p_distance_km: route.distanceKm,
-                p_duration_minutes: route.durationMinutes,
-                p_profile: 'driving',
-                p_cache_duration_days: 7
+              .from('route_cache')
+              .upsert({
+                cache_key: cacheKey,
+                origin_lat: origin.latitude,
+                origin_lng: origin.longitude,
+                destination_lat: dest.latitude,
+                destination_lng: dest.longitude,
+                distance_km: route.distanceKm,
+                duration_minutes: route.durationMinutes,
+                profile: 'driving',
+                cached_at: new Date().toISOString(),
+              }, {
+                onConflict: 'cache_key'
               })
-              .then(() => console.log(`✅ Cached route for ${dest.id}`))
-              .catch((err: Error) => console.warn('⚠️ Failed to cache route:', err.message));
+              .then(() => console.log(`💾 Cached route for ${dest.id}`))
+              .catch((err: Error) => console.warn('⚠️ Cache write failed:', err.message));
           }
         }
         

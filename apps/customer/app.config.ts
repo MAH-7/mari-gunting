@@ -138,6 +138,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Payment
       stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
       fpxMerchantId: process.env.EXPO_PUBLIC_FPX_MERCHANT_ID,
+      billplzApiKey: process.env.EXPO_PUBLIC_BILLPLZ_API_KEY,
+      billplzCollectionId: process.env.EXPO_PUBLIC_BILLPLZ_COLLECTION_ID,
       
       // Notifications
       fcmApiKey: process.env.EXPO_PUBLIC_FCM_API_KEY,

@@ -171,17 +171,18 @@ export default function PaymentMethodScreen() {
 
     try {
       // Handle different payment methods
-      if (selectedMethod === 'card') {
+      // Card and FPX now use Billplz
+      if (selectedMethod === 'card' || selectedMethod === 'fpx') {
         setIsProcessing(false);
         router.push({
-          pathname: '/payment-card',
-          params: params,
-        } as any);
-      } else if (selectedMethod === 'fpx') {
-        setIsProcessing(false);
-        router.push({
-          pathname: '/payment-fpx',
-          params: params,
+          pathname: '/payment-billplz',
+          params: {
+            ...params,
+            paymentMethod: selectedMethod, // Pass actual method: 'card' or 'fpx'
+            discount: discount.toString(),
+            creditsUsed: creditsToApply.toString(),
+            voucherId: selectedVoucher?.id || '',
+          },
         } as any);
       } else if (selectedMethod === 'ewallet') {
         setIsProcessing(false);

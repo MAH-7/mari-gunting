@@ -193,7 +193,7 @@ export default function BarbersScreen() {
   // State to store calculated driving distances and durations
   const [barberRoutesInfo, setBarberRoutesInfo] = useState<Map<string, { distanceKm: number; durationMinutes: number }>>(new Map());
   
-  // Calculate DRIVING distances for nearby barbers (already pre-filtered by PostGIS)
+  // GRAB STANDARD: Calculate REAL driving distances for ALL visible barbers (with smart caching)
   useEffect(() => {
     if (!location || rawBarbers.length === 0) return;
     
@@ -201,9 +201,9 @@ export default function BarbersScreen() {
       setCalculatingDistances(true);
       
       try {
-        console.log(`🗺️ Calculating driving distances for ${rawBarbers.length} nearby barbers (pre-filtered by PostGIS)`);
+        console.log(`🗺️ Calculating real driving distances for ${rawBarbers.length} barbers`);
         
-        // Calculate actual driving distances for all barbers returned by PostGIS
+        // Calculate actual driving distances for ALL barbers (PostGIS already filtered by radius)
         const destinations = rawBarbers.map(b => ({
           id: b.id,
           latitude: b.location.latitude,
@@ -215,12 +215,13 @@ export default function BarbersScreen() {
           destinations, 
           ENV.MAPBOX_ACCESS_TOKEN || '',
           { 
-            useCache: true, // Enable route caching
-            supabase: supabase // Pass supabase client for cache access
+            useCache: true,
+            supabase: supabase,
+            cacheTTL: 3600 // 1 hour cache - high hit rate for repeated views
           }
         );
         
-        console.log(`✅ Calculated driving distances for ${routesMap.size} barbers`);
+        console.log(`✅ Calculated ${routesMap.size} real driving distances`);
         setBarberRoutesInfo(routesMap);
       } catch (error) {
         console.error('❌ Error calculating driving distances:', error);
@@ -238,7 +239,7 @@ export default function BarbersScreen() {
       const routeInfo = barberRoutesInfo.get(barber.id);
       return {
         ...barber,
-        distance: routeInfo?.distanceKm, // DRIVING distance!
+        distance: routeInfo?.distanceKm, // Real driving distance from Mapbox
         durationMinutes: routeInfo?.durationMinutes,
       };
     });

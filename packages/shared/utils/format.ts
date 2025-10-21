@@ -103,6 +103,7 @@ export const formatDuration = (minutes: number): string => {
 
 // Phone number formatting
 export const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return '';
   // Remove all non-digit characters
   const cleaned = phone.replace(/\D/g, '');
   

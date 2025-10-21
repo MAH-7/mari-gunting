@@ -319,7 +319,7 @@ export const supabaseApi = {
             joinedDate: barber.created_at || new Date().toISOString(),
             photos: barber.portfolio_urls || [],
             specializations: barber.specializations || [],
-            distance: barber.straight_line_distance_km, // Straight-line distance from PostGIS
+            straightLineDistance: barber.straight_line_distance_km, // Straight-line distance from PostGIS
             createdAt: barber.created_at || new Date().toISOString(),
           };
         } else {

@@ -33,6 +33,8 @@ interface EnvConfig {
   // Payment
   STRIPE_PUBLISHABLE_KEY?: string;
   FPX_MERCHANT_ID?: string;
+  BILLPLZ_API_KEY?: string;
+  BILLPLZ_COLLECTION_ID?: string;
   
   // Notifications
   FCM_API_KEY?: string;
@@ -90,6 +92,8 @@ function getEnvConfig(): EnvConfig {
     // Payment
     STRIPE_PUBLISHABLE_KEY: extra.stripePublishableKey,
     FPX_MERCHANT_ID: extra.fpxMerchantId,
+    BILLPLZ_API_KEY: extra.billplzApiKey,
+    BILLPLZ_COLLECTION_ID: extra.billplzCollectionId,
     
     // Notifications
     FCM_API_KEY: extra.fcmApiKey,
@@ -176,4 +180,6 @@ if (isDevelopment) {
   console.log('☁️  Cloudinary:', ENV.CLOUDINARY_CLOUD_NAME ? '✅' : '❌');
   console.log('🚨 Sentry:', ENV.SENTRY_DSN ? '✅' : '❌');
   console.log('💳 Stripe:', ENV.STRIPE_PUBLISHABLE_KEY ? '✅' : '❌');
+  console.log('💰 Billplz:', ENV.BILLPLZ_API_KEY ? '✅' : '❌');
+  console.log('📦 Collection:', ENV.BILLPLZ_COLLECTION_ID || 'Not set');
 }

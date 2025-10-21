@@ -52,7 +52,7 @@ export default function CreateBookingScreen() {
   const selectedServices = barber?.services.filter(s => selectedServiceIds.includes(s.id)) || [];
   const addresses = addressResponse?.data || [];
   
-  // Calculate distance and duration from selected address to barber
+  // OPTIMIZED: Calculate distance with smart caching
   useEffect(() => {
     const calculateRoute = async () => {
       if (!selectedAddress || !barber) return;
@@ -63,7 +63,35 @@ export default function CreateBookingScreen() {
       setCalculatingRoute(true);
       
       try {
-        console.log('🗺️ Calculating route from service address to barber...');
+        // Check if we already have this route cached from Available Barbers screen
+        const cacheKey = `route_${selectedAddr.latitude}_${selectedAddr.longitude}_${barber.location.latitude}_${barber.location.longitude}`;
+        console.log('🔍 Checking cache for existing route...');
+        
+        // Try to get from cache first
+        const { data: cachedRoute } = await supabase
+          .from('route_cache')
+          .select('distance_km, duration_minutes, cached_at')
+          .eq('cache_key', cacheKey)
+          .single();
+        
+        if (cachedRoute) {
+          // Check if cache is still fresh (within 1 hour)
+          const cacheAge = Date.now() - new Date(cachedRoute.cached_at).getTime();
+          const ONE_HOUR = 60 * 60 * 1000;
+          
+          if (cacheAge < ONE_HOUR) {
+            console.log('✅ Using cached route (saved 1 API call!):', cachedRoute.distance_km, 'km');
+            setRouteInfo({
+              distanceKm: cachedRoute.distance_km,
+              durationMinutes: cachedRoute.duration_minutes,
+            });
+            setCalculatingRoute(false);
+            return; // Exit early - no API call needed!
+          }
+        }
+        
+        // No cache or stale - calculate fresh route
+        console.log('🗺️ Cache miss - calculating fresh route...');
         
         const routesMap = await batchCalculateDistances(
           { latitude: selectedAddr.latitude, longitude: selectedAddr.longitude },
@@ -75,13 +103,14 @@ export default function CreateBookingScreen() {
           ENV.MAPBOX_ACCESS_TOKEN || '',
           { 
             useCache: true,
-            supabase: supabase
+            supabase: supabase,
+            cacheTTL: 3600 // 1 hour cache
           }
         );
         
         const route = routesMap.get(barber.id);
         if (route) {
-          console.log(`✅ Route calculated: ${route.distanceKm}km, ${route.durationMinutes}min`);
+          console.log(`✅ Fresh route calculated: ${route.distanceKm}km, ${route.durationMinutes}min`);
           setRouteInfo(route);
         }
       } catch (error) {

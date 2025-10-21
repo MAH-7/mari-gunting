@@ -12,13 +12,21 @@
     "install:all": "npm install && npm run install:customer && npm run install:partner && npm run install:shared",
     "install:customer": "cd apps/customer && npm install",
     "install:partner": "cd apps/partner && npm install",
-    "install:shared": "cd packages/shared && npm install"
+    "install:shared": "cd packages/shared && npm install",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "typescript": "~5.9.2"
   },
   "dependencies": {
     "@react-native-picker/picker": "^2.11.2",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "react-native-webview": "^13.16.0",
+    "react-native-worklets": "^0.6.1",
+    "react-native-worklets-core": "^1.6.2",
+    "expo": "~54.0.12",
+    "react": "19.1.0",
+    "react-native": "0.81.4"
   }
 }

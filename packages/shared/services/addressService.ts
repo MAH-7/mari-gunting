@@ -96,7 +96,7 @@ export const addressService = {
   async addCustomerAddress(params: AddAddressParams): Promise<ApiResponse<CustomerAddress>> {
     try {
       const { data, error} = await supabase.rpc('add_customer_address', {
-        p_customer_id: params.userId,
+        p_user_id: params.userId,  // Changed from p_customer_id to match function signature
         p_label: params.label,
         p_address_line1: params.addressLine1,
         p_address_line2: params.addressLine2 || null,
