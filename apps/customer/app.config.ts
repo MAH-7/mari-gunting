@@ -1,4 +1,5 @@
 import { ExpoConfig, ConfigContext } from '@expo/config';
+import 'dotenv/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const isProduction = process.env.EXPO_PUBLIC_APP_ENV === 'production';
@@ -138,6 +139,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Payment
       stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
       fpxMerchantId: process.env.EXPO_PUBLIC_FPX_MERCHANT_ID,
+      curlecKeyId: process.env.EXPO_PUBLIC_CURLEC_KEY_ID,
+      curlecCurrency: process.env.EXPO_PUBLIC_CURLEC_CURRENCY || 'MYR',
       
       // Notifications
       fcmApiKey: process.env.EXPO_PUBLIC_FCM_API_KEY,

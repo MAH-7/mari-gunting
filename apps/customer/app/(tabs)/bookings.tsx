@@ -343,6 +343,18 @@ function BookingCard({ booking }: { booking: any }) {
   const currentUser = useStore((state) => state.currentUser);
   const [isCancelling, setIsCancelling] = useState(false);
   
+  // Helper to display user-friendly payment method names
+  const getPaymentMethodDisplay = (method: string) => {
+    const methods: Record<string, string> = {
+      'curlec_card': 'Card',
+      'curlec_fpx': 'FPX',
+      'cash': 'Cash',
+      'ewallet': 'E-Wallet',
+      'curlec': 'Card', // Fallback for old data
+    };
+    return methods[method] || method;
+  };
+  
   // Debug: Check what booking data looks like
   console.log('📋 Booking data:', { id: booking.id, booking_number: booking.booking_number, keys: Object.keys(booking) });
   
@@ -576,7 +588,7 @@ function BookingCard({ booking }: { booking: any }) {
                   color={mappedBooking.paymentMethod === 'cash' ? '#F59E0B' : '#00B14F'} 
                 />
                 <Text style={styles.paymentMethodTextSmall}>
-                  {(mappedBooking.paymentMethod || 'cash').toUpperCase()}
+                  {getPaymentMethodDisplay(mappedBooking.paymentMethod || 'cash')}
                 </Text>
               </View>
             </View>

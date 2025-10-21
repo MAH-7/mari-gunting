@@ -19,6 +19,7 @@ export * from './services/cloudinaryUpload';
 export * from './services/barberService';
 export * from './services/serviceService';
 export * from './services/portfolioService';
+export * from './services/curlecService';
 
 // Export store
 export * from './store/useStore';

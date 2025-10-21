@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -8,6 +8,8 @@ import SuccessModal from '@/components/SuccessModal';
 import { rewardsService, type UserVoucher } from '@/services/rewardsService';
 import { supabase } from '@mari-gunting/shared';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
+import { curlecService, type CurlecOrder } from '@mari-gunting/shared/services/curlecService';
+import RazorpayCheckout from 'react-native-razorpay';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -161,7 +163,327 @@ export default function PaymentMethodScreen() {
     return check.canApply;
   });
 
+  /**
+   * Handle credits-only payment (when credits cover full amount)
+   */
+  const handleCreditsOnlyPayment = async () => {
+    try {
+      setIsProcessing(true);
+      
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      const services = JSON.parse(params.services || '[]');
+      const address = JSON.parse(params.address || '{}');
+      const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
+      const isBarbershop = bookingType === 'scheduled-shop';
+      
+      const scheduledDate = isBarbershop && params.scheduledDate 
+        ? params.scheduledDate 
+        : new Date().toISOString().split('T')[0];
+      
+      const scheduledTime = isBarbershop && params.scheduledTime
+        ? params.scheduledTime
+        : new Date().toTimeString().split(' ')[0].substring(0, 5);
+      
+      const customerAddress = !isBarbershop ? {
+        line1: address.address_line1 || address.line1 || '',
+        line2: address.address_line2 || address.line2 || '',
+        city: address.city || '',
+        state: address.state || '',
+        postalCode: address.postal_code || address.postalCode || '',
+      } : null;
+
+      // Create booking with credits payment
+      const createBookingResponse = await bookingService.createBooking({
+        customerId: currentUserId,
+        barberId: params.barberId,
+        services: services,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        serviceType: isBarbershop ? 'walk_in' : 'home_service',
+        barbershopId: params.shopId || null,
+        customerAddress: customerAddress,
+        customerNotes: params.serviceNotes || null,
+        paymentMethod: 'credits',
+        travelFee: parseFloat(params.travelCost || '0'),
+        discountAmount: discount,
+      });
+
+      if (!createBookingResponse.success || !createBookingResponse.data) {
+        throw new Error(createBookingResponse.error || 'Failed to create booking');
+      }
+
+      const createdBookingId = createBookingResponse.data.booking_id;
+
+      // Apply voucher if selected
+      if (selectedVoucher && discount > 0) {
+        await rewardsService.applyVoucherToBooking(
+          createdBookingId,
+          selectedVoucher.id,
+          subtotal + travelCost + bookingFee,
+          discount,
+          totalAmount + creditsToApply // Original total before credits
+        );
+      }
+
+      // Deduct credits
+      const result = await rewardsService.deductCredit(
+        currentUserId,
+        creditsToApply,
+        'booking_payment',
+        `Payment for booking #${createBookingResponse.data.booking_number}`,
+        createdBookingId,
+        {
+          booking_number: createBookingResponse.data.booking_number,
+          original_amount: subtotal + travelCost + bookingFee,
+          discount_amount: discount,
+          credits_used: creditsToApply,
+          final_amount: 0, // Fully paid with credits
+        }
+      );
+
+      if (!result.success) {
+        throw new Error('Failed to deduct credits');
+      }
+
+      console.log('✅ Booking created with credits payment');
+      setBookingId(createdBookingId);
+      setShowSuccessModal(true);
+      setIsProcessing(false);
+    } catch (error: any) {
+      console.error('[Credits] Payment error:', error);
+      Alert.alert(
+        'Payment Error',
+        error.message || 'Failed to process credits payment. Please try again.',
+        [{ text: 'OK' }]
+      );
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Handle Curlec payment (Card & FPX)
+   */
+  const handleCurlecPayment = async () => {
+    try {
+      if (!curlecService.isConfigured()) {
+        Alert.alert(
+          'Payment Not Available',
+          'Online payment is not configured. Please use cash payment or contact support.',
+          [{ text: 'OK' }]
+        );
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get current auth user for email fallback
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Get user profile for prefill
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone_number')
+        .eq('id', currentUserId)
+        .single();
+
+      // Create Curlec order
+      console.log('[Curlec] Creating order for amount:', totalAmount);
+      const order = await curlecService.createOrder({
+        amount: totalAmount,
+        receipt: `booking_${Date.now()}`,
+        notes: {
+          customer_id: currentUserId,
+          barber_id: params.barberId,
+          payment_method: selectedMethod || 'card',
+        },
+      });
+
+      console.log('[Curlec] Order created:', order.id);
+
+      // Prepare checkout options with metadata
+      const checkoutOptions = curlecService.prepareCheckoutOptions(order, {
+        customerName: profile?.full_name,
+        customerEmail: profile?.email || user?.email, // Fallback to auth email
+        customerContact: profile?.phone_number,
+        description: `Booking with ${params.barberName}`,
+        bookingId: `temp_${Date.now()}`,
+        barberId: params.barberId,
+        customerId: currentUserId,
+        serviceName: params.serviceName || 'Barber Services',
+      });
+
+      // Open Curlec checkout (uses Razorpay SDK with Curlec keys)
+      RazorpayCheckout.open(checkoutOptions)
+        .then(async (data: any) => {
+          // Payment successful
+          console.log('[Curlec] Payment success:', data);
+          
+          try {
+            // Verify payment signature
+            const verified = await curlecService.verifyPayment({
+              razorpay_order_id: data.razorpay_order_id,
+              razorpay_payment_id: data.razorpay_payment_id,
+              razorpay_signature: data.razorpay_signature,
+            });
+
+            if (!verified) {
+              throw new Error('Payment verification failed');
+            }
+
+            console.log('[Curlec] Payment verified, creating booking...');
+
+            // Create booking after successful payment
+            await createBookingWithCurlecPayment(
+              data.razorpay_payment_id,
+              data.razorpay_order_id
+            );
+          } catch (error) {
+            console.error('[Curlec] Payment verification error:', error);
+            Alert.alert(
+              'Payment Verification Failed',
+              'Your payment was received but could not be verified. Please contact support with payment ID: ' + data.razorpay_payment_id,
+              [{ text: 'OK' }]
+            );
+            setIsProcessing(false);
+          }
+        })
+        .catch((error: any) => {
+          // Payment failed or cancelled
+          console.log('[Curlec] Payment cancelled/failed:', error);
+          
+          if (error.code === RazorpayCheckout.PAYMENT_CANCELLED) {
+            Alert.alert('Payment Cancelled', 'You cancelled the payment.');
+          } else {
+            Alert.alert(
+              'Payment Failed',
+              error.description || 'Something went wrong. Please try again.',
+              [{ text: 'OK' }]
+            );
+          }
+          setIsProcessing(false);
+        });
+    } catch (error: any) {
+      console.error('[Curlec] Error:', error);
+      Alert.alert(
+        'Payment Error',
+        error.message || 'Failed to initialize payment. Please try again.',
+        [{ text: 'OK' }]
+      );
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Create booking with Curlec payment information
+   */
+  const createBookingWithCurlecPayment = async (
+    paymentId: string,
+    orderId: string
+  ) => {
+    try {
+      const services = JSON.parse(params.services || '[]');
+      const address = JSON.parse(params.address || '{}');
+      
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+      
+      const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
+      const isBarbershop = bookingType === 'scheduled-shop';
+      
+      const scheduledDate = isBarbershop && params.scheduledDate 
+        ? params.scheduledDate 
+        : new Date().toISOString().split('T')[0];
+      
+      const scheduledTime = isBarbershop && params.scheduledTime
+        ? params.scheduledTime
+        : new Date().toTimeString().split(' ')[0].substring(0, 5);
+      
+      const customerAddress = !isBarbershop ? {
+        line1: address.address_line1 || address.line1 || '',
+        line2: address.address_line2 || address.line2 || '',
+        city: address.city || '',
+        state: address.state || '',
+        postalCode: address.postal_code || address.postalCode || '',
+      } : null;
+      
+      // Create booking
+      const createBookingResponse = await bookingService.createBooking({
+        customerId: currentUserId,
+        barberId: params.barberId,
+        services: services,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        serviceType: isBarbershop ? 'walk_in' : 'home_service',
+        barbershopId: params.shopId || null,
+        customerAddress: customerAddress,
+        customerNotes: params.serviceNotes || null,
+        paymentMethod: selectedMethod === 'fpx' ? 'curlec_fpx' : 'curlec_card',
+        travelFee: parseFloat(params.travelCost || '0'),
+        discountAmount: discount,
+        curlecPaymentId: paymentId,
+        curlecOrderId: orderId,
+      });
+      
+      if (!createBookingResponse.success || !createBookingResponse.data) {
+        throw new Error(createBookingResponse.error || 'Failed to create booking');
+      }
+      
+      const createdBookingId = createBookingResponse.data.booking_id;
+      
+      // Apply voucher if selected
+      if (selectedVoucher && discount > 0) {
+        await rewardsService.applyVoucherToBooking(
+          createdBookingId,
+          selectedVoucher.id,
+          subtotal + travelCost + bookingFee,
+          discount,
+          totalAmount
+        );
+      }
+      
+      // Deduct credits if used
+      if (useCredits && creditsToApply > 0) {
+        await rewardsService.deductCredit(
+          currentUserId,
+          creditsToApply,
+          'booking_payment',
+          `Payment for booking #${createBookingResponse.data.booking_number}`,
+          createdBookingId,
+          {
+            booking_number: createBookingResponse.data.booking_number,
+            original_amount: subtotal + travelCost + bookingFee,
+            discount_amount: discount,
+            credits_used: creditsToApply,
+            final_amount: totalAmount,
+          }
+        );
+      }
+      
+      setBookingId(createdBookingId);
+      setShowSuccessModal(true);
+      setIsProcessing(false);
+      
+      console.log('✅ Booking created successfully with Curlec payment');
+    } catch (error: any) {
+      console.error('[Booking] Creation error:', error);
+      throw error;
+    }
+  };
+
   const handleConfirmPayment = async () => {
+    // If credits cover full amount, skip payment method selection
+    if (totalAmount === 0 && useCredits) {
+      await handleCreditsOnlyPayment();
+      return;
+    }
+
     if (!selectedMethod) {
       Alert.alert('Required', 'Please select a payment method');
       return;
@@ -172,12 +494,8 @@ export default function PaymentMethodScreen() {
     try {
       // Handle different payment methods
       if (selectedMethod === 'card' || selectedMethod === 'fpx') {
-        setIsProcessing(false);
-        Alert.alert(
-          'Coming Soon',
-          'Card and online banking payments will be available soon. Please use cash payment for now.',
-          [{ text: 'OK' }]
-        );
+        // Curlec payment flow (Card & FPX)
+        await handleCurlecPayment();
         return;
       } else if (selectedMethod === 'ewallet') {
         setIsProcessing(false);
@@ -483,9 +801,10 @@ export default function PaymentMethodScreen() {
           )}
         </View>
 
-        {/* Payment Methods */}
-        <View style={styles.methodsSection}>
-          {paymentOptions.map((option, index) => (
+        {/* Payment Methods - Hide when fully covered by credits */}
+        {totalAmount > 0 && (
+          <View style={styles.methodsSection}>
+            {paymentOptions.map((option, index) => (
             <TouchableOpacity
               key={option.id}
               style={[
@@ -525,16 +844,29 @@ export default function PaymentMethodScreen() {
                 {selectedMethod === option.id && <View style={styles.radioInner} />}
               </View>
             </TouchableOpacity>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
+
+        {/* Fully paid with credits message */}
+        {totalAmount === 0 && useCredits && (
+          <View style={styles.creditsPaidBox}>
+            <Ionicons name="checkmark-circle" size={24} color="#00B14F" />
+            <Text style={styles.creditsPaidText}>
+              Fully paid with MARI Credits! No additional payment needed.
+            </Text>
+          </View>
+        )}
 
         {/* Info Section */}
-        <View style={styles.infoBox}>
+        {totalAmount > 0 && (
+          <View style={styles.infoBox}>
           <Ionicons name="information-circle" size={16} color="#8E8E93" />
-          <Text style={styles.infoText}>
-            Card payments are pre-authorized and charged after service completion
-          </Text>
-        </View>
+            <Text style={styles.infoText}>
+              Card payments are pre-authorized and charged after service completion
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* Bottom Button */}
@@ -542,14 +874,14 @@ export default function PaymentMethodScreen() {
         <TouchableOpacity
           style={[
             styles.continueButton,
-            !selectedMethod && styles.continueButtonDisabled,
+            !(selectedMethod || (totalAmount === 0 && useCredits)) && styles.continueButtonDisabled,
           ]}
           onPress={handleConfirmPayment}
-          disabled={!selectedMethod || isProcessing}
+          disabled={!(selectedMethod || (totalAmount === 0 && useCredits)) || isProcessing}
           activeOpacity={0.8}
         >
           <Text style={styles.continueButtonText}>
-            {isProcessing ? 'Processing...' : 'Continue'}
+            {isProcessing ? 'Processing...' : (totalAmount === 0 && useCredits ? 'Complete Booking' : 'Continue')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1101,5 +1433,24 @@ const styles = StyleSheet.create({
   checkboxActive: {
     backgroundColor: '#00B14F',
     borderColor: '#00B14F',
+  },
+  creditsPaidBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F0FDF4',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderWidth: 1.5,
+    borderColor: '#00B14F',
+  },
+  creditsPaidText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#00B14F',
+    lineHeight: 20,
   },
 });

@@ -145,6 +145,18 @@ export default function BookingDetailScreen() {
     confirmServiceMutation.mutate(selectedService);
   };
 
+  // Helper to display user-friendly payment method names
+  const getPaymentMethodDisplay = (method: string) => {
+    const methods: Record<string, string> = {
+      'curlec_card': 'Card',
+      'curlec_fpx': 'Online Banking',
+      'cash': 'Cash',
+      'ewallet': 'E-Wallet',
+      'curlec': 'Card', // Fallback for old data
+    };
+    return methods[method] || method;
+  };
+
   const getStatusConfig = (status: BookingStatus) => {
     const configs = {
       pending: { 
@@ -919,7 +931,7 @@ export default function BookingDetailScreen() {
                 color={booking.payment_method === 'cash' ? '#F59E0B' : '#00B14F'} 
               />
               <Text style={styles.paymentValue}>
-                {(booking.payment_method || 'cash').toUpperCase()}
+                {getPaymentMethodDisplay(booking.payment_method || 'cash')}
               </Text>
             </View>
           </View>

@@ -422,6 +422,7 @@ export const rewardsService = {
    */
   async getUserCredits(userId: string): Promise<number> {
     try {
+      // Read from cached customer_credits table (O(1) lookup)
       const { data, error } = await supabase
         .from('customer_credits')
         .select('balance')
@@ -434,10 +435,10 @@ export const rewardsService = {
           return 0;
         }
         console.error('[rewardsService] getUserCredits error:', error);
-        throw error;
+        return 0;
       }
 
-      return data?.balance || 0;
+      return Number(data?.balance || 0);
     } catch (error) {
       console.error('[rewardsService] getUserCredits error:', error);
       return 0;

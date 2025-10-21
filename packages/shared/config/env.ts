@@ -33,6 +33,8 @@ interface EnvConfig {
   // Payment
   STRIPE_PUBLISHABLE_KEY?: string;
   FPX_MERCHANT_ID?: string;
+  CURLEC_KEY_ID?: string;
+  CURLEC_CURRENCY?: string;
   
   // Notifications
   FCM_API_KEY?: string;
@@ -90,6 +92,8 @@ function getEnvConfig(): EnvConfig {
     // Payment
     STRIPE_PUBLISHABLE_KEY: extra.stripePublishableKey,
     FPX_MERCHANT_ID: extra.fpxMerchantId,
+    CURLEC_KEY_ID: extra.curlecKeyId,
+    CURLEC_CURRENCY: extra.curlecCurrency || 'MYR',
     
     // Notifications
     FCM_API_KEY: extra.fcmApiKey,
@@ -176,4 +180,5 @@ if (isDevelopment) {
   console.log('☁️  Cloudinary:', ENV.CLOUDINARY_CLOUD_NAME ? '✅' : '❌');
   console.log('🚨 Sentry:', ENV.SENTRY_DSN ? '✅' : '❌');
   console.log('💳 Stripe:', ENV.STRIPE_PUBLISHABLE_KEY ? '✅' : '❌');
+  console.log('💳 Curlec:', ENV.CURLEC_KEY_ID ? '✅' : '❌');
 }

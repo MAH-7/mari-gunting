@@ -29,6 +29,8 @@ export interface CreateBookingParams {
   paymentMethod?: string;
   travelFee?: number | null;
   discountAmount?: number | null; // NEW: For voucher/promo discounts
+  curlecPaymentId?: string | null; // Curlec payment ID
+  curlecOrderId?: string | null; // Curlec order ID
 }
 
 export interface BookingResult {
@@ -57,6 +59,8 @@ export const bookingService = {
         p_payment_method: params.paymentMethod || 'cash',
         p_travel_fee: params.travelFee || null,
         p_discount_amount: params.discountAmount || null,
+        p_curlec_payment_id: params.curlecPaymentId || null,
+        p_curlec_order_id: params.curlecOrderId || null,
       });
 
       if (error) {
