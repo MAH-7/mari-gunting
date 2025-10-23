@@ -10,6 +10,7 @@ import { supabase } from '@mari-gunting/shared';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { curlecService, type CurlecOrder } from '@mari-gunting/shared/services/curlecService';
 import RazorpayCheckout from 'react-native-razorpay';
+import { BarberResponseWaitingModal } from '@/components/BarberResponseWaitingModal';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -97,6 +98,10 @@ export default function PaymentMethodScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userCredits, setUserCredits] = useState(0);
   const [useCredits, setUseCredits] = useState(false);
+  
+  // Wait-for-barber-accept flow state
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [waitingBookingId, setWaitingBookingId] = useState<string | null>(null);
 
   // Load current user and their vouchers
   useEffect(() => {
@@ -331,152 +336,15 @@ export default function PaymentMethodScreen() {
       createdBookingId = createBookingResponse.data.booking_id;
       const bookingNumber = createBookingResponse.data.booking_number;
       
-      console.log('[Booking-First] Booking created:', bookingNumber, '- Now requesting payment');
+      console.log('[Booking-First] Booking created:', bookingNumber, '- Waiting for barber to accept');
 
-      // STEP 2: Get user profile for payment prefill
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, email, phone_number')
-        .eq('id', currentUserId)
-        .single();
+      // STEP 2: Show waiting screen (payment only after barber accepts)
+      console.log('[Wait-for-Barber] Showing waiting screen');
+      setWaitingBookingId(createdBookingId);
+      setShowWaitingModal(true);
+      setIsProcessing(false); // Stop spinner, waiting modal has its own
 
-      // STEP 3: Create Curlec order (linked to booking)
-      console.log('[Curlec] Creating order for booking:', bookingNumber);
-      const order = await curlecService.createOrder({
-        amount: totalAmount,
-        receipt: `booking_${bookingNumber}`,
-        notes: {
-          customer_id: currentUserId,
-          barber_id: params.barberId,
-          booking_id: createdBookingId, // Link to booking
-          payment_method: selectedMethod || 'card',
-        },
-      });
-
-      console.log('[Curlec] Order created:', order.id);
-
-      // STEP 4: Prepare checkout options
-      const checkoutOptions = curlecService.prepareCheckoutOptions(order, {
-        customerName: profile?.full_name,
-        customerEmail: profile?.email || user?.email,
-        customerContact: profile?.phone_number,
-        description: `Booking #${bookingNumber} with ${params.barberName}`,
-        bookingId: createdBookingId,
-        barberId: params.barberId,
-        customerId: currentUserId,
-        serviceName: params.serviceName || 'Barber Services',
-      });
-
-      // STEP 5: Open payment popup
-      RazorpayCheckout.open(checkoutOptions)
-        .then(async (data: any) => {
-          console.log('[Curlec] Payment success:', data);
-          
-          try {
-            // Verify payment
-            const verified = await curlecService.verifyPayment({
-              razorpay_order_id: data.razorpay_order_id,
-              razorpay_payment_id: data.razorpay_payment_id,
-              razorpay_signature: data.razorpay_signature,
-            });
-
-            if (!verified) {
-              throw new Error('Payment verification failed');
-            }
-
-            // STEP 6: Link payment to booking
-            console.log('[Booking-First] Linking payment to booking...');
-            const linkResult = await bookingService.linkPaymentToBooking(
-              createdBookingId!,
-              currentUserId,
-              data.razorpay_payment_id,
-              data.razorpay_order_id
-            );
-            
-            if (!linkResult.success) {
-              throw new Error(linkResult.error || 'Failed to link payment');
-            }
-            
-            console.log('[Booking-First] Payment linked successfully');
-
-            // Apply voucher if selected
-            if (selectedVoucher && discount > 0) {
-              await rewardsService.applyVoucherToBooking(
-                createdBookingId!,
-                selectedVoucher.id,
-                subtotal + travelCost + bookingFee,
-                discount,
-                totalAmount
-              );
-            }
-            
-            // Deduct credits if used
-            if (useCredits && creditsToApply > 0) {
-              await rewardsService.deductCredit(
-                currentUserId,
-                creditsToApply,
-                'booking_payment',
-                `Payment for booking #${bookingNumber}`,
-                createdBookingId!,
-                {
-                  booking_number: bookingNumber,
-                  online_payment: totalAmount,
-                  credits_used: creditsToApply,
-                }
-              );
-            }
-
-            // Success!
-            console.log('✅ Booking created and paid successfully');
-            setBookingId(createdBookingId!);
-            setShowSuccessModal(true);
-            setIsProcessing(false);
-          } catch (error: any) {
-            console.error('[Curlec] Payment verification error:', error);
-            
-            // Payment received but linking failed - need manual intervention
-            Alert.alert(
-              'Payment Received',
-              `Your payment was received but there was an issue completing the booking. Please contact support with payment ID: ${data.razorpay_payment_id}`,
-              [{ text: 'OK' }]
-            );
-            setIsProcessing(false);
-          }
-        })
-        .catch(async (error: any) => {
-          console.log('[Curlec] Payment cancelled/failed:', error);
-          
-          // Cancel the booking since payment failed/cancelled
-          if (createdBookingId) {
-            try {
-              await supabase
-                .from('bookings')
-                .update({ 
-                  status: 'cancelled',
-                  cancellation_reason: error.code === RazorpayCheckout.PAYMENT_CANCELLED 
-                    ? 'Payment cancelled by customer'
-                    : 'Payment failed'
-                })
-                .eq('id', createdBookingId);
-                
-              console.log('[Booking-First] Booking cancelled due to payment failure');
-            } catch (cancelError) {
-              console.error('[Booking-First] Failed to cancel booking:', cancelError);
-            }
-          }
-          
-          if (error.code === RazorpayCheckout.PAYMENT_CANCELLED) {
-            Alert.alert('Payment Cancelled', 'Your booking has been cancelled.');
-          } else {
-            Alert.alert(
-              'Payment Failed',
-              error.description || 'Payment failed. Your booking has been cancelled. Please try again.',
-              [{ text: 'OK' }]
-            );
-          }
-          setIsProcessing(false);
-        });
+      // Payment will be triggered by handleBarberAccepted callback
     } catch (error: any) {
       console.error('[Booking-First] Error:', error);
       
@@ -502,6 +370,220 @@ export default function PaymentMethodScreen() {
       );
       setIsProcessing(false);
     }
+  };
+
+  /**
+   * Handle barber acceptance - Open payment popup
+   */
+  const handleBarberAccepted = async (bookingId: string) => {
+    try {
+      console.log('[Wait-for-Barber] Barber accepted! Opening payment...');
+      
+      // Close waiting modal
+      setShowWaitingModal(false);
+      setIsProcessing(true);
+      
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get booking details
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('booking_number, total_price')
+        .eq('id', bookingId)
+        .single();
+
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Get user profile for payment prefill
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone_number')
+        .eq('id', currentUserId)
+        .single();
+
+      // Create Curlec order
+      console.log('[Curlec] Creating order for booking:', booking.booking_number);
+      const order = await curlecService.createOrder({
+        amount: booking.total_price,
+        receipt: `booking_${booking.booking_number}`,
+        notes: {
+          customer_id: currentUserId,
+          barber_id: params.barberId,
+          booking_id: bookingId,
+          payment_method: selectedMethod || 'card',
+        },
+      });
+
+      // Prepare checkout options
+      const checkoutOptions = curlecService.prepareCheckoutOptions(order, {
+        customerName: profile?.full_name,
+        customerEmail: profile?.email || user?.email,
+        customerContact: profile?.phone_number,
+        description: `Booking #${booking.booking_number}`,
+        bookingId: bookingId,
+        barberId: params.barberId,
+        customerId: currentUserId,
+        serviceName: params.serviceName || 'Barber Services',
+      });
+
+      // Open payment popup (barber already accepted!)
+      RazorpayCheckout.open(checkoutOptions)
+        .then(async (data: any) => {
+          // Payment successful - link to booking
+          const verified = await curlecService.verifyPayment({
+            razorpay_order_id: data.razorpay_order_id,
+            razorpay_payment_id: data.razorpay_payment_id,
+            razorpay_signature: data.razorpay_signature,
+          });
+
+          if (!verified) {
+            throw new Error('Payment verification failed');
+          }
+
+          // Link payment
+          await bookingService.linkPaymentToBooking(
+            bookingId,
+            currentUserId,
+            data.razorpay_payment_id,
+            data.razorpay_order_id
+          );
+
+          // Apply voucher if selected
+          if (selectedVoucher && discount > 0) {
+            await rewardsService.applyVoucherToBooking(
+              bookingId,
+              selectedVoucher.id,
+              subtotal + travelCost + bookingFee,
+              discount,
+              totalAmount
+            );
+          }
+          
+          // Deduct credits if used
+          if (useCredits && creditsToApply > 0) {
+            await rewardsService.deductCredit(
+              currentUserId,
+              creditsToApply,
+              'booking_payment',
+              `Payment for booking #${booking.booking_number}`,
+              bookingId,
+              {
+                booking_number: booking.booking_number,
+                online_payment: totalAmount,
+                credits_used: creditsToApply,
+              }
+            );
+          }
+
+          // Success!
+          setBookingId(bookingId);
+          setShowSuccessModal(true);
+          setIsProcessing(false);
+        })
+        .catch(async (error: any) => {
+          // Payment failed AFTER barber accepted
+          // This is a problem - barber accepted but customer didn't pay
+          
+          console.error('[Payment] Failed after barber accepted:', error);
+          
+          // Cancel the booking
+          await supabase
+            .from('bookings')
+            .update({ 
+              status: 'cancelled',
+              cancellation_reason: 'Payment failed after acceptance'
+            })
+            .eq('id', bookingId);
+          
+          Alert.alert(
+            'Payment Failed',
+            'Your payment failed. The booking has been cancelled. Please try again.',
+            [{ text: 'OK' }]
+          );
+          setIsProcessing(false);
+        });
+    } catch (error: any) {
+      console.error('[Wait-for-Barber] Error opening payment:', error);
+      Alert.alert('Error', error.message || 'Failed to process payment');
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Handle barber rejection
+   */
+  const handleBarberRejected = async () => {
+    console.log('[Wait-for-Barber] Barber rejected');
+    
+    setShowWaitingModal(false);
+    setIsProcessing(false);
+    
+    Alert.alert(
+      'Barber Unavailable',
+      'Sorry, the barber is not available right now. Would you like to try another barber?',
+      [
+        { text: 'OK', onPress: () => router.back() },
+        { text: 'Try Another', onPress: () => {
+          // Navigate to barber list or search
+          router.replace('/');
+        }},
+      ]
+    );
+  };
+
+  /**
+   * Handle timeout - no barber response
+   */
+  const handleBarberTimeout = async () => {
+    console.log('[Wait-for-Barber] Timeout - no response');
+    
+    setShowWaitingModal(false);
+    setIsProcessing(false);
+    
+    // Cancel the booking
+    if (waitingBookingId) {
+      await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: 'No barber response (timeout)'
+        })
+        .eq('id', waitingBookingId);
+    }
+    
+    Alert.alert(
+      'No Response',
+      'The barber hasn\'t responded yet. Your booking has been cancelled. Please try another barber.',
+      [{ text: 'OK', onPress: () => router.back() }]
+    );
+  };
+
+  /**
+   * Handle customer cancels waiting
+   */
+  const handleCancelWaiting = async () => {
+    console.log('[Wait-for-Barber] Customer cancelled while waiting');
+    
+    setShowWaitingModal(false);
+    setIsProcessing(false);
+    
+    // Cancel the booking
+    if (waitingBookingId) {
+      await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: 'Customer cancelled before barber response'
+        })
+        .eq('id', waitingBookingId);
+    }
+    
+    router.back();
   };
 
   /**
@@ -1096,6 +1178,18 @@ export default function PaymentMethodScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+      
+      {/* Waiting for barber response */}
+      <BarberResponseWaitingModal
+        visible={showWaitingModal}
+        bookingId={waitingBookingId || ''}
+        barberName={params.barberName}
+        onBarberAccepted={() => handleBarberAccepted(waitingBookingId!)}
+        onBarberRejected={handleBarberRejected}
+        onTimeout={handleBarberTimeout}
+        onCancel={handleCancelWaiting}
+        timeoutSeconds={180}
+      />
       
       {/* Success Modal */}
       <SuccessModal
