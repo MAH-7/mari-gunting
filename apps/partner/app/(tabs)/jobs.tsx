@@ -257,7 +257,7 @@ export default function PartnerJobsScreen() {
               const updatedJob = { ...job, status: 'accepted' as BookingStatus };
               setSelectedJob(updatedJob);
               
-              // Update backend
+              // Update backend - this will also capture payment if Curlec
               await updateStatusMutation.mutateAsync({ 
                 bookingId: job.id, 
                 newStatus: 'accepted' 

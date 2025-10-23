@@ -192,7 +192,7 @@ class CurlecService {
       currency: order.currency,
       name: 'Mari Gunting',
       description: options.description || 'Barber Service Booking',
-      image: 'https://your-logo-url.com/logo.png', // Optional: Add your logo
+      // image: removed - using dashboard logo instead
       order_id: order.id,
       prefill: {
         name: options.customerName,
@@ -217,8 +217,11 @@ class CurlecService {
       },
       readonly: {
         contact: true, // Lock phone number (user already verified)
-        email: true, // Lock email to match profile
+        email: true, // Lock email (shows but can't edit)
         name: false, // Allow name edit in case of typos
+      },
+      hidden: {
+        email: false, // Don't hide email field
       },
       send_sms_hash: true, // Auto-read OTP from SMS (Android)
       retry: {
