@@ -42,6 +42,46 @@ export interface BookingResult {
 
 export const bookingService = {
   /**
+   * Link payment to existing booking (booking-first flow)
+   */
+  async linkPaymentToBooking(
+    bookingId: string,
+    customerId: string,
+    paymentId: string,
+    orderId: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase.rpc('link_payment_to_booking', {
+        p_booking_id: bookingId,
+        p_customer_id: customerId,
+        p_curlec_payment_id: paymentId,
+        p_curlec_order_id: orderId,
+      });
+
+      if (error) {
+        console.error('❌ Link payment error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      console.log('✅ Payment linked to booking:', result);
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error: any) {
+      console.error('❌ Link payment exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to link payment to booking',
+      };
+    }
+  },
+  /**
    * Create a new booking
    */
   async createBooking(params: CreateBookingParams): Promise<ApiResponse<BookingResult>> {
@@ -152,6 +192,86 @@ export const bookingService = {
 
       const result = Array.isArray(data) ? data[0] : data;
 
+      // If status is 'accepted' and payment is authorized, capture it
+      if (newStatus === 'accepted' && result?.payment_status === 'authorized') {
+        console.log('💳 Barber accepted - capturing authorized payment');
+        
+        try {
+          // Get booking details to capture payment
+          const { data: booking } = await supabase
+            .from('bookings')
+            .select('curlec_payment_id, total_price')
+            .eq('id', bookingId)
+            .single();
+
+          if (booking?.curlec_payment_id) {
+            const { data: captureData, error: captureError } = await supabase.functions.invoke(
+              'capture-curlec-payment',
+              {
+                body: {
+                  payment_id: booking.curlec_payment_id,
+                  amount: Math.round(booking.total_price * 100), // Convert to sen
+                },
+              }
+            );
+
+            if (captureError) {
+              console.error('❌ Capture failed:', captureError);
+              console.error('⚠️ Payment capture failed - manual processing required');
+            } else if (captureData?.success) {
+              console.log('✅ Payment captured successfully');
+              
+              // Update payment status to completed
+              await supabase
+                .from('bookings')
+                .update({ payment_status: 'completed' })
+                .eq('id', bookingId);
+            }
+          }
+        } catch (captureException: any) {
+          console.error('❌ Capture exception:', captureException);
+        }
+      }
+
+      // If refund is needed (booking cancelled with payment), call refund Edge Function
+      if (result?.refund_needed && result?.payment_id) {
+        console.log('💰 Processing instant refund for cancelled booking:', result.payment_id);
+        
+        try {
+          const { data: refundData, error: refundError } = await supabase.functions.invoke(
+            'refund-curlec-payment',
+            {
+              body: {
+                payment_id: result.payment_id,
+                amount: Math.round(result.refund_amount * 100), // Convert to sen
+                notes: {
+                  booking_id: bookingId,
+                  reason: notes || 'Booking cancelled',
+                },
+                receipt: `refund_${bookingId.substring(0, 8)}`,
+              },
+            }
+          );
+
+          if (refundError) {
+            console.error('❌ Refund failed:', refundError);
+          } else if (refundData?.success) {
+            console.log('✅ Instant refund initiated:', refundData.refund?.id);
+            
+            // Update booking with refund ID
+            await supabase
+              .from('bookings')
+              .update({
+                payment_status: 'refund_initiated',
+                curlec_refund_id: refundData.refund?.id,
+              })
+              .eq('id', bookingId);
+          }
+        } catch (refundException: any) {
+          console.error('❌ Refund exception:', refundException);
+        }
+      }
+
       return {
         success: true,
         data: result,
@@ -191,6 +311,47 @@ export const bookingService = {
       const result = Array.isArray(data) ? data[0] : data;
 
       console.log('✅ Booking cancelled:', result);
+
+      // If refund is needed, call the refund Edge Function
+      if (result?.refund_needed && result?.payment_id) {
+        console.log('💰 Processing instant refund for payment:', result.payment_id);
+        
+        try {
+          const { data: refundData, error: refundError } = await supabase.functions.invoke(
+            'refund-curlec-payment',
+            {
+              body: {
+                payment_id: result.payment_id,
+                amount: Math.round(result.refund_amount * 100), // Convert to sen
+                notes: {
+                  booking_id: bookingId,
+                  reason: reason,
+                },
+                receipt: `refund_${bookingId.substring(0, 8)}`,
+              },
+            }
+          );
+
+          if (refundError) {
+            console.error('❌ Refund failed:', refundError);
+            // Don't fail the cancellation, just log the refund error
+          } else if (refundData?.success) {
+            console.log('✅ Instant refund initiated:', refundData.refund?.id);
+            
+            // Update booking with refund ID
+            await supabase
+              .from('bookings')
+              .update({
+                payment_status: 'refund_initiated',
+                curlec_refund_id: refundData.refund?.id,
+              })
+              .eq('id', bookingId);
+          }
+        } catch (refundException: any) {
+          console.error('❌ Refund exception:', refundException);
+          // Continue - cancellation was successful even if refund failed
+        }
+      }
 
       return {
         success: true,

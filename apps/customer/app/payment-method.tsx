@@ -10,6 +10,7 @@ import { supabase } from '@mari-gunting/shared';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { curlecService, type CurlecOrder } from '@mari-gunting/shared/services/curlecService';
 import RazorpayCheckout from 'react-native-razorpay';
+import { BarberResponseWaitingModal } from '@/components/BarberResponseWaitingModal';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -97,6 +98,10 @@ export default function PaymentMethodScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userCredits, setUserCredits] = useState(0);
   const [useCredits, setUseCredits] = useState(false);
+  
+  // Wait-for-barber-accept flow state
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [waitingBookingId, setWaitingBookingId] = useState<string | null>(null);
 
   // Load current user and their vouchers
   useEffect(() => {
@@ -264,9 +269,11 @@ export default function PaymentMethodScreen() {
   };
 
   /**
-   * Handle Curlec payment (Card & FPX)
+   * Handle Curlec payment (Card & FPX) - BOOKING-FIRST FLOW
    */
   const handleCurlecPayment = async () => {
+    let createdBookingId: string | null = null;
+    
     try {
       if (!curlecService.isConfigured()) {
         Alert.alert(
@@ -282,97 +289,83 @@ export default function PaymentMethodScreen() {
         throw new Error('User not authenticated');
       }
 
-      // Get current auth user for email fallback
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Get user profile for prefill
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('full_name, email, phone_number')
-        .eq('id', currentUserId)
-        .single();
-
-      // Create Curlec order
-      console.log('[Curlec] Creating order for amount:', totalAmount);
-      const order = await curlecService.createOrder({
-        amount: totalAmount,
-        receipt: `booking_${Date.now()}`,
-        notes: {
-          customer_id: currentUserId,
-          barber_id: params.barberId,
-          payment_method: selectedMethod || 'card',
-        },
-      });
-
-      console.log('[Curlec] Order created:', order.id);
-
-      // Prepare checkout options with metadata
-      const checkoutOptions = curlecService.prepareCheckoutOptions(order, {
-        customerName: profile?.full_name,
-        customerEmail: profile?.email || user?.email, // Fallback to auth email
-        customerContact: profile?.phone_number,
-        description: `Booking with ${params.barberName}`,
-        bookingId: `temp_${Date.now()}`,
-        barberId: params.barberId,
+      // STEP 1: Create booking FIRST (before payment)
+      console.log('[Booking-First] Creating booking before payment...');
+      
+      const services = JSON.parse(params.services || '[]');
+      const address = JSON.parse(params.address || '{}');
+      const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
+      const isBarbershop = bookingType === 'scheduled-shop';
+      
+      const scheduledDate = isBarbershop && params.scheduledDate 
+        ? params.scheduledDate 
+        : new Date().toISOString().split('T')[0];
+      
+      const scheduledTime = isBarbershop && params.scheduledTime
+        ? params.scheduledTime
+        : new Date().toTimeString().split(' ')[0].substring(0, 5);
+      
+      const customerAddress = !isBarbershop ? {
+        line1: address.address_line1 || address.line1 || '',
+        line2: address.address_line2 || address.line2 || '',
+        city: address.city || '',
+        state: address.state || '',
+        postalCode: address.postal_code || address.postalCode || '',
+      } : null;
+      
+      const createBookingResponse = await bookingService.createBooking({
         customerId: currentUserId,
-        serviceName: params.serviceName || 'Barber Services',
+        barberId: params.barberId,
+        services: services,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        serviceType: isBarbershop ? 'walk_in' : 'home_service',
+        barbershopId: params.shopId || null,
+        customerAddress: customerAddress,
+        customerNotes: params.serviceNotes || null,
+        paymentMethod: selectedMethod === 'fpx' ? 'curlec_fpx' : 'curlec_card',
+        travelFee: parseFloat(params.travelCost || '0'),
+        discountAmount: discount,
+        // NO payment IDs - booking created without payment
       });
+      
+      if (!createBookingResponse.success || !createBookingResponse.data) {
+        throw new Error(createBookingResponse.error || 'Failed to create booking');
+      }
+      
+      createdBookingId = createBookingResponse.data.booking_id;
+      const bookingNumber = createBookingResponse.data.booking_number;
+      
+      console.log('[Booking-First] Booking created:', bookingNumber, '- Waiting for barber to accept');
 
-      // Open Curlec checkout (uses Razorpay SDK with Curlec keys)
-      RazorpayCheckout.open(checkoutOptions)
-        .then(async (data: any) => {
-          // Payment successful
-          console.log('[Curlec] Payment success:', data);
-          
-          try {
-            // Verify payment signature
-            const verified = await curlecService.verifyPayment({
-              razorpay_order_id: data.razorpay_order_id,
-              razorpay_payment_id: data.razorpay_payment_id,
-              razorpay_signature: data.razorpay_signature,
-            });
+      // STEP 2: Show waiting screen (payment only after barber accepts)
+      console.log('[Wait-for-Barber] Showing waiting screen');
+      setWaitingBookingId(createdBookingId);
+      setShowWaitingModal(true);
+      setIsProcessing(false); // Stop spinner, waiting modal has its own
 
-            if (!verified) {
-              throw new Error('Payment verification failed');
-            }
-
-            console.log('[Curlec] Payment verified, creating booking...');
-
-            // Create booking after successful payment
-            await createBookingWithCurlecPayment(
-              data.razorpay_payment_id,
-              data.razorpay_order_id
-            );
-          } catch (error) {
-            console.error('[Curlec] Payment verification error:', error);
-            Alert.alert(
-              'Payment Verification Failed',
-              'Your payment was received but could not be verified. Please contact support with payment ID: ' + data.razorpay_payment_id,
-              [{ text: 'OK' }]
-            );
-            setIsProcessing(false);
-          }
-        })
-        .catch((error: any) => {
-          // Payment failed or cancelled
-          console.log('[Curlec] Payment cancelled/failed:', error);
-          
-          if (error.code === RazorpayCheckout.PAYMENT_CANCELLED) {
-            Alert.alert('Payment Cancelled', 'You cancelled the payment.');
-          } else {
-            Alert.alert(
-              'Payment Failed',
-              error.description || 'Something went wrong. Please try again.',
-              [{ text: 'OK' }]
-            );
-          }
-          setIsProcessing(false);
-        });
+      // Payment will be triggered by handleBarberAccepted callback
     } catch (error: any) {
-      console.error('[Curlec] Error:', error);
+      console.error('[Booking-First] Error:', error);
+      
+      // If booking was created but error occurred before payment
+      if (createdBookingId) {
+        try {
+          await supabase
+            .from('bookings')
+            .update({ 
+              status: 'cancelled',
+              cancellation_reason: 'Error before payment'
+            })
+            .eq('id', createdBookingId);
+        } catch (cancelError) {
+          console.error('[Booking-First] Failed to cancel booking:', cancelError);
+        }
+      }
+      
       Alert.alert(
-        'Payment Error',
-        error.message || 'Failed to initialize payment. Please try again.',
+        'Booking Error',
+        error.message || 'Failed to create booking. Please try again.',
         [{ text: 'OK' }]
       );
       setIsProcessing(false);
@@ -380,8 +373,225 @@ export default function PaymentMethodScreen() {
   };
 
   /**
-   * Create booking with Curlec payment information
+   * Handle barber acceptance - Open payment popup
    */
+  const handleBarberAccepted = async (bookingId: string) => {
+    try {
+      console.log('[Wait-for-Barber] Barber accepted! Opening payment...');
+      
+      // Close waiting modal
+      setShowWaitingModal(false);
+      setIsProcessing(true);
+      
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get booking details
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('booking_number, total_price')
+        .eq('id', bookingId)
+        .single();
+
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Get user profile for payment prefill
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone_number')
+        .eq('id', currentUserId)
+        .single();
+
+      // Create Curlec order
+      console.log('[Curlec] Creating order for booking:', booking.booking_number);
+      const order = await curlecService.createOrder({
+        amount: booking.total_price,
+        receipt: `booking_${booking.booking_number}`,
+        notes: {
+          customer_id: currentUserId,
+          barber_id: params.barberId,
+          booking_id: bookingId,
+          payment_method: selectedMethod || 'card',
+        },
+      });
+
+      // Prepare checkout options
+      const checkoutOptions = curlecService.prepareCheckoutOptions(order, {
+        customerName: profile?.full_name,
+        customerEmail: profile?.email || user?.email,
+        customerContact: profile?.phone_number,
+        description: `Booking #${booking.booking_number}`,
+        bookingId: bookingId,
+        barberId: params.barberId,
+        customerId: currentUserId,
+        serviceName: params.serviceName || 'Barber Services',
+      });
+
+      // Open payment popup (barber already accepted!)
+      RazorpayCheckout.open(checkoutOptions)
+        .then(async (data: any) => {
+          // Payment successful - link to booking
+          const verified = await curlecService.verifyPayment({
+            razorpay_order_id: data.razorpay_order_id,
+            razorpay_payment_id: data.razorpay_payment_id,
+            razorpay_signature: data.razorpay_signature,
+          });
+
+          if (!verified) {
+            throw new Error('Payment verification failed');
+          }
+
+          // Link payment
+          await bookingService.linkPaymentToBooking(
+            bookingId,
+            currentUserId,
+            data.razorpay_payment_id,
+            data.razorpay_order_id
+          );
+
+          // Apply voucher if selected
+          if (selectedVoucher && discount > 0) {
+            await rewardsService.applyVoucherToBooking(
+              bookingId,
+              selectedVoucher.id,
+              subtotal + travelCost + bookingFee,
+              discount,
+              totalAmount
+            );
+          }
+          
+          // Deduct credits if used
+          if (useCredits && creditsToApply > 0) {
+            await rewardsService.deductCredit(
+              currentUserId,
+              creditsToApply,
+              'booking_payment',
+              `Payment for booking #${booking.booking_number}`,
+              bookingId,
+              {
+                booking_number: booking.booking_number,
+                online_payment: totalAmount,
+                credits_used: creditsToApply,
+              }
+            );
+          }
+
+          // Success!
+          setBookingId(bookingId);
+          setShowSuccessModal(true);
+          setIsProcessing(false);
+        })
+        .catch(async (error: any) => {
+          // Payment failed AFTER barber accepted
+          // This is a problem - barber accepted but customer didn't pay
+          
+          console.error('[Payment] Failed after barber accepted:', error);
+          
+          // Cancel the booking
+          await supabase
+            .from('bookings')
+            .update({ 
+              status: 'cancelled',
+              cancellation_reason: 'Payment failed after acceptance'
+            })
+            .eq('id', bookingId);
+          
+          Alert.alert(
+            'Payment Failed',
+            'Your payment failed. The booking has been cancelled. Please try again.',
+            [{ text: 'OK' }]
+          );
+          setIsProcessing(false);
+        });
+    } catch (error: any) {
+      console.error('[Wait-for-Barber] Error opening payment:', error);
+      Alert.alert('Error', error.message || 'Failed to process payment');
+      setIsProcessing(false);
+    }
+  };
+
+  /**
+   * Handle barber rejection
+   */
+  const handleBarberRejected = async () => {
+    console.log('[Wait-for-Barber] Barber rejected');
+    
+    setShowWaitingModal(false);
+    setIsProcessing(false);
+    
+    Alert.alert(
+      'Barber Unavailable',
+      'Sorry, the barber is not available right now. Would you like to try another barber?',
+      [
+        { text: 'OK', onPress: () => router.back() },
+        { text: 'Try Another', onPress: () => {
+          // Navigate to barber list or search
+          router.replace('/');
+        }},
+      ]
+    );
+  };
+
+  /**
+   * Handle timeout - no barber response
+   */
+  const handleBarberTimeout = async () => {
+    console.log('[Wait-for-Barber] Timeout - no response');
+    
+    setShowWaitingModal(false);
+    setIsProcessing(false);
+    
+    // Cancel the booking
+    if (waitingBookingId) {
+      await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: 'No barber response (timeout)'
+        })
+        .eq('id', waitingBookingId);
+    }
+    
+    Alert.alert(
+      'No Response',
+      'The barber hasn\'t responded yet. Your booking has been cancelled. Please try another barber.',
+      [{ text: 'OK', onPress: () => router.back() }]
+    );
+  };
+
+  /**
+   * Handle customer cancels waiting
+   */
+  const handleCancelWaiting = async () => {
+    console.log('[Wait-for-Barber] Customer cancelled while waiting');
+    
+    setShowWaitingModal(false);
+    setIsProcessing(false);
+    
+    // Cancel the booking
+    if (waitingBookingId) {
+      await supabase
+        .from('bookings')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: 'Customer cancelled before barber response'
+        })
+        .eq('id', waitingBookingId);
+    }
+    
+    router.back();
+  };
+
+  /**
+   * DEPRECATED: Old payment-first flow
+   * Now using booking-first flow in handleCurlecPayment()
+   * Kept for reference only - can be removed after testing
+   */
+  /* 
   const createBookingWithCurlecPayment = async (
     paymentId: string,
     orderId: string
@@ -476,6 +686,7 @@ export default function PaymentMethodScreen() {
       throw error;
     }
   };
+  */
 
   const handleConfirmPayment = async () => {
     // If credits cover full amount, skip payment method selection
@@ -967,6 +1178,18 @@ export default function PaymentMethodScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+      
+      {/* Waiting for barber response */}
+      <BarberResponseWaitingModal
+        visible={showWaitingModal}
+        bookingId={waitingBookingId || ''}
+        barberName={params.barberName}
+        onBarberAccepted={() => handleBarberAccepted(waitingBookingId!)}
+        onBarberRejected={handleBarberRejected}
+        onTimeout={handleBarberTimeout}
+        onCancel={handleCancelWaiting}
+        timeoutSeconds={180}
+      />
       
       {/* Success Modal */}
       <SuccessModal
