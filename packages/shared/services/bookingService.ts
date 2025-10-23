@@ -192,9 +192,9 @@ export const bookingService = {
 
       const result = Array.isArray(data) ? data[0] : data;
 
-      // If status is 'accepted' and payment is authorized, capture it
-      if (newStatus === 'accepted' && result?.payment_status === 'authorized') {
-        console.log('💳 Barber accepted - capturing authorized payment');
+      // If status is 'completed' and payment is authorized, capture it
+      if (newStatus === 'completed' && result?.payment_status === 'authorized') {
+        console.log('💳 Service completed - capturing authorized payment');
         
         try {
           // Get booking details to capture payment
