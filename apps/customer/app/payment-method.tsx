@@ -264,9 +264,11 @@ export default function PaymentMethodScreen() {
   };
 
   /**
-   * Handle Curlec payment (Card & FPX)
+   * Handle Curlec payment (Card & FPX) - BOOKING-FIRST FLOW
    */
   const handleCurlecPayment = async () => {
+    let createdBookingId: string | null = null;
+    
     try {
       if (!curlecService.isConfigured()) {
         Alert.alert(
@@ -282,50 +284,97 @@ export default function PaymentMethodScreen() {
         throw new Error('User not authenticated');
       }
 
-      // Get current auth user for email fallback
-      const { data: { user } } = await supabase.auth.getUser();
+      // STEP 1: Create booking FIRST (before payment)
+      console.log('[Booking-First] Creating booking before payment...');
+      
+      const services = JSON.parse(params.services || '[]');
+      const address = JSON.parse(params.address || '{}');
+      const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
+      const isBarbershop = bookingType === 'scheduled-shop';
+      
+      const scheduledDate = isBarbershop && params.scheduledDate 
+        ? params.scheduledDate 
+        : new Date().toISOString().split('T')[0];
+      
+      const scheduledTime = isBarbershop && params.scheduledTime
+        ? params.scheduledTime
+        : new Date().toTimeString().split(' ')[0].substring(0, 5);
+      
+      const customerAddress = !isBarbershop ? {
+        line1: address.address_line1 || address.line1 || '',
+        line2: address.address_line2 || address.line2 || '',
+        city: address.city || '',
+        state: address.state || '',
+        postalCode: address.postal_code || address.postalCode || '',
+      } : null;
+      
+      const createBookingResponse = await bookingService.createBooking({
+        customerId: currentUserId,
+        barberId: params.barberId,
+        services: services,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        serviceType: isBarbershop ? 'walk_in' : 'home_service',
+        barbershopId: params.shopId || null,
+        customerAddress: customerAddress,
+        customerNotes: params.serviceNotes || null,
+        paymentMethod: selectedMethod === 'fpx' ? 'curlec_fpx' : 'curlec_card',
+        travelFee: parseFloat(params.travelCost || '0'),
+        discountAmount: discount,
+        // NO payment IDs - booking created without payment
+      });
+      
+      if (!createBookingResponse.success || !createBookingResponse.data) {
+        throw new Error(createBookingResponse.error || 'Failed to create booking');
+      }
+      
+      createdBookingId = createBookingResponse.data.booking_id;
+      const bookingNumber = createBookingResponse.data.booking_number;
+      
+      console.log('[Booking-First] Booking created:', bookingNumber, '- Now requesting payment');
 
-      // Get user profile for prefill
-      const { data: profile, error: profileError } = await supabase
+      // STEP 2: Get user profile for payment prefill
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, email, phone_number')
         .eq('id', currentUserId)
         .single();
 
-      // Create Curlec order
-      console.log('[Curlec] Creating order for amount:', totalAmount);
+      // STEP 3: Create Curlec order (linked to booking)
+      console.log('[Curlec] Creating order for booking:', bookingNumber);
       const order = await curlecService.createOrder({
         amount: totalAmount,
-        receipt: `booking_${Date.now()}`,
+        receipt: `booking_${bookingNumber}`,
         notes: {
           customer_id: currentUserId,
           barber_id: params.barberId,
+          booking_id: createdBookingId, // Link to booking
           payment_method: selectedMethod || 'card',
         },
       });
 
       console.log('[Curlec] Order created:', order.id);
 
-      // Prepare checkout options with metadata
+      // STEP 4: Prepare checkout options
       const checkoutOptions = curlecService.prepareCheckoutOptions(order, {
         customerName: profile?.full_name,
-        customerEmail: profile?.email || user?.email, // Fallback to auth email
+        customerEmail: profile?.email || user?.email,
         customerContact: profile?.phone_number,
-        description: `Booking with ${params.barberName}`,
-        bookingId: `temp_${Date.now()}`,
+        description: `Booking #${bookingNumber} with ${params.barberName}`,
+        bookingId: createdBookingId,
         barberId: params.barberId,
         customerId: currentUserId,
         serviceName: params.serviceName || 'Barber Services',
       });
 
-      // Open Curlec checkout (uses Razorpay SDK with Curlec keys)
+      // STEP 5: Open payment popup
       RazorpayCheckout.open(checkoutOptions)
         .then(async (data: any) => {
-          // Payment successful
           console.log('[Curlec] Payment success:', data);
           
           try {
-            // Verify payment signature
+            // Verify payment
             const verified = await curlecService.verifyPayment({
               razorpay_order_id: data.razorpay_order_id,
               razorpay_payment_id: data.razorpay_payment_id,
@@ -336,43 +385,119 @@ export default function PaymentMethodScreen() {
               throw new Error('Payment verification failed');
             }
 
-            console.log('[Curlec] Payment verified, creating booking...');
-
-            // Create booking after successful payment
-            await createBookingWithCurlecPayment(
+            // STEP 6: Link payment to booking
+            console.log('[Booking-First] Linking payment to booking...');
+            const linkResult = await bookingService.linkPaymentToBooking(
+              createdBookingId!,
+              currentUserId,
               data.razorpay_payment_id,
               data.razorpay_order_id
             );
-          } catch (error) {
+            
+            if (!linkResult.success) {
+              throw new Error(linkResult.error || 'Failed to link payment');
+            }
+            
+            console.log('[Booking-First] Payment linked successfully');
+
+            // Apply voucher if selected
+            if (selectedVoucher && discount > 0) {
+              await rewardsService.applyVoucherToBooking(
+                createdBookingId!,
+                selectedVoucher.id,
+                subtotal + travelCost + bookingFee,
+                discount,
+                totalAmount
+              );
+            }
+            
+            // Deduct credits if used
+            if (useCredits && creditsToApply > 0) {
+              await rewardsService.deductCredit(
+                currentUserId,
+                creditsToApply,
+                'booking_payment',
+                `Payment for booking #${bookingNumber}`,
+                createdBookingId!,
+                {
+                  booking_number: bookingNumber,
+                  online_payment: totalAmount,
+                  credits_used: creditsToApply,
+                }
+              );
+            }
+
+            // Success!
+            console.log('✅ Booking created and paid successfully');
+            setBookingId(createdBookingId!);
+            setShowSuccessModal(true);
+            setIsProcessing(false);
+          } catch (error: any) {
             console.error('[Curlec] Payment verification error:', error);
+            
+            // Payment received but linking failed - need manual intervention
             Alert.alert(
-              'Payment Verification Failed',
-              'Your payment was received but could not be verified. Please contact support with payment ID: ' + data.razorpay_payment_id,
+              'Payment Received',
+              `Your payment was received but there was an issue completing the booking. Please contact support with payment ID: ${data.razorpay_payment_id}`,
               [{ text: 'OK' }]
             );
             setIsProcessing(false);
           }
         })
-        .catch((error: any) => {
-          // Payment failed or cancelled
+        .catch(async (error: any) => {
           console.log('[Curlec] Payment cancelled/failed:', error);
           
+          // Cancel the booking since payment failed/cancelled
+          if (createdBookingId) {
+            try {
+              await supabase
+                .from('bookings')
+                .update({ 
+                  status: 'cancelled',
+                  cancellation_reason: error.code === RazorpayCheckout.PAYMENT_CANCELLED 
+                    ? 'Payment cancelled by customer'
+                    : 'Payment failed'
+                })
+                .eq('id', createdBookingId);
+                
+              console.log('[Booking-First] Booking cancelled due to payment failure');
+            } catch (cancelError) {
+              console.error('[Booking-First] Failed to cancel booking:', cancelError);
+            }
+          }
+          
           if (error.code === RazorpayCheckout.PAYMENT_CANCELLED) {
-            Alert.alert('Payment Cancelled', 'You cancelled the payment.');
+            Alert.alert('Payment Cancelled', 'Your booking has been cancelled.');
           } else {
             Alert.alert(
               'Payment Failed',
-              error.description || 'Something went wrong. Please try again.',
+              error.description || 'Payment failed. Your booking has been cancelled. Please try again.',
               [{ text: 'OK' }]
             );
           }
           setIsProcessing(false);
         });
     } catch (error: any) {
-      console.error('[Curlec] Error:', error);
+      console.error('[Booking-First] Error:', error);
+      
+      // If booking was created but error occurred before payment
+      if (createdBookingId) {
+        try {
+          await supabase
+            .from('bookings')
+            .update({ 
+              status: 'cancelled',
+              cancellation_reason: 'Error before payment'
+            })
+            .eq('id', createdBookingId);
+        } catch (cancelError) {
+          console.error('[Booking-First] Failed to cancel booking:', cancelError);
+        }
+      }
+      
       Alert.alert(
-        'Payment Error',
-        error.message || 'Failed to initialize payment. Please try again.',
+        'Booking Error',
+        error.message || 'Failed to create booking. Please try again.',
         [{ text: 'OK' }]
       );
       setIsProcessing(false);
@@ -380,8 +505,11 @@ export default function PaymentMethodScreen() {
   };
 
   /**
-   * Create booking with Curlec payment information
+   * DEPRECATED: Old payment-first flow
+   * Now using booking-first flow in handleCurlecPayment()
+   * Kept for reference only - can be removed after testing
    */
+  /* 
   const createBookingWithCurlecPayment = async (
     paymentId: string,
     orderId: string
@@ -476,6 +604,7 @@ export default function PaymentMethodScreen() {
       throw error;
     }
   };
+  */
 
   const handleConfirmPayment = async () => {
     // If credits cover full amount, skip payment method selection

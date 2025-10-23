@@ -42,6 +42,46 @@ export interface BookingResult {
 
 export const bookingService = {
   /**
+   * Link payment to existing booking (booking-first flow)
+   */
+  async linkPaymentToBooking(
+    bookingId: string,
+    customerId: string,
+    paymentId: string,
+    orderId: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase.rpc('link_payment_to_booking', {
+        p_booking_id: bookingId,
+        p_customer_id: customerId,
+        p_curlec_payment_id: paymentId,
+        p_curlec_order_id: orderId,
+      });
+
+      if (error) {
+        console.error('❌ Link payment error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      console.log('✅ Payment linked to booking:', result);
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error: any) {
+      console.error('❌ Link payment exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to link payment to booking',
+      };
+    }
+  },
+  /**
    * Create a new booking
    */
   async createBooking(params: CreateBookingParams): Promise<ApiResponse<BookingResult>> {
