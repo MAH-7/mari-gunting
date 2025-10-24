@@ -11,6 +11,7 @@ import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { curlecService, type CurlecOrder } from '@mari-gunting/shared/services/curlecService';
 import RazorpayCheckout from 'react-native-razorpay';
 import { BarberResponseWaitingModal } from '@/components/BarberResponseWaitingModal';
+import { FEATURE_FLAGS } from '@mari-gunting/shared/constants';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -22,7 +23,8 @@ interface PaymentOption {
   badge?: string;
 }
 
-const paymentOptions: PaymentOption[] = [
+// All available payment options
+const allPaymentOptions: PaymentOption[] = [
   {
     id: 'card',
     name: 'Card',
@@ -49,6 +51,16 @@ const paymentOptions: PaymentOption[] = [
     description: 'Pay after service',
   },
 ];
+
+// Filter payment options based on feature flags
+// Cash payment: Disabled to prevent customer ghosting/no-shows during MVP phase
+// E-wallet: Disabled because payment flow not yet implemented
+// To enable: Set respective flags to true in packages/shared/constants/features.ts
+const paymentOptions: PaymentOption[] = allPaymentOptions.filter(option => {
+  if (option.id === 'cash') return FEATURE_FLAGS.CASH_PAYMENT_ENABLED;
+  if (option.id === 'ewallet') return FEATURE_FLAGS.EWALLET_PAYMENT_ENABLED;
+  return true; // Card and FPX always enabled
+});
 
 export default function PaymentMethodScreen() {
   const params = useLocalSearchParams<{
