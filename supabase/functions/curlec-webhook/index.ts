@@ -4,20 +4,27 @@ import { createHmac } from 'https://deno.land/std@0.168.0/node/crypto.ts'
 
 serve(async (req) => {
   try {
+    console.log('[Curlec Webhook] 🔔 Incoming webhook request')
+    
     // Get webhook signature from headers
     const signature = req.headers.get('x-razorpay-signature')
     
     if (!signature) {
-      console.error('[Curlec Webhook] Missing signature')
+      console.error('[Curlec Webhook] ❌ Missing signature')
       return new Response('Missing signature', { status: 400 })
     }
+    
+    console.log('[Curlec Webhook] ✅ Signature present')
 
-    // Get webhook secret
+    // Get webhook secret from environment
     const CURLEC_WEBHOOK_SECRET = Deno.env.get('CURLEC_WEBHOOK_SECRET')
     
     if (!CURLEC_WEBHOOK_SECRET) {
+      console.error('[Curlec Webhook] ❌ CURLEC_WEBHOOK_SECRET not set in environment')
       throw new Error('Webhook secret not configured')
     }
+    
+    console.log('[Curlec Webhook] ✅ Using secret from environment')
 
     // Get raw body
     const rawBody = await req.text()
@@ -28,9 +35,11 @@ serve(async (req) => {
     const generatedSignature = hmac.digest('hex')
 
     if (generatedSignature !== signature) {
-      console.error('[Curlec Webhook] Invalid signature')
+      console.error('[Curlec Webhook] ❌ Invalid signature')
       return new Response('Invalid signature', { status: 401 })
     }
+    
+    console.log('[Curlec Webhook] ✅ Signature verified')
 
     // Parse webhook payload
     const payload = JSON.parse(rawBody)
