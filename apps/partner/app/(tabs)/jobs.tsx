@@ -69,9 +69,7 @@ export default function PartnerJobsScreen() {
   const { data: bookingsResponse, isLoading } = useQuery({
     queryKey: ['barber-bookings', barberId],
     queryFn: async () => {
-      console.log('🔍 Fetching bookings for barber ID:', barberId);
       const result = await bookingService.getBarberBookings(barberId || '');
-      console.log('📦 Bookings response:', result);
       return result;
     },
     enabled: !!barberId,
@@ -79,14 +77,6 @@ export default function PartnerJobsScreen() {
   });
 
   const partnerJobs = bookingsResponse?.data || [];
-  
-  // Debug: Log current state
-  useEffect(() => {
-    console.log('👤 Current User ID:', currentUser?.id);
-    console.log('👨‍🦰 Barber ID:', barberId);
-    console.log('📊 Partner Jobs Count:', partnerJobs.length);
-    console.log('📋 Partner Jobs:', partnerJobs);
-  }, [currentUser?.id, barberId, partnerJobs]);
 
   // CRITICAL: Auto-update selectedJob when data refreshes from backend
   useEffect(() => {
@@ -988,7 +978,11 @@ export default function PartnerJobsScreen() {
                 <Ionicons name="information-circle" size={24} color={getStatusColor(selectedJob.status)} />
                 <Text style={[styles.statusBannerText, { color: getStatusColor(selectedJob.status) }]}>
                   {selectedJob.status === 'pending' && 'Waiting for your response'}
-                  {selectedJob.status === 'accepted' && 'Job accepted, ready to start'}
+                  {selectedJob.status === 'accepted' && (
+                    ['card', 'curlec_card', 'curlec_fpx'].includes(selectedJob.payment_method) && selectedJob.payment_status !== 'authorized'
+                      ? 'Waiting for customer payment authorization'
+                      : 'Job accepted, ready to start'
+                  )}
                   {selectedJob.status === 'on_the_way' && 'On the way to customer'}
                   {selectedJob.status === 'arrived' && 'Arrived at customer location'}
                   {selectedJob.status === 'in_progress' && 'Job in progress'}
@@ -1220,13 +1214,29 @@ export default function PartnerJobsScreen() {
                   </>
                 )}
                 {selectedJob.status === 'accepted' && (
-                  <TouchableOpacity
-                    style={styles.primaryButton}
-                    onPress={() => handleOnTheWay(selectedJob)}
-                  >
-                    <Ionicons name="navigate" size={20} color={COLORS.background.primary} />
-                    <Text style={styles.primaryButtonText}>I'm on the way</Text>
-                  </TouchableOpacity>
+                  <>
+                    {['card', 'curlec_card', 'curlec_fpx'].includes(selectedJob.payment_method) && selectedJob.payment_status !== 'authorized' ? (
+                      <View style={styles.waitingPaymentContainer}>
+                        <View style={styles.waitingPaymentIcon}>
+                          <Ionicons name="time-outline" size={24} color={COLORS.warning} />
+                        </View>
+                        <View style={styles.waitingPaymentContent}>
+                          <Text style={styles.waitingPaymentTitle}>Waiting for customer payment...</Text>
+                          <Text style={styles.waitingPaymentText}>
+                            The customer will complete payment authorization shortly. You can proceed once payment is confirmed.
+                          </Text>
+                        </View>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.primaryButton}
+                        onPress={() => handleOnTheWay(selectedJob)}
+                      >
+                        <Ionicons name="navigate" size={20} color={COLORS.background.primary} />
+                        <Text style={styles.primaryButtonText}>I'm on the way</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
                 {selectedJob.status === 'on_the_way' && (
                   <TouchableOpacity
@@ -1890,6 +1900,32 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border.light,
     gap: 12,
+  },
+  waitingPaymentContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: COLORS.warningLight || '#FFF4E5',
+    borderRadius: 12,
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  waitingPaymentIcon: {
+    marginTop: 2,
+  },
+  waitingPaymentContent: {
+    flex: 1,
+  },
+  waitingPaymentTitle: {
+    ...TYPOGRAPHY.body.regular,
+    fontWeight: '700',
+    color: COLORS.warning,
+    marginBottom: 4,
+  },
+  waitingPaymentText: {
+    ...TYPOGRAPHY.body.small,
+    color: COLORS.text.secondary,
+    lineHeight: 18,
   },
   rejectButton: {
     flex: 1,

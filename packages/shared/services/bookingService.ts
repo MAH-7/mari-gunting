@@ -192,8 +192,15 @@ export const bookingService = {
 
       const result = Array.isArray(data) ? data[0] : data;
 
+      // RPC returns payment_status as 'returned_payment_status' to avoid SQL ambiguity
+      const paymentStatus = result?.returned_payment_status || result?.payment_status;
+      
+      console.log('[Capture Debug] New status:', newStatus);
+      console.log('[Capture Debug] Result payment_status:', paymentStatus);
+      console.log('[Capture Debug] Will capture?', newStatus === 'completed' && paymentStatus === 'authorized');
+
       // If status is 'completed' and payment is authorized, capture it
-      if (newStatus === 'completed' && result?.payment_status === 'authorized') {
+      if (newStatus === 'completed' && paymentStatus === 'authorized') {
         console.log('💳 Service completed - capturing authorized payment');
         
         try {
@@ -312,8 +319,29 @@ export const bookingService = {
 
       console.log('✅ Booking cancelled:', result);
 
-      // If refund is needed, call the refund Edge Function
-      if (result?.refund_needed && result?.payment_id) {
+      // If reversal is needed (authorized but not captured)
+      // Note: Razorpay/Curlec doesn't have explicit reverse API for authorized payments
+      // The authorization will automatically expire in 5-7 days
+      if (result?.reverse_needed && result?.payment_id) {
+        console.log('🔄 Authorized payment will auto-expire:', result.payment_id);
+        console.log('ℹ️ Authorization holds expire automatically in 5-7 days');
+        
+        // Update payment status to indicate it will be reversed
+        try {
+          await supabase
+            .from('bookings')
+            .update({
+              payment_status: 'reversed', // Will auto-expire
+            })
+            .eq('id', bookingId);
+          
+          console.log('✅ Payment marked as reversed (will auto-expire)');
+        } catch (updateException: any) {
+          console.error('❌ Failed to update payment status:', updateException);
+        }
+      }
+      // If refund is needed (captured payment), call the refund Edge Function
+      else if (result?.refund_needed && result?.payment_id) {
         console.log('💰 Processing instant refund for payment:', result.payment_id);
         
         try {

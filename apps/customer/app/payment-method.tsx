@@ -525,13 +525,9 @@ export default function PaymentMethodScreen() {
     
     Alert.alert(
       'Barber Unavailable',
-      'Sorry, the barber is not available right now. Would you like to try another barber?',
+      'Sorry, the barber is not available right now. Let\'s find you another barber.',
       [
-        { text: 'OK', onPress: () => router.back() },
-        { text: 'Try Another', onPress: () => {
-          // Navigate to barber list or search
-          router.replace('/');
-        }},
+        { text: 'Try Another Barber', onPress: () => router.replace('/') },
       ]
     );
   };

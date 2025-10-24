@@ -32,7 +32,6 @@ export const BarberResponseWaitingModal: React.FC<BarberResponseWaitingModalProp
   timeoutSeconds = 180, // 3 minutes default
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isListening, setIsListening] = useState(false);
 
   // Timer
   useEffect(() => {
@@ -60,10 +59,9 @@ export const BarberResponseWaitingModal: React.FC<BarberResponseWaitingModalProp
 
   // Real-time subscription for booking status changes
   useEffect(() => {
-    if (!visible || !bookingId || isListening) return;
+    if (!visible || !bookingId) return;
 
     console.log('[Waiting] Setting up real-time subscription for booking:', bookingId);
-    setIsListening(true);
 
     const channel = supabase
       .channel(`booking-${bookingId}`)
@@ -94,9 +92,8 @@ export const BarberResponseWaitingModal: React.FC<BarberResponseWaitingModalProp
     return () => {
       console.log('[Waiting] Cleaning up subscription');
       supabase.removeChannel(channel);
-      setIsListening(false);
     };
-  }, [visible, bookingId, isListening, onBarberAccepted, onBarberRejected]);
+  }, [visible, bookingId, onBarberAccepted, onBarberRejected]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
