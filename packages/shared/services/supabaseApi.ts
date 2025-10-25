@@ -288,6 +288,7 @@ export const supabaseApi = {
         if (filters?.location) {
           return {
             id: barber.id,
+            userId: barber.user_id, // CRITICAL: Add userId for heartbeat checks
             name: barber.name,
             email: '',
             phone: barber.phone_number || '',
@@ -339,6 +340,37 @@ export const supabaseApi = {
         finalBarbers = transformedBarbers.filter((b: any) =>
           b.services.some((s: any) => s.id === filters.serviceId)
         );
+      }
+
+      // HEARTBEAT CHECK: Filter out barbers with stale heartbeat (>3 min)
+      if (filters?.isOnline) {
+        const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+        
+        // Fetch heartbeat data for online barbers
+        const barberUserIds = filters.location 
+          ? barbersData.map((b: any) => b.user_id)
+          : barbersData.map((b: any) => b.profile?.id).filter(Boolean);
+        
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, last_heartbeat')
+          .in('id', barberUserIds);
+        
+        const staleUserIds = new Set(
+          (profilesData || []).filter((p: any) => 
+            !p.last_heartbeat || new Date(p.last_heartbeat) < threeMinutesAgo
+          ).map((p: any) => p.id)
+        );
+        
+        if (staleUserIds.size > 0) {
+          console.log(`🔴 Filtering out ${staleUserIds.size} barbers with stale heartbeat (>3 min)`);
+          finalBarbers = finalBarbers.filter((b: any) => {
+            const userId = filters.location 
+              ? barbersData.find((bd: any) => bd.id === b.id)?.user_id
+              : b.userId;
+            return !staleUserIds.has(userId);
+          });
+        }
       }
 
       console.log(`✅ Found ${finalBarbers.length} barbers`);

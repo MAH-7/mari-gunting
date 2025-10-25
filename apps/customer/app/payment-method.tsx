@@ -225,6 +225,7 @@ export default function PaymentMethodScreen() {
         customerNotes: params.serviceNotes || null,
         paymentMethod: 'credits',
         travelFee: parseFloat(params.travelCost || '0'),
+        distanceKm: parseFloat(params.distance || '0'),
         discountAmount: discount,
       });
 
@@ -337,6 +338,7 @@ export default function PaymentMethodScreen() {
         customerNotes: params.serviceNotes || null,
         paymentMethod: selectedMethod === 'fpx' ? 'curlec_fpx' : 'curlec_card',
         travelFee: parseFloat(params.travelCost || '0'),
+        distanceKm: parseFloat(params.distance || '0'),
         discountAmount: discount,
         // NO payment IDs - booking created without payment
       });

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Dimensions, Animated, Easing, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Dimensions, Animated, Easing, Platform, AppState, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { supabase } from '@mari-gunting/shared/config/supabase';
 import VerificationProgressWidget from '@/components/VerificationProgressWidget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationTrackingService } from '@/services/locationTrackingService';
+import { heartbeatService } from '@/services/heartbeatService';
 
 // Responsive helper
 const { width } = Dimensions.get('window');
@@ -105,7 +106,7 @@ const Toast = ({ message, type = 'success', visible, onHide }: { message: string
 
 export default function PartnerDashboardScreen() {
   const currentUser = useStore((state) => state.currentUser);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false); // Default to offline
   const [refreshing, setRefreshing] = useState(false);
   const [dailyGoal] = useState(200);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({ message: '', type: 'success', visible: false });
@@ -113,6 +114,11 @@ export default function PartnerDashboardScreen() {
   const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
   const [loadingVerification, setLoadingVerification] = useState(true);
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
+  const [backgroundTime, setBackgroundTime] = useState<number | null>(null);
+  const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const toggleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const appState = useRef(AppState.currentState);
 
   // Animation
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -141,7 +147,52 @@ export default function PartnerDashboardScreen() {
     loadVerificationStatus();
     // Load initial online status
     loadOnlineStatus();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (toggleTimeoutRef.current) {
+        clearTimeout(toggleTimeoutRef.current);
+      }
+    };
   }, []);
+
+  // AppState listener: Handle app backgrounding and force quit
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      console.log('📱 AppState changed:', appState.current, '→', nextAppState);
+      
+      // App went to background
+      if (appState.current.match(/active/) && nextAppState === 'background') {
+        console.log('⏸️  App backgrounded at:', new Date().toISOString());
+        setBackgroundTime(Date.now());
+        // Keep online - barber can still receive notifications
+      }
+      
+      // App came back to foreground
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('▶️  App resumed at:', new Date().toISOString());
+        
+        // Check how long app was backgrounded
+        if (backgroundTime && isOnline) {
+          const idleMinutes = (Date.now() - backgroundTime) / 1000 / 60;
+          console.log(`⏱️  Was idle for ${idleMinutes.toFixed(1)} minutes`);
+          
+          // Show warning if idle for more than 15 minutes
+          if (idleMinutes > 15) {
+            setShowIdleWarning(true);
+          }
+        }
+        
+        setBackgroundTime(null);
+      }
+      
+      appState.current = nextAppState;
+    });
+    
+    return () => {
+      subscription.remove();
+    };
+  }, [isOnline, backgroundTime]);
 
   const loadVerificationStatus = async () => {
     if (!currentUser?.id) return;
@@ -164,20 +215,21 @@ export default function PartnerDashboardScreen() {
     if (!currentUser?.id) return;
     
     try {
-      const { data, error } = await supabase
+      // ALWAYS start offline when app opens (handles force close scenario)
+      // User must explicitly toggle online
+      const { error: updateError } = await supabase
         .from('profiles')
-        .select('is_online')
-        .eq('id', currentUser.id)
-        .single();
+        .update({ is_online: false })
+        .eq('id', currentUser.id);
       
-      if (error) {
-        console.error('Error loading online status:', error);
-        return;
+      if (updateError) {
+        console.error('Error setting offline on startup:', updateError);
+      } else {
+        console.log('✅ Set offline on app startup (force close protection)');
       }
       
-      if (data) {
-        setIsOnline(data.is_online || false);
-      }
+      // Keep local state as offline
+      setIsOnline(false);
     } catch (error) {
       console.error('Failed to load online status:', error);
     }
@@ -273,15 +325,32 @@ export default function PartnerDashboardScreen() {
   }, []);
 
   const toggleOnlineStatus = useCallback(async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || isTogglingStatus) return;
+    
+    // Clear any pending toggle (debounce)
+    if (toggleTimeoutRef.current) {
+      clearTimeout(toggleTimeoutRef.current);
+    }
     
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     
+    setIsTogglingStatus(true);
     const newStatus = !isOnline;
     
     try {
       // Update local state immediately for better UX
       setIsOnline(newStatus);
+      
+      // Start/stop heartbeat (for all account types)
+      if (newStatus) {
+        // Going online - start heartbeat
+        await heartbeatService.startHeartbeat(currentUser.id);
+        console.log('💓 Heartbeat started');
+      } else {
+        // Going offline - stop heartbeat
+        await heartbeatService.stopHeartbeat();
+        console.log('🛑 Heartbeat stopped');
+      }
       
       // Start/stop location tracking for freelance barbers
       if (accountType === 'freelance') {
@@ -351,8 +420,38 @@ export default function PartnerDashboardScreen() {
         locationTrackingService.stopTracking();
       }
       setToast({ message: 'Failed to update status', type: 'error', visible: true });
+    } finally {
+      // Re-enable toggle after a short delay (prevent rapid spam)
+      toggleTimeoutRef.current = setTimeout(() => {
+        setIsTogglingStatus(false);
+      }, 1000);
     }
-  }, [currentUser, isOnline, accountType]);
+  }, [currentUser, isOnline, accountType, isTogglingStatus]);
+
+  // Show idle warning when returning after 15+ minutes
+  useEffect(() => {
+    if (showIdleWarning) {
+      Alert.alert(
+        '⏱️  You\'ve Been Idle',
+        'You\'ve been away for more than 15 minutes. Consider going offline if you\'re not actively working.',
+        [
+          {
+            text: 'Stay Online',
+            style: 'cancel',
+            onPress: () => setShowIdleWarning(false),
+          },
+          {
+            text: 'Go Offline',
+            style: 'default',
+            onPress: async () => {
+              setShowIdleWarning(false);
+              await toggleOnlineStatus();
+            },
+          },
+        ]
+      );
+    }
+  }, [showIdleWarning, toggleOnlineStatus]);
 
   if (!currentUser) {
     return (
@@ -434,15 +533,16 @@ export default function PartnerDashboardScreen() {
         {/* Online/Offline Toggle - Prominent */}
         <Animated.View style={[styles.toggleSection, { opacity: fadeAnim }]}>
           <TouchableOpacity
-            style={[styles.toggleButton, isOnline ? styles.toggleOnline : styles.toggleOffline]}
+            style={[styles.toggleButton, isOnline ? styles.toggleOnline : styles.toggleOffline, isTogglingStatus && styles.toggleDisabled]}
             onPress={toggleOnlineStatus}
             activeOpacity={0.8}
+            disabled={isTogglingStatus}
           >
             <View style={styles.toggleContent}>
               <View style={styles.toggleLeft}>
                 <View style={[styles.toggleDot, { backgroundColor: isOnline ? '#FFF' : '#999' }]} />
                 <Text style={[styles.toggleText, { color: isOnline ? '#FFF' : '#666' }]}>
-                  {isOnline ? "You're Online" : "You're Offline"}
+                  {isTogglingStatus ? 'Updating...' : (isOnline ? "You're Online" : "You're Offline")}
                 </Text>
               </View>
               <View style={[styles.toggleSwitch, isOnline && styles.toggleSwitchActive]}>
@@ -450,7 +550,9 @@ export default function PartnerDashboardScreen() {
               </View>
             </View>
             <Text style={[styles.toggleSubtext, { color: isOnline ? 'rgba(255,255,255,0.8)' : '#999' }]}>
-              {isOnline ? 'Tap to go offline and stop receiving orders' : 'Tap to go online and start receiving orders'}
+              {isTogglingStatus 
+                ? 'Please wait...' 
+                : (isOnline ? 'Tap to go offline and stop receiving orders' : 'Tap to go online and start receiving orders')}
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -826,6 +928,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderWidth: 2,
     borderColor: '#E0E0E0',
+  },
+  toggleDisabled: {
+    opacity: 0.6,
   },
   toggleContent: {
     flexDirection: 'row',

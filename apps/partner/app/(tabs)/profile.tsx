@@ -43,7 +43,6 @@ export default function PartnerProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
-  const [updatingLocation, setUpdatingLocation] = useState(false);
 
   // Fetch barber profile and account type on mount (initial load)
   useEffect(() => {
@@ -169,16 +168,8 @@ export default function PartnerProfileScreen() {
           iconBg: '#E3F2FD',
           iconColor: '#2196F3',
         }] : []),
-        // Only show Update Location for freelance barbers
-        ...(accountType === 'freelance' ? [{ 
-          icon: 'location-outline', 
-          label: 'Update My Location', 
-          action: 'update-location',
-          iconBg: '#E8F5E9',
-          iconColor: '#00B14F',
-        }] : []),
         // Only show Availability for barbershops, not freelance barbers
-        ...(accountType === 'barbershop' ? [{ 
+        ...(accountType === 'barbershop' ? [{
           icon: 'calendar-outline', 
           label: 'Availability', 
           screen: '/schedule',
@@ -266,28 +257,10 @@ export default function PartnerProfileScreen() {
         case 'verification':
           router.push('/profile/verification');
           break;
-        case 'update-location':
-          handleUpdateLocation();
-          break;
         default:
           Alert.alert(item.label, `${item.label} feature`);
           break;
       }
-    }
-  };
-
-  const handleUpdateLocation = async () => {
-    if (!currentUser?.id) return;
-    
-    setUpdatingLocation(true);
-    try {
-      await locationTrackingService.updateLocation(currentUser.id);
-      Alert.alert('Success', 'Your location has been updated successfully');
-    } catch (error) {
-      console.error('Failed to update location:', error);
-      Alert.alert('Error', 'Failed to update location. Please check your location permissions.');
-    } finally {
-      setUpdatingLocation(false);
     }
   };
 

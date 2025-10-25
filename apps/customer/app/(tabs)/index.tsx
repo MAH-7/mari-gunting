@@ -142,7 +142,6 @@ export default function HomeScreen() {
           table: 'barbers',
         },
         (payload) => {
-          console.log('🔔 Barber data changed:', payload);
           // Force immediate refetch to get updated stats
           refetch();
         }

@@ -26,7 +26,6 @@ export default function PartnerRootLayout() {
         <Stack.Screen name="select-account-type" />
         <Stack.Screen name="pending-approval" />
         <Stack.Screen name="onboarding" />
-        <Stack.Screen name="profile" />
         <Stack.Screen name="(tabs)" />
       </Stack>
     </QueryClientProvider>

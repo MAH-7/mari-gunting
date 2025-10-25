@@ -149,7 +149,8 @@ export default function CreateBookingScreen() {
     } else {
       travelCost = 5 + ((distance - 4) * 1); // Base + RM 1/km after 4km
     }
-    travelCost = Math.round(travelCost * 100) / 100; // Round to 2 decimals
+    // Round UP to nearest RM 0.50 (Grab standard)
+    travelCost = Math.ceil(travelCost * 2) / 2;
   }
   
   // Booking fee

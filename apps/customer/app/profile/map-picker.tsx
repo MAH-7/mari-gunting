@@ -7,7 +7,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MapboxGL from '@rnmapbox/maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,7 +49,14 @@ export default function MapPickerScreen() {
   const [address, setAddress] = useState('');
   const [mapReady, setMapReady] = useState(false);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const [mapCenter, setMapCenter] = useState({
+    latitude: initialLat,
+    longitude: initialLng,
+  });
+  const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
   const cameraRef = useRef<MapboxGL.Camera>(null);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const mapViewRef = useRef<MapboxGL.MapView>(null);
 
   useEffect(() => {
     // Get user's current location after map is ready
@@ -70,6 +78,7 @@ export default function MapPickerScreen() {
       }
 
       setIsLoading(true);
+      setIsGeocodingLoading(true);
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
@@ -80,6 +89,7 @@ export default function MapPickerScreen() {
       };
 
       setSelectedLocation(newLocation);
+      setMapCenter(newLocation);
       
       // Animate camera to current location
       cameraRef.current?.setCamera({
@@ -91,16 +101,16 @@ export default function MapPickerScreen() {
       // Get address for current location
       await getAddressForLocation(newLocation.latitude, newLocation.longitude);
     } catch (error) {
-      console.error('Error getting current location:', error);
       Alert.alert('Error', 'Failed to get your current location.');
     } finally {
       setIsLoading(false);
+      setIsGeocodingLoading(false);
     }
   };
 
   const getAddressForLocation = async (latitude: number, longitude: number) => {
     try {
-      // Try Mapbox first
+      // Try Mapbox first (v6)
       const mapboxAddress = await reverseGeocode(latitude, longitude);
       
       if (mapboxAddress) {
@@ -108,7 +118,7 @@ export default function MapPickerScreen() {
         return;
       }
 
-      // Fallback to Expo Location
+      // Fallback to Expo Location (less detailed)
       const expoResult = await Location.reverseGeocodeAsync({
         latitude,
         longitude,
@@ -124,27 +134,67 @@ export default function MapPickerScreen() {
           location.country,
         ].filter(Boolean);
         
-        setAddress(addressParts.join(', '));
+        const address = addressParts.join(', ');
+        setAddress(address);
       }
     } catch (error) {
-      console.error('Error getting address:', error);
+      // Silent fail - address will remain empty
     }
   };
 
-  const handleMapPress = async (feature: any) => {
-    const coordinates = feature.geometry.coordinates;
-    const newLocation = {
-      latitude: coordinates[1],
-      longitude: coordinates[0],
-    };
-
-    setSelectedLocation(newLocation);
-    setIsLoading(true);
-    
+  // Handle map moving (real-time coordinate update)
+  const handleMapMoving = async () => {
+    // Mark as loading immediately when map starts moving
+    setIsGeocodingLoading(true);
     try {
-      await getAddressForLocation(newLocation.latitude, newLocation.longitude);
-    } finally {
-      setIsLoading(false);
+      const center = await mapViewRef.current?.getCenter();
+      if (center && Array.isArray(center) && center.length === 2) {
+        const newLocation = {
+          latitude: center[1],
+          longitude: center[0],
+        };
+        // Update coordinates immediately (no delay)
+        setMapCenter(newLocation);
+        setSelectedLocation(newLocation);
+      }
+    } catch (error) {
+      // Ignore errors during movement
+    }
+  };
+
+  // Handle map idle (stopped moving)
+  const handleMapIdle = async () => {
+    // Clear existing debounce timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // Get map center from camera
+    try {
+      const center = await mapViewRef.current?.getCenter();
+      if (center && Array.isArray(center) && center.length === 2) {
+        const newLocation = {
+          latitude: center[1],
+          longitude: center[0],
+        };
+
+        setMapCenter(newLocation);
+        setSelectedLocation(newLocation);
+
+        // Debounce address lookup (only expensive operation)
+        debounceTimer.current = setTimeout(async () => {
+          setIsLoading(true);
+          setIsGeocodingLoading(true);
+          try {
+            await getAddressForLocation(newLocation.latitude, newLocation.longitude);
+          } finally {
+            setIsLoading(false);
+            setIsGeocodingLoading(false);
+          }
+        }, 300); // Reduced from 500ms to 300ms
+      }
+    } catch (error) {
+      // Silent fail
     }
   };
 
@@ -192,13 +242,18 @@ export default function MapPickerScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: 'Pick Location',
-          headerShown: true,
-        }}
-      />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Pick Location</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
       {/* Loading overlay while map initializes */}
       {!mapReady && (
@@ -209,29 +264,39 @@ export default function MapPickerScreen() {
       )}
 
       <MapboxGL.MapView
+        ref={mapViewRef}
         style={styles.map}
         styleURL={MapboxGL.StyleURL.Street}
-        onPress={handleMapPress}
         onDidFinishLoadingMap={() => setMapReady(true)}
+        onCameraChanged={() => {
+          // Map is moving - update coordinates immediately
+          handleMapMoving();
+          // Clear any pending address lookups
+          if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
+          }
+        }}
+        onMapIdle={handleMapIdle}
+        zoomEnabled={true}
+        scrollEnabled={true}
+        pitchEnabled={false}
+        rotateEnabled={false}
       >
         <MapboxGL.Camera
           ref={cameraRef}
-          zoomLevel={15}
-          centerCoordinate={[selectedLocation.longitude, selectedLocation.latitude]}
-          animationMode="easeTo"
-          animationDuration={0}
+          defaultSettings={{
+            centerCoordinate: [mapCenter.longitude, mapCenter.latitude],
+            zoomLevel: 15,
+          }}
         />
-
-        {/* Selected location marker */}
-        <MapboxGL.PointAnnotation
-          id="selected-location"
-          coordinate={[selectedLocation.longitude, selectedLocation.latitude]}
-        >
-          <View style={styles.markerContainer}>
-            <Ionicons name="location" size={40} color="#FF6B6B" />
-          </View>
-        </MapboxGL.PointAnnotation>
       </MapboxGL.MapView>
+
+      {/* Fixed center pin - stays in center while map moves underneath */}
+      <View style={styles.centerPinContainer} pointerEvents="none">
+        <Ionicons name="location" size={48} color="#FF6B6B" />
+        {/* Pin shadow/point indicator */}
+        <View style={styles.pinShadow} />
+      </View>
 
       {/* Current location button */}
       <TouchableOpacity
@@ -256,7 +321,7 @@ export default function MapPickerScreen() {
               <Text style={styles.addressLabel}>Selected Location</Text>
             </View>
             <Text style={styles.addressText}>
-              {address || 'Tap on the map to select a location'}
+              {address || 'Move the map to select a location'}
             </Text>
             <Text style={styles.coordinatesText}>
               {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
@@ -268,9 +333,9 @@ export default function MapPickerScreen() {
       {/* Confirm button */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.confirmButton, (!address || isLoading) && styles.confirmButtonDisabled]}
+          style={[styles.confirmButton, (!address || isGeocodingLoading) && styles.confirmButtonDisabled]}
           onPress={handleConfirmLocation}
-          disabled={!address || isLoading}
+          disabled={!address || isGeocodingLoading}
         >
           <Text style={styles.confirmButtonText}>Confirm Location</Text>
         </TouchableOpacity>
@@ -288,14 +353,30 @@ export default function MapPickerScreen() {
         initialAddressString={address}
         addressToEdit={addressToEdit}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E5EA',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    letterSpacing: -0.4,
   },
   map: {
     flex: 1,
@@ -304,10 +385,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  centerPinContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -24, // Half of icon width (48/2)
+    marginTop: -48, // Full icon height to anchor at bottom point
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  pinShadow: {
+    width: 20,
+    height: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    marginTop: -8,
+  },
   currentLocationButton: {
     position: 'absolute',
-    top: 20,
-    right: 20,
+    top: 80,
+    right: 16,
     backgroundColor: '#fff',
     borderRadius: 25,
     width: 50,

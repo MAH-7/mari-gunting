@@ -205,6 +205,8 @@ PODS:
     - Yoga
   - ExpoAsset (12.0.9):
     - ExpoModulesCore
+  - ExpoBackgroundFetch (14.0.7):
+    - ExpoModulesCore
   - ExpoBlur (15.0.7):
     - ExpoModulesCore
   - ExpoCalendar (15.0.7):
@@ -263,6 +265,9 @@ PODS:
     - ExpoModulesCore
   - ExpoSystemUI (6.0.7):
     - ExpoModulesCore
+  - EXTaskManager (14.0.8):
+    - ExpoModulesCore
+    - UMAppLoader
   - EXUpdatesInterface (2.0.0):
     - ExpoModulesCore
   - FBLazyVector (0.81.4)
@@ -2310,6 +2315,7 @@ PODS:
     - Yoga
   - Sentry/HybridSDK (8.56.2)
   - Turf (2.8.0)
+  - UMAppLoader (6.0.7)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2323,6 +2329,7 @@ DEPENDENCIES:
   - expo-dev-menu (from `../../../node_modules/expo-dev-menu`)
   - expo-dev-menu-interface (from `../../../node_modules/expo-dev-menu-interface/ios`)
   - ExpoAsset (from `../../../node_modules/expo/node_modules/expo-asset/ios`)
+  - ExpoBackgroundFetch (from `../../../node_modules/expo-background-fetch/ios`)
   - ExpoBlur (from `../../../node_modules/expo-blur/ios`)
   - ExpoCalendar (from `../../../node_modules/expo-calendar/ios`)
   - ExpoCrypto (from `../../../node_modules/expo-crypto/ios`)
@@ -2341,6 +2348,7 @@ DEPENDENCIES:
   - ExpoSecureStore (from `../../../node_modules/expo-secure-store/ios`)
   - ExpoSplashScreen (from `../../../node_modules/expo-splash-screen/ios`)
   - ExpoSystemUI (from `../../../node_modules/expo-system-ui/ios`)
+  - EXTaskManager (from `../../../node_modules/expo-task-manager/ios`)
   - EXUpdatesInterface (from `../../../node_modules/expo-updates-interface/ios`)
   - FBLazyVector (from `../../../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
@@ -2418,6 +2426,7 @@ DEPENDENCIES:
   - RNScreens (from `../../../node_modules/react-native-screens`)
   - "RNSentry (from `../../../node_modules/@sentry/react-native`)"
   - RNWorklets (from `../../../node_modules/react-native-worklets`)
+  - UMAppLoader (from `../../../node_modules/unimodules-app-loader/ios`)
   - Yoga (from `../../../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -2450,6 +2459,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-dev-menu-interface/ios"
   ExpoAsset:
     :path: "../../../node_modules/expo/node_modules/expo-asset/ios"
+  ExpoBackgroundFetch:
+    :path: "../../../node_modules/expo-background-fetch/ios"
   ExpoBlur:
     :path: "../../../node_modules/expo-blur/ios"
   ExpoCalendar:
@@ -2486,6 +2497,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-splash-screen/ios"
   ExpoSystemUI:
     :path: "../../../node_modules/expo-system-ui/ios"
+  EXTaskManager:
+    :path: "../../../node_modules/expo-task-manager/ios"
   EXUpdatesInterface:
     :path: "../../../node_modules/expo-updates-interface/ios"
   FBLazyVector:
@@ -2639,6 +2652,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/@sentry/react-native"
   RNWorklets:
     :path: "../../../node_modules/react-native-worklets"
+  UMAppLoader:
+    :path: "../../../node_modules/unimodules-app-loader/ios"
   Yoga:
     :path: "../../../node_modules/react-native/ReactCommon/yoga"
 
@@ -2653,6 +2668,7 @@ SPEC CHECKSUMS:
   expo-dev-menu: 6db57f4d3001fe3992d84a0c2e285de381e4b51b
   expo-dev-menu-interface: 600df12ea01efecdd822daaf13cc0ac091775533
   ExpoAsset: 9ba6fbd677fb8e241a3899ac00fa735bc911eadf
+  ExpoBackgroundFetch: ed6e4bf58cab43d3d3fa29ece1661d88a08c882d
   ExpoBlur: 2dd8f64aa31f5d405652c21d3deb2d2588b1852f
   ExpoCalendar: 34fe3956dab6278057a8ad04c648fe43bd642ef5
   ExpoCrypto: a9f1d75baeea6ef8b03c1660621585196c382e85
@@ -2671,6 +2687,7 @@ SPEC CHECKSUMS:
   ExpoSecureStore: 9c6571fe3fcb045a671c4011c451546eaaab98fd
   ExpoSplashScreen: cbb839de72110dea1851dd3e85080b7923af2540
   ExpoSystemUI: 6cd74248a2282adf6dec488a75fa532d69dee314
+  EXTaskManager: cbbb80cbccea6487ccca0631809fbba2ed3e5271
   EXUpdatesInterface: 5adf50cb41e079c861da6d9b4b954c3db9a50734
   FBLazyVector: 9e0cd874afd81d9a4d36679daca991b58b260d42
   hermes-engine: 35c763d57c9832d0eef764316ca1c4d043581394
@@ -2753,6 +2770,7 @@ SPEC CHECKSUMS:
   RNWorklets: c27a3e7ac7e71c8b8df3d8380eee64929b9a6744
   Sentry: b53951377b78e21a734f5dc8318e333dbfc682d7
   Turf: aa2ede4298009639d10db36aba1a7ebaad072a5e
+  UMAppLoader: e1234c45d2b7da239e9e90fc4bbeacee12afd5b6
   Yoga: 051f086b5ccf465ff2ed38a2cf5a558ae01aaaa1
 
 PODFILE CHECKSUM: af17af07b5a8206dc6a79d75732a880104c5f7fa

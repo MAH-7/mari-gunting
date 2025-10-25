@@ -911,13 +911,18 @@ export default function PartnerJobsScreen() {
                 <View style={styles.jobInfoRow}>
                   <Ionicons name="cut" size={16} color={COLORS.text.secondary} />
                   <Text style={styles.jobInfoText}>
-                    {job.services?.map(s => s.name).join(', ') || 'Service'}
+                    {(() => {
+                      const services = job.services || [];
+                      if (services.length === 0) return 'Service';
+                      if (services.length <= 2) return services.map(s => s.name).join(', ');
+                      return `${services[0].name}, ${services[1].name} +${services.length - 2} more`;
+                    })()}
                   </Text>
                 </View>
                 <View style={styles.jobInfoRow}>
                   <Ionicons name="location" size={16} color={COLORS.text.secondary} />
                   <Text style={styles.jobInfoText} numberOfLines={1}>
-                    {job.address?.fullAddress || 'Location'}
+                    {job.distance ? `${job.distance.toFixed(1)} km away • ` : ''}{job.address?.area || job.address?.fullAddress || 'Location'}
                   </Text>
                 </View>
                 {/* Payment Method Badge */}
@@ -944,7 +949,14 @@ export default function PartnerJobsScreen() {
               </View>
 
               <View style={styles.jobCardFooter}>
-                <Text style={styles.jobPrice}>RM {job.total_price || job.totalPrice}</Text>
+                <Text style={styles.jobPrice}>
+                  RM {(() => {
+                    const servicesTotal = job.services?.reduce((sum, s) => sum + s.price, 0) || 0;
+                    const travelCost = job.travelCost || 0;
+                    const earnings = (servicesTotal * 0.85) + travelCost;
+                    return earnings.toFixed(2);
+                  })()}
+                </Text>
                 <Ionicons name="chevron-forward" size={20} color={COLORS.text.tertiary} />
               </View>
             </TouchableOpacity>
@@ -973,6 +985,26 @@ export default function PartnerJobsScreen() {
             </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* Booking Number & Payment Method */}
+              <View style={styles.bookingInfoHeader}>
+                <View style={styles.bookingNumberContainer}>
+                  <Text style={styles.bookingNumberLabel}>Booking ID</Text>
+                  <Text style={styles.bookingNumber}>{selectedJob.booking_number || selectedJob.bookingNumber || 'N/A'}</Text>
+                </View>
+                <View style={styles.paymentMethodBadgeLarge}>
+                  <Ionicons 
+                    name={selectedJob.payment_method === 'cash' ? 'cash-outline' : 'card-outline'} 
+                    size={18} 
+                    color={selectedJob.payment_method === 'cash' ? '#F59E0B' : '#10B981'} 
+                  />
+                  <Text style={[styles.paymentMethodTextLarge, { color: selectedJob.payment_method === 'cash' ? '#F59E0B' : '#10B981' }]}>
+                    {selectedJob.payment_method === 'cash' ? 'CASH' : 
+                     selectedJob.payment_method === 'curlec_card' || selectedJob.payment_method === 'card' ? 'CARD' : 
+                     selectedJob.payment_method === 'curlec_fpx' ? 'FPX' : 'ONLINE'}
+                  </Text>
+                </View>
+              </View>
+
               {/* Status Banner */}
               <View style={[styles.statusBanner, { backgroundColor: getStatusBackground(selectedJob.status) }]}>
                 <Ionicons name="information-circle" size={24} color={getStatusColor(selectedJob.status)} />
@@ -1061,40 +1093,35 @@ export default function PartnerJobsScreen() {
                 <Text style={styles.detailSectionTitle}>Customer</Text>
                 <View style={styles.customerInfo}>
                   <View style={styles.customerAvatar}>
-                    <Ionicons name="person" size={32} color={COLORS.primary} />
+                    {selectedJob.customer?.avatar ? (
+                      <Image 
+                        source={{ uri: selectedJob.customer.avatar }} 
+                        style={styles.customerAvatarImage}
+                      />
+                    ) : (
+                      <Ionicons name="person" size={32} color={COLORS.primary} />
+                    )}
                   </View>
                   <View style={styles.customerDetails}>
                     <Text style={styles.customerName}>{selectedJob.customer?.name}</Text>
-                    <Text style={styles.customerContact}>{selectedJob.customer?.phone}</Text>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.contactButton}
-                    onPress={() => handleCallCustomer(selectedJob.customer?.phone || '')}
-                  >
-                    <Ionicons name="call" size={20} color={COLORS.primary} />
-                  </TouchableOpacity>
                 </View>
                 
-                {/* Contact Actions */}
-                <View style={styles.contactActions}>
-                  <TouchableOpacity 
-                    style={styles.contactActionButton}
-                    onPress={() => handleCallCustomer(selectedJob.customer?.phone || '')}
-                  >
-                    <Ionicons name="call" size={20} color={COLORS.primary} />
-                    <Text style={styles.contactActionText}>Call</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.contactActionButton}
-                    onPress={() => handleChatCustomer(
-                      selectedJob.customer?.id || '',
-                      selectedJob.customer?.name || 'Customer'
-                    )}
-                  >
-                    <Ionicons name="chatbubble-ellipses" size={20} color={COLORS.info} />
-                    <Text style={styles.contactActionText}>Chat</Text>
-                  </TouchableOpacity>
-                </View>
+                {/* Contact Actions - Chat Only (show after accepting) */}
+                {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && (
+                  <View style={styles.contactActions}>
+                    <TouchableOpacity 
+                      style={[styles.contactActionButton, { flex: 1 }]}
+                      onPress={() => handleChatCustomer(
+                        selectedJob.customer?.id || '',
+                        selectedJob.customer?.name || 'Customer'
+                      )}
+                    >
+                      <Ionicons name="chatbubble-ellipses" size={20} color={COLORS.info} />
+                      <Text style={styles.contactActionText}>Chat with Customer</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               {/* Services */}
@@ -1141,22 +1168,24 @@ export default function PartnerJobsScreen() {
                 {selectedJob.distance && (
                   <View style={styles.distanceInfo}>
                     <Ionicons name="navigate" size={16} color={COLORS.text.secondary} />
-                    <Text style={styles.distanceText}>{selectedJob.distance} km away</Text>
+                    <Text style={styles.distanceText}>{Number(selectedJob.distance).toFixed(1)} km away</Text>
                   </View>
                 )}
                 
-                {/* Navigation Button */}
-                <TouchableOpacity 
-                  style={styles.directionsButton}
-                  onPress={() => handleGetDirections(
-                    selectedJob.address?.fullAddress || '',
-                    selectedJob.address?.latitude,
-                    selectedJob.address?.longitude
-                  )}
-                >
-                  <Ionicons name="navigate" size={20} color={COLORS.background.primary} />
-                  <Text style={styles.directionsButtonText}>Get Directions</Text>
-                </TouchableOpacity>
+                {/* Navigation Button - Only show after accepting */}
+                {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && (
+                  <TouchableOpacity 
+                    style={styles.directionsButton}
+                    onPress={() => handleGetDirections(
+                      selectedJob.address?.fullAddress || '',
+                      selectedJob.address?.latitude,
+                      selectedJob.address?.longitude
+                    )}
+                  >
+                    <Ionicons name="navigate" size={20} color={COLORS.background.primary} />
+                    <Text style={styles.directionsButtonText}>Get Directions</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Notes */}
@@ -1167,26 +1196,40 @@ export default function PartnerJobsScreen() {
                 </View>
               )}
 
-              {/* Price Breakdown */}
+              {/* Earnings Breakdown */}
               <View style={styles.detailSection}>
-                <Text style={styles.detailSectionTitle}>Payment</Text>
+                <Text style={styles.detailSectionTitle}>Your Earnings</Text>
                 <View style={styles.priceBreakdown}>
                   <View style={styles.priceRow}>
                     <Text style={styles.priceLabel}>Services</Text>
                     <Text style={styles.priceValue}>
-                      RM {selectedJob.services?.reduce((sum, s) => sum + s.price, 0)}
+                      RM {selectedJob.services?.reduce((sum, s) => sum + s.price, 0).toFixed(2)}
                     </Text>
                   </View>
                   {selectedJob.travelCost && selectedJob.travelCost > 0 && (
                     <View style={styles.priceRow}>
-                      <Text style={styles.priceLabel}>Travel</Text>
-                      <Text style={styles.priceValue}>RM {selectedJob.travelCost}</Text>
+                      <Text style={styles.priceLabel}>
+                        Travel{selectedJob.distance ? ` (${Number(selectedJob.distance).toFixed(1)} km)` : ''}
+                      </Text>
+                      <Text style={styles.priceValue}>RM {selectedJob.travelCost.toFixed(2)}</Text>
                     </View>
                   )}
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>Subtotal</Text>
+                    <Text style={styles.priceValue}>
+                      RM {((selectedJob.services?.reduce((sum, s) => sum + s.price, 0) || 0) + (selectedJob.travelCost || 0)).toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.priceRow}>
+                    <Text style={[styles.priceLabel, { color: '#FF6B6B' }]}>Platform Commission (15% on services)</Text>
+                    <Text style={[styles.priceValue, { color: '#FF6B6B' }]}>- RM {((selectedJob.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.15).toFixed(2)}</Text>
+                  </View>
                   <View style={styles.priceDivider} />
                   <View style={styles.priceRow}>
-                    <Text style={styles.priceTotalLabel}>Total</Text>
-                    <Text style={styles.priceTotalValue}>RM {selectedJob.totalPrice}</Text>
+                    <Text style={styles.priceTotalLabel}>You'll Earn</Text>
+                    <Text style={[styles.priceTotalValue, { color: '#10B981' }]}>
+                      RM {(((selectedJob.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.85) + (selectedJob.travelCost || 0)).toFixed(2)}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -1636,6 +1679,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
   },
+  jobTotalPrice: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.text.tertiary,
+    marginTop: 2,
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
@@ -1693,11 +1742,50 @@ const styles = StyleSheet.create({
   modalContent: {
     flex: 1,
   },
+  bookingInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.primary,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+  },
+  bookingNumberContainer: {
+    flex: 1,
+  },
+  bookingNumberLabel: {
+    ...TYPOGRAPHY.body.small,
+    color: COLORS.text.secondary,
+    marginBottom: 4,
+  },
+  bookingNumber: {
+    ...TYPOGRAPHY.body.large,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+  },
+  paymentMethodBadgeLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.background.secondary,
+  },
+  paymentMethodTextLarge: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   statusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    margin: 20,
+    marginHorizontal: 20,
+    marginBottom: 12,
     borderRadius: 12,
     gap: 12,
   },
@@ -1731,6 +1819,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  customerAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   customerDetails: {
     flex: 1,

@@ -28,6 +28,7 @@ export interface CreateBookingParams {
   customerNotes?: string | null;
   paymentMethod?: string;
   travelFee?: number | null;
+  distanceKm?: number | null;
   discountAmount?: number | null; // NEW: For voucher/promo discounts
   curlecPaymentId?: string | null; // Curlec payment ID
   curlecOrderId?: string | null; // Curlec order ID
@@ -98,6 +99,7 @@ export const bookingService = {
         p_customer_notes: params.customerNotes || null,
         p_payment_method: params.paymentMethod || 'cash',
         p_travel_fee: params.travelFee || null,
+        p_distance_km: params.distanceKm || null,
         p_discount_amount: params.discountAmount || null,
         p_curlec_payment_id: params.curlecPaymentId || null,
         p_curlec_order_id: params.curlecOrderId || null,
@@ -443,14 +445,24 @@ export const bookingService = {
       // Transform data to match frontend expectations (camelCase)
       const transformedData = (data || []).map((booking: any) => {
         // Transform customer data
-        if (booking.customer && Array.isArray(booking.customer) && booking.customer.length > 0) {
-          const customerData = booking.customer[0];
-          booking.customer = {
-            id: customerData.id,
-            name: customerData.full_name,
-            avatar: customerData.avatar_url,
-            phone: customerData.phone_number,
-          };
+        if (booking.customer) {
+          // Handle both array and object formats
+          const customerData = Array.isArray(booking.customer) 
+            ? booking.customer[0] 
+            : booking.customer;
+          
+          if (customerData) {
+            booking.customer = {
+              id: customerData.id,
+              name: customerData.full_name,
+              avatar: customerData.avatar_url,
+              phone: customerData.phone_number,
+            };
+          } else {
+            console.warn('⚠️  No customer data found in booking:', booking.id);
+          }
+        } else {
+          console.warn('⚠️  booking.customer is null/undefined for booking:', booking.id);
         }
 
         // Transform booking fields to camelCase
@@ -458,6 +470,7 @@ export const bookingService = {
         booking.scheduledTime = booking.scheduled_time;
         booking.totalPrice = booking.total_price;
         booking.travelCost = booking.travel_fee;
+        booking.distance = booking.distance_km;
         booking.duration = booking.estimated_duration_minutes;
         booking.createdAt = booking.created_at;
         booking.updatedAt = booking.updated_at;
