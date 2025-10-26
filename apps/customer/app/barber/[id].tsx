@@ -180,10 +180,15 @@ export default function BarberProfileScreen() {
         console.log('⚠️ Barber became unavailable!');
         Alert.alert(
           'Barber Went Offline',
-          `${barber.name} is no longer available. You can still view their profile or come back later.`,
+          `${barber.name} is no longer available right now.`,
           [
-            { text: 'View Profile', style: 'cancel' },
-            { text: 'Go Back', onPress: () => router.back() }
+            { 
+              text: 'Find Another Barber', 
+              onPress: () => {
+                router.dismissAll();
+                router.replace('/(tabs)/');
+              }
+            }
           ]
         );
       }
