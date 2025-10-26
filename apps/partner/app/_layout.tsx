@@ -5,7 +5,7 @@ import { initializeMapbox } from '../utils/mapbox';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications'; // Disabled - requires paid Apple Developer account
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { pushService } from '../services/pushService';
@@ -49,7 +49,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     const { locations } = data;
     if (locations && locations.length > 0) {
       const location = locations[0];
-      console.log('📍 [BACKGROUND TASK] Location update:', {
+      const malaysiaTime = new Date().toLocaleString('en-MY', { 
+        timeZone: 'Asia/Kuala_Lumpur',
+        hour12: false 
+      });
+      console.log(`📍 [BACKGROUND TASK] ${malaysiaTime} Location update:`, {
         lat: location.coords.latitude.toFixed(6),
         lng: location.coords.longitude.toFixed(6),
         source: 'BACKGROUND_TASK',
@@ -93,12 +97,12 @@ export default function PartnerRootLayout() {
     initializeMapbox();
 
     // Register background notification task
-    Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {});
+    // Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {}); // Disabled - requires paid Apple Developer account
 
     // Reduce notification display (data-only)
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({ shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false }),
-    });
+    // Notifications.setNotificationHandler({
+    //   handleNotification: async () => ({ shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false }),
+    // });
 
     // Store userId for background handlers and register push
     (async () => {

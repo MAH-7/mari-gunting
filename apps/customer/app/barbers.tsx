@@ -136,19 +136,23 @@ export default function BarbersScreen() {
               );
               return filtered;
             } else {
-              // Barber came online - debounce refetch to avoid race conditions
-              console.log("✅ Barber came online - scheduling refetch...");
+              // Barber came online - only refetch if NOT already in list
+              const alreadyInList = prev.some((b) => b.userId === affectedUserId);
+              
+              if (!alreadyInList) {
+                console.log("✅ Barber came online - scheduling refetch...");
 
-              // Clear any pending refetch
-              if (refetchTimeoutRef.current) {
-                clearTimeout(refetchTimeoutRef.current);
+                // Clear any pending refetch
+                if (refetchTimeoutRef.current) {
+                  clearTimeout(refetchTimeoutRef.current);
+                }
+
+                // Wait 500ms before refetching (debounce)
+                refetchTimeoutRef.current = setTimeout(() => {
+                  console.log("🔄 Executing debounced refetch...");
+                  refetch();
+                }, 500);
               }
-
-              // Wait 500ms before refetching (debounce)
-              refetchTimeoutRef.current = setTimeout(() => {
-                console.log("🔄 Executing debounced refetch...");
-                refetch();
-              }, 500);
             }
             return prev;
           });
@@ -257,7 +261,7 @@ export default function BarbersScreen() {
     };
   }, [refetch, location]); // Include refetch and location in dependencies
 
-  // Periodic heartbeat check: Auto-remove barbers with stale heartbeat (>3 min)
+  // Periodic heartbeat check: Auto-remove barbers with stale heartbeat (>90s)
   useEffect(() => {
     if (realtimeBarbers.length === 0) {
       console.log('⏭️  Skipping heartbeat check - no barbers visible');
@@ -272,12 +276,16 @@ export default function BarbersScreen() {
 
     const checkStaleBarbers = async () => {
       const now = new Date();
-      const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000); // 3 minutes
+      const ninetySecondsAgo = new Date(Date.now() - 90 * 1000); // 90 seconds (production standard)
       const userIds = realtimeBarbers.map((b) => b.userId).filter(Boolean);
 
-      console.log(`🔍 Heartbeat check running at ${now.toLocaleTimeString()}`);
+      const malaysiaTime = now.toLocaleString('en-MY', { 
+        timeZone: 'Asia/Kuala_Lumpur',
+        hour12: false 
+      });
+      console.log(`🔍 [CUSTOMER] ${malaysiaTime} Heartbeat check running`);
       console.log(
-        `   Checking ${userIds.length} barbers for stale heartbeat...`
+        `    Checking ${userIds.length} barbers for stale heartbeat (>90s)...`
       );
 
       if (userIds.length === 0) {
@@ -306,22 +314,22 @@ export default function BarbersScreen() {
         const lastHeartbeat = p.last_heartbeat
           ? new Date(p.last_heartbeat)
           : null;
-        const minutesAgo = lastHeartbeat
-          ? (now.getTime() - lastHeartbeat.getTime()) / 1000 / 60
+        const secondsAgo = lastHeartbeat
+          ? (now.getTime() - lastHeartbeat.getTime()) / 1000
           : null;
         console.log(
-          `   👤 ${p.full_name || p.id}: ${
-            lastHeartbeat ? `${minutesAgo?.toFixed(1)} min ago` : "NO HEARTBEAT"
-          }`
+          `    👤 ${p.full_name || p.id}: ${
+            lastHeartbeat ? `${secondsAgo?.toFixed(0)}s ago` : "NO HEARTBEAT"
+          } ${secondsAgo && secondsAgo > 90 ? '❌ STALE' : '✅ FRESH'}`
         );
       });
 
-      // Find stale barbers (no heartbeat or > 3 min old)
+      // Find stale barbers (no heartbeat or > 90 seconds old)
       const staleUserIds = new Set(
         profilesData
           .filter(
             (p) =>
-              !p.last_heartbeat || new Date(p.last_heartbeat) < threeMinutesAgo
+              !p.last_heartbeat || new Date(p.last_heartbeat) < ninetySecondsAgo
           )
           .map((p) => p.id)
       );

@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		07DFBF163A3505DA97E390AE /* libPods-MariGuntingPartnerDev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EEEBE4E64DE7114C0DDAE2A /* libPods-MariGuntingPartnerDev.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		2F94A1DC4C04AF9C74B796F4 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED97886084EC05129953AD6F /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		959FE56E96BF87CA72A1344D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 368B99C0825BBBF402AF5EAE /* PrivacyInfo.xcprivacy */; };
+		57E7E2788FF724FFDD8D2545 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB9D3F354EC55BA413E97FE9 /* ExpoModulesProvider.swift */; };
+		602EC1A50F56E222B7313A4E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7DE53C816A5E8D2EB5B22B42 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		E095538FFAEC004DBF1593DB /* libPods-MariGuntingPartnerDev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FF1E994CDEB103E063CD3467 /* libPods-MariGuntingPartnerDev.a */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -20,16 +20,16 @@
 		13B07F961A680F5B00A75B9A /* MariGuntingPartnerDev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MariGuntingPartnerDev.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = MariGuntingPartnerDev/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = MariGuntingPartnerDev/Info.plist; sourceTree = "<group>"; };
-		2EEEBE4E64DE7114C0DDAE2A /* libPods-MariGuntingPartnerDev.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MariGuntingPartnerDev.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		368B99C0825BBBF402AF5EAE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = MariGuntingPartnerDev/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		6B5FCE954D466D9F9D0EE2BE /* Pods-MariGuntingPartnerDev.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.release.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.release.xcconfig"; sourceTree = "<group>"; };
+		7DE53C816A5E8D2EB5B22B42 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = MariGuntingPartnerDev/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		93B85E983F9C9BC1BDF9C88F /* Pods-MariGuntingPartnerDev.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.release.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.release.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = MariGuntingPartnerDev/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		DB9D3F354EC55BA413E97FE9 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-MariGuntingPartnerDev/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		E6276F9DADE3FA8C536B0A41 /* Pods-MariGuntingPartnerDev.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.debug.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		ED97886084EC05129953AD6F /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-MariGuntingPartnerDev/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MariGuntingPartnerDev/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* MariGuntingPartnerDev-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "MariGuntingPartnerDev-Bridging-Header.h"; path = "MariGuntingPartnerDev/MariGuntingPartnerDev-Bridging-Header.h"; sourceTree = "<group>"; };
-		FD6DA6355A397FEFBCA62B4D /* Pods-MariGuntingPartnerDev.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.debug.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.debug.xcconfig"; sourceTree = "<group>"; };
+		FF1E994CDEB103E063CD3467 /* libPods-MariGuntingPartnerDev.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MariGuntingPartnerDev.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,21 +37,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				07DFBF163A3505DA97E390AE /* libPods-MariGuntingPartnerDev.a in Frameworks */,
+				E095538FFAEC004DBF1593DB /* libPods-MariGuntingPartnerDev.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		06EB41F45F7C0A2879E4E1BF /* MariGuntingPartnerDev */ = {
-			isa = PBXGroup;
-			children = (
-				ED97886084EC05129953AD6F /* ExpoModulesProvider.swift */,
-			);
-			name = MariGuntingPartnerDev;
-			sourceTree = "<group>";
-		};
 		13B07FAE1A68108700A75B9A /* MariGuntingPartnerDev */ = {
 			isa = PBXGroup;
 			children = (
@@ -61,36 +53,18 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				368B99C0825BBBF402AF5EAE /* PrivacyInfo.xcprivacy */,
+				7DE53C816A5E8D2EB5B22B42 /* PrivacyInfo.xcprivacy */,
 			);
 			name = MariGuntingPartnerDev;
-			sourceTree = "<group>";
-		};
-		14E918B961026B95F3639980 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				FD6DA6355A397FEFBCA62B4D /* Pods-MariGuntingPartnerDev.debug.xcconfig */,
-				6B5FCE954D466D9F9D0EE2BE /* Pods-MariGuntingPartnerDev.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				2EEEBE4E64DE7114C0DDAE2A /* libPods-MariGuntingPartnerDev.a */,
+				FF1E994CDEB103E063CD3467 /* libPods-MariGuntingPartnerDev.a */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		6D832B89885CC3ED8172AF52 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				06EB41F45F7C0A2879E4E1BF /* MariGuntingPartnerDev */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -107,8 +81,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				14E918B961026B95F3639980 /* Pods */,
-				6D832B89885CC3ED8172AF52 /* ExpoModulesProviders */,
+				BD031B0D8107997330DCEBC4 /* Pods */,
+				EC585A493809B405D11EFF6A /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -132,6 +106,31 @@
 			path = MariGuntingPartnerDev/Supporting;
 			sourceTree = "<group>";
 		};
+		BD031B0D8107997330DCEBC4 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				E6276F9DADE3FA8C536B0A41 /* Pods-MariGuntingPartnerDev.debug.xcconfig */,
+				93B85E983F9C9BC1BDF9C88F /* Pods-MariGuntingPartnerDev.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		E79AD6F4286CDF12676FCAE1 /* MariGuntingPartnerDev */ = {
+			isa = PBXGroup;
+			children = (
+				DB9D3F354EC55BA413E97FE9 /* ExpoModulesProvider.swift */,
+			);
+			name = MariGuntingPartnerDev;
+			sourceTree = "<group>";
+		};
+		EC585A493809B405D11EFF6A /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				E79AD6F4286CDF12676FCAE1 /* MariGuntingPartnerDev */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -140,14 +139,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "MariGuntingPartnerDev" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				3F83291F013473753081A3CE /* [Expo] Configure project */,
+				D9B4177ADCE19731748E78FF /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				AAC7FF1E3EB24CB7BB83899D /* Upload Debug Symbols to Sentry */,
-				4BB598833832823153868CD3 /* [CP] Embed Pods Frameworks */,
+				0613200A72EE40389D5001A2 /* Upload Debug Symbols to Sentry */,
+				C4151DE0C79127EB60525251 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -168,7 +167,6 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
-						DevelopmentTeam = "C45922S8T9";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -199,7 +197,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				959FE56E96BF87CA72A1344D /* PrivacyInfo.xcprivacy in Resources */,
+				602EC1A50F56E222B7313A4E /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -223,6 +221,20 @@
 			shellPath = /bin/sh;
 			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n# The project root by default is one level up from the ios directory\nexport PROJECT_ROOT=\"$PROJECT_DIR\"/..\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  export SKIP_BUNDLING=1\nfi\nif [[ -z \"$ENTRY_FILE\" ]]; then\n  # Set the entry JS file using the bundler's entry resolution.\n  export ENTRY_FILE=\"$(\"$NODE_BINARY\" -e \"require('expo/scripts/resolveAppEntry')\" \"$PROJECT_ROOT\" ios absolute | tail -n 1)\"\nfi\n\nif [[ -z \"$CLI_PATH\" ]]; then\n  # Use Expo CLI\n  export CLI_PATH=\"$(\"$NODE_BINARY\" --print \"require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })\")\"\nfi\nif [[ -z \"$BUNDLE_COMMAND\" ]]; then\n  # Default Expo CLI command for bundling\n  export BUNDLE_COMMAND=\"export:embed\"\nfi\n\n# Source .xcode.env.updates if it exists to allow\n# SKIP_BUNDLING to be unset if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.updates\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.updates\"\nfi\n# Source local changes to allow overrides\n# if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n/bin/sh `\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode.sh'\"` `\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\"`\n\n";
 		};
+		0613200A72EE40389D5001A2 /* Upload Debug Symbols to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Upload Debug Symbols to Sentry";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh `${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`";
+		};
 		08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -243,62 +255,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		3F83291F013473753081A3CE /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env",
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/MariGuntingPartnerDev/MariGuntingPartnerDev.entitlements",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-MariGuntingPartnerDev/expo-configure-project.sh",
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-MariGuntingPartnerDev/ExpoModulesProvider.swift",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-MariGuntingPartnerDev/expo-configure-project.sh\"\n";
-		};
-		4BB598833832823153868CD3 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/MapboxMaps/MapboxMaps.framework",
-				"${BUILT_PRODUCTS_DIR}/Turf/Turf.framework",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCommon/MapboxCommon.framework/MapboxCommon",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCoreMaps/MapboxCoreMaps.framework/MapboxCoreMaps",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxMobileEvents/MapboxMobileEvents.framework/MapboxMobileEvents",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMaps.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Turf.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCommon.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCoreMaps.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMobileEvents.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
@@ -345,19 +301,61 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		AAC7FF1E3EB24CB7BB83899D /* Upload Debug Symbols to Sentry */ = {
+		C4151DE0C79127EB60525251 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/MapboxMaps/MapboxMaps.framework",
+				"${BUILT_PRODUCTS_DIR}/Turf/Turf.framework",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCommon/MapboxCommon.framework/MapboxCommon",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCoreMaps/MapboxCoreMaps.framework/MapboxCoreMaps",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxMobileEvents/MapboxMobileEvents.framework/MapboxMobileEvents",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
 			);
-			name = "Upload Debug Symbols to Sentry";
+			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMaps.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Turf.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCommon.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCoreMaps.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMobileEvents.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh `${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D9B4177ADCE19731748E78FF /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/MariGuntingPartnerDev/MariGuntingPartnerDev.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-MariGuntingPartnerDev/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Pods/Target Support Files/Pods-MariGuntingPartnerDev/ExpoModulesProvider.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-MariGuntingPartnerDev/expo-configure-project.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -367,7 +365,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				2F94A1DC4C04AF9C74B796F4 /* ExpoModulesProvider.swift in Sources */,
+				57E7E2788FF724FFDD8D2545 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,12 +374,15 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = FD6DA6355A397FEFBCA62B4D /* Pods-MariGuntingPartnerDev.debug.xcconfig */;
+			baseConfigurationReference = E6276F9DADE3FA8C536B0A41 /* Pods-MariGuntingPartnerDev.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MariGuntingPartnerDev/MariGuntingPartnerDev.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C45922S8T9;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -407,20 +408,20 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
-				DEVELOPMENT_TEAM = "C45922S8T9";
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 6B5FCE954D466D9F9D0EE2BE /* Pods-MariGuntingPartnerDev.release.xcconfig */;
+			baseConfigurationReference = 93B85E983F9C9BC1BDF9C88F /* Pods-MariGuntingPartnerDev.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MariGuntingPartnerDev/MariGuntingPartnerDev.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C45922S8T9;
 				INFOPLIST_FILE = MariGuntingPartnerDev/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -440,9 +441,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
-				DEVELOPMENT_TEAM = "C45922S8T9";
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Release;
 		};

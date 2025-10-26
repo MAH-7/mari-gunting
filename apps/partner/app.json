@@ -21,8 +21,7 @@
         "NSLocationAlwaysUsageDescription": "Mari Gunting needs continuous location access to keep you visible to customers even when the app is minimized. This helps you receive booking requests and provides real-time location updates to customers.",
         "UIBackgroundModes": [
           "fetch",
-          "location",
-          "remote-notification"
+          "location"
         ]
       }
     },
@@ -65,7 +64,14 @@
           }
         }
       ],
-      "expo-notifications"
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "scheme": "marigunting",
     "experiments": {

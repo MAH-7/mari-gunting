@@ -69,19 +69,20 @@ class LocationTrackingService {
     this.foregroundWatcher = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.High,
-        timeInterval: mode === 'on-the-way' ? 5000 : 15000, // 5s when traveling, 15s when idle
-        distanceInterval: mode === 'on-the-way' ? 10 : 50, // 10m when traveling, 50m when idle
+        timeInterval: mode === 'on-the-way' ? 5000 : 30000, // 5s when traveling, 30s when idle
+        distanceInterval: 0, // Update even when stationary (important for heartbeat!)
       },
       async (location) => {
         try {
           const now = Date.now();
-          // Throttle updates to avoid overwhelming the server
-          if (now - this.lastLocationUpdate < this.updateIntervalMs[mode]) {
-            return;
-          }
+          // No throttle needed - timeInterval already controls frequency
           this.lastLocationUpdate = now;
 
-          console.log('📍 [FOREGROUND WATCH] Location update:', {
+          const malaysiaTime = new Date().toLocaleString('en-MY', { 
+            timeZone: 'Asia/Kuala_Lumpur',
+            hour12: false 
+          });
+          console.log(`📍 [FOREGROUND WATCH] ${malaysiaTime} Location update:`, {
             lat: location.coords.latitude.toFixed(6),
             lng: location.coords.longitude.toFixed(6),
             mode: mode,

@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
-import { Mapbox as MapboxInstance, DEFAULT_MAP_STYLE, MAP_CONFIG } from '../config/mapbox';
+import { Mapbox as MapboxInstance, DEFAULT_MAP_STYLE, MAP_CONFIG } from '../utils/mapbox';
 import type { Coordinates } from '../utils/location';
 
 /**

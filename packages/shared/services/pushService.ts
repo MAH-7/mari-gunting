@@ -15,9 +15,9 @@ export const pushService = {
       if (!granted) {
         const req = await Notifications.requestPermissionsAsync({
           ios: {
-            allowAlert: false,
-            allowBadge: false,
-            allowSound: false,
+            allowAlert: true,     // ✅ Show notification banner
+            allowBadge: true,     // ✅ Show badge count
+            allowSound: true,     // ✅ PLAY SOUND (critical for bookings!)
             allowAnnouncements: false,
           },
         });
