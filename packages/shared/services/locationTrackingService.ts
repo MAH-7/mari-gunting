@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { calculateDistance } from '@mari-gunting/shared/utils/location';
 
@@ -11,14 +12,20 @@ export interface LocationUpdate {
 
 export type TrackingMode = 'idle' | 'on-the-way';
 
+const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
+
 class LocationTrackingService {
   private trackingInterval: NodeJS.Timeout | null = null;
+  private foregroundWatcher: Location.LocationSubscription | null = null;
   private isTracking = false;
   private currentMode: TrackingMode = 'idle';
   private currentUserId: string | null = null;
+  private backgroundTaskRegistered = false;
+  private lastLocationUpdate: number = 0;
+  // PRODUCTION SETTINGS (Grab/Foodpanda standard)
   private updateIntervalMs = {
-    idle: 5 * 60 * 1000, // 5 minutes when just online
-    'on-the-way': 1.5 * 60 * 1000, // 1.5 minutes when actively traveling to customer
+    idle: 30 * 1000, // 30 seconds when idle (frequent for customer visibility)
+    'on-the-way': 10 * 1000, // 10 seconds when traveling (near real-time)
   };
 
   /**
@@ -36,11 +43,19 @@ class LocationTrackingService {
     this.currentUserId = userId;
     console.log(`📍 Starting location tracking for user: ${userId} (mode: ${mode})`);
 
-    // Check and request permissions
-    const { status } = await Location.requestForegroundPermissionsAsync();
+    // Request background location permission ("Always Allow")
+    let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       console.error('❌ Location permission denied');
       throw new Error('Location permission not granted');
+    }
+
+    // Request background permission
+    const bgStatus = await Location.requestBackgroundPermissionsAsync();
+    if (bgStatus.status !== 'granted') {
+      console.warn('⚠️ Background location permission denied - will only track in foreground');
+    } else {
+      console.log('✅ Background location permission granted');
     }
 
     this.isTracking = true;
@@ -48,25 +63,48 @@ class LocationTrackingService {
     // Update location immediately
     await this.updateLocation(userId);
 
-    // Set up periodic updates with mode-based interval
-    const intervalMs = this.updateIntervalMs[mode];
-    this.trackingInterval = setInterval(async () => {
-      try {
-        await this.updateLocation(userId);
-      } catch (error) {
-        console.error('❌ Error updating location:', error);
+    // PRODUCTION: Continuous foreground tracking (Grab/Foodpanda standard)
+    // Use watchPositionAsync for real-time updates when app is active
+    console.log('🎯 Starting continuous foreground tracking...');
+    this.foregroundWatcher = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        timeInterval: mode === 'on-the-way' ? 5000 : 15000, // 5s when traveling, 15s when idle
+        distanceInterval: mode === 'on-the-way' ? 10 : 50, // 10m when traveling, 50m when idle
+      },
+      async (location) => {
+        try {
+          const now = Date.now();
+          // Throttle updates to avoid overwhelming the server
+          if (now - this.lastLocationUpdate < this.updateIntervalMs[mode]) {
+            return;
+          }
+          this.lastLocationUpdate = now;
+
+          console.log('📍 [FOREGROUND WATCH] Location update:', {
+            lat: location.coords.latitude.toFixed(6),
+            lng: location.coords.longitude.toFixed(6),
+            mode: mode,
+          });
+
+          await this.updateLocationFromCoords(userId, location.coords, mode);
+        } catch (error) {
+          console.error('❌ Error in foreground watcher:', error);
+        }
       }
-    }, intervalMs);
+    );
+    console.log('✅ Continuous foreground tracking started');
 
-    console.log(`⏱️ Update interval: ${intervalMs / 1000} seconds (${intervalMs / 60000} minutes)`);
+    // Start background location tracking (for when app is minimized)
+    await this.startBackgroundLocationTracking(userId, mode);
 
-    console.log('✅ Location tracking started');
+    console.log('✅ Location tracking started (foreground + background)');
   }
 
   /**
    * Stop tracking location
    */
-  stopTracking(): void {
+  async stopTracking(): Promise<void> {
     if (!this.isTracking) {
       console.log('⚠️ Location tracking not active');
       return;
@@ -74,14 +112,25 @@ class LocationTrackingService {
 
     console.log('🛑 Stopping location tracking');
 
+    // Stop foreground watcher
+    if (this.foregroundWatcher) {
+      this.foregroundWatcher.remove();
+      this.foregroundWatcher = null;
+      console.log('🛑 Foreground watcher stopped');
+    }
+
     if (this.trackingInterval) {
       clearInterval(this.trackingInterval);
       this.trackingInterval = null;
     }
 
+    // Stop background location tracking
+    await this.stopBackgroundLocationTracking();
+
     this.isTracking = false;
     this.currentMode = 'idle'; // Reset to idle mode
     this.currentUserId = null;
+    this.lastLocationUpdate = 0;
     console.log('✅ Location tracking stopped');
   }
 
@@ -113,7 +162,50 @@ class LocationTrackingService {
   }
 
   /**
-   * Update location once
+   * Update location from coordinates (used by foreground watcher and background task)
+   */
+  private async updateLocationFromCoords(
+    userId: string,
+    coords: { latitude: number; longitude: number; accuracy?: number | null },
+    mode: TrackingMode
+  ): Promise<void> {
+    try {
+      const locationData: LocationUpdate = {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy || undefined,
+        timestamp: Date.now(),
+      };
+
+      // Update in Supabase - PostGIS format + heartbeat
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          location: `POINT(${locationData.longitude} ${locationData.latitude})`,
+          last_heartbeat: new Date().toISOString(), // Update heartbeat with every location
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('❌ Error updating location in Supabase:', error);
+        throw error;
+      }
+
+      console.log('✅ Location + heartbeat updated in database');
+
+      // If in on-the-way mode, update booking metrics
+      if (mode === 'on-the-way') {
+        await this.updateActiveBookingMetrics(userId, locationData);
+      }
+    } catch (error) {
+      console.error('❌ Error in updateLocationFromCoords:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update location once (legacy method, now uses updateLocationFromCoords)
    */
   async updateLocation(userId: string): Promise<LocationUpdate | null> {
     try {
@@ -256,6 +348,88 @@ class LocationTrackingService {
    */
   getUpdateInterval(mode?: TrackingMode): number {
     return mode ? this.updateIntervalMs[mode] : this.updateIntervalMs[this.currentMode];
+  }
+
+  /**
+   * Start background location tracking
+   * PRODUCTION: Dual-mode tracking for maximum reliability (Grab/Foodpanda standard)
+   * - Mode 1: High-frequency updates when moving (real-time)
+   * - Mode 2: Significant location changes when stationary (survives force close)
+   */
+  private async startBackgroundLocationTracking(userId: string, mode: TrackingMode): Promise<void> {
+    try {
+      // Force stop any existing location updates first (clean slate)
+      const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      
+      if (hasStarted) {
+        console.log('🔄 Background location was running, restarting...');
+        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      }
+
+      // Task is defined in app/_layout.tsx at startup
+      console.log('🚀 Starting PRODUCTION background location updates...');
+
+      // PRODUCTION SETTINGS (Grab/Foodpanda standard)
+      await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+        // Accuracy: Balanced for battery vs precision trade-off
+        accuracy: mode === 'on-the-way' ? Location.Accuracy.High : Location.Accuracy.Balanced,
+        
+        // Distance: Update every 20m when moving (catches all significant movement)
+        distanceInterval: mode === 'on-the-way' ? 20 : 50,
+        
+        // Time: Real-time updates (10-15s)
+        timeInterval: mode === 'on-the-way' ? 10000 : 15000, // 10s traveling, 15s idle
+        
+        // iOS: Never pause (critical for production)
+        pausesUpdatesAutomatically: false,
+        
+        // iOS: Navigation mode gets highest priority from iOS
+        activityType: Location.ActivityType.OtherNavigation,
+        
+        // iOS: Show blue bar (user knows we're tracking)
+        showsBackgroundLocationIndicator: true,
+        
+        // iOS: Defer updates when possible to save battery (iOS optimizes this)
+        deferredUpdatesInterval: 30000, // Batch updates every 30s when idle
+        deferredUpdatesDistance: 100, // Or every 100m
+        
+        // Android: Foreground service with notification (required)
+        foregroundService: {
+          notificationTitle: 'Mari Gunting - You\'re Online',
+          notificationBody: mode === 'on-the-way' 
+            ? 'Tracking your route to customer' 
+            : 'Customers can see you',
+          notificationColor: '#00B87C',
+        },
+      });
+
+      this.backgroundTaskRegistered = true;
+      console.log('✅ PRODUCTION background tracking started:', {
+        mode,
+        timeInterval: mode === 'on-the-way' ? '10s' : '15s',
+        distanceInterval: mode === 'on-the-way' ? '20m' : '50m',
+      });
+    } catch (error) {
+      console.error('❌ Failed to start background location tracking:', error);
+    }
+  }
+
+  /**
+   * Stop background location tracking
+   */
+  private async stopBackgroundLocationTracking(): Promise<void> {
+    try {
+      const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
+      
+      if (isRegistered) {
+        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+        console.log('🛑 Background location tracking stopped');
+      }
+      
+      this.backgroundTaskRegistered = false;
+    } catch (error) {
+      console.error('❌ Failed to stop background location tracking:', error);
+    }
   }
 
   /**

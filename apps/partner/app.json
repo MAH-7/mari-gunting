@@ -16,11 +16,13 @@
         "location"
       ],
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience.",
-        "NSLocationAlwaysUsageDescription": "Mari Gunting needs your location to track barber arrival and provide real-time updates.",
+        "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to show your availability to nearby customers and navigate to their locations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Mari Gunting needs continuous location access to keep you visible to customers even when the app is minimized. This helps you receive booking requests and provides real-time location updates to customers.",
+        "NSLocationAlwaysUsageDescription": "Mari Gunting needs continuous location access to keep you visible to customers even when the app is minimized. This helps you receive booking requests and provides real-time location updates to customers.",
         "UIBackgroundModes": [
           "fetch",
-          "location"
+          "location",
+          "remote-notification"
         ]
       }
     },
@@ -34,7 +36,10 @@
       "package": "com.marigunting.app",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -47,7 +52,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience."
+          "locationAlwaysAndWhenInUsePermission": "Mari Gunting needs continuous location access to keep you visible to customers even when the app is minimized. This helps you receive booking requests and provides real-time location updates to customers.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       [
@@ -57,7 +64,8 @@
             "backgroundModes": ["fetch"]
           }
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "scheme": "marigunting",
     "experiments": {

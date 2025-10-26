@@ -1,13 +1,15 @@
 import { supabase } from '@mari-gunting/shared/config/supabase';
 
 /**
- * Heartbeat Service - Simplified Version
+ * Heartbeat Service - Production Grade
  * 
- * Sends periodic "heartbeat" pings to server while app is in foreground.
- * When app is minimized, heartbeat stops but barber stays online.
- * Push notifications will wake barber when jobs come in.
+ * PRODUCTION SETTINGS (Grab/Foodpanda standard):
+ * - Foreground: Heartbeat sent with every location update (10-30s)
+ * - Background: Heartbeat sent with background location updates (10-15s)
+ * - Force close: Connection drops → Auto-offline after 90s
  * 
- * For force quit detection: If no heartbeat for 3 min → Auto-offline
+ * Note: Heartbeat is bundled with location updates for efficiency.
+ * No separate heartbeat intervals needed - location tracking handles it.
  */
 
 class HeartbeatService {
@@ -15,8 +17,9 @@ class HeartbeatService {
   private userId: string | null = null;
   private isRunning: boolean = false;
   
-  // Send heartbeat every 60 seconds
-  private readonly HEARTBEAT_INTERVAL = 60 * 1000; // 60 seconds
+  // PRODUCTION: Send heartbeat every 30 seconds (for barbershop partners who don't track location)
+  // Freelance barbers get heartbeat from location updates (10-30s)
+  private readonly HEARTBEAT_INTERVAL = 30 * 1000; // 30 seconds
   
   /**
    * Start sending heartbeats for a user

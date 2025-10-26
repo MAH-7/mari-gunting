@@ -1,4 +1,6 @@
 PODS:
+  - EXApplication (5.9.1):
+    - ExpoModulesCore
   - EXConstants (18.0.9):
     - ExpoModulesCore
   - EXImageLoader (6.0.0):
@@ -6,6 +8,8 @@ PODS:
     - React-Core
   - EXJSONUtils (0.15.0)
   - EXManifests (1.0.8):
+    - ExpoModulesCore
+  - EXNotifications (0.28.19):
     - ExpoModulesCore
   - Expo (54.0.12):
     - ExpoModulesCore
@@ -2319,10 +2323,12 @@ PODS:
   - Yoga (0.0.0)
 
 DEPENDENCIES:
+  - EXApplication (from `../node_modules/expo-notifications/node_modules/expo-application/ios`)
   - EXConstants (from `../../../node_modules/expo-constants/ios`)
   - EXImageLoader (from `../../../node_modules/expo-image-loader/ios`)
   - EXJSONUtils (from `../../../node_modules/expo-json-utils/ios`)
   - EXManifests (from `../../../node_modules/expo-manifests/ios`)
+  - EXNotifications (from `../node_modules/expo-notifications/ios`)
   - Expo (from `../../../node_modules/expo`)
   - expo-dev-client (from `../../../node_modules/expo-dev-client/ios`)
   - expo-dev-launcher (from `../../../node_modules/expo-dev-launcher`)
@@ -2439,6 +2445,8 @@ SPEC REPOS:
     - Turf
 
 EXTERNAL SOURCES:
+  EXApplication:
+    :path: "../node_modules/expo-notifications/node_modules/expo-application/ios"
   EXConstants:
     :path: "../../../node_modules/expo-constants/ios"
   EXImageLoader:
@@ -2447,6 +2455,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-json-utils/ios"
   EXManifests:
     :path: "../../../node_modules/expo-manifests/ios"
+  EXNotifications:
+    :path: "../node_modules/expo-notifications/ios"
   Expo:
     :path: "../../../node_modules/expo"
   expo-dev-client:
@@ -2658,10 +2668,12 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
+  EXApplication: ec862905fdab3a15bf6bd8ca1a99df7fc02d7762
   EXConstants: a95804601ee4a6aa7800645f9b070d753b1142b3
   EXImageLoader: 189e3476581efe3ad4d1d3fb4735b7179eb26f05
   EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
   EXManifests: 224345a575fca389073c416297b6348163f28d1a
+  EXNotifications: 6ce128c0d3d3d161cd68bfd07d593db40e140396
   Expo: 24375439ae3be9e01cdd3ab8e03967d453e66d3e
   expo-dev-client: 6da1a574fa7caa33a315d818b43c4e560be91915
   expo-dev-launcher: ab4604b4cc823ff8c67835a90e7e36834224ea8c

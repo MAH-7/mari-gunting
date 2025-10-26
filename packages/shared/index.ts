@@ -8,7 +8,8 @@ export * from './theme';
 export * from './constants';
 
 // Export types
-export * from './types';
+export * from './map';
+export { connectionMonitor } from './services/connectionMonitor';
 // Note: types/database.ts is imported by types/index.ts, so no need to re-export here
 
 // Export Services

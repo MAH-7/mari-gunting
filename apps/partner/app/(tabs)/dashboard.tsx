@@ -15,6 +15,46 @@ import VerificationProgressWidget from '@/components/VerificationProgressWidget'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationTrackingService } from '@/services/locationTrackingService';
 import { heartbeatService } from '@/services/heartbeatService';
+import { connectionMonitor } from '@mari-gunting/shared/services/connectionMonitor';
+import * as BackgroundFetch from 'expo-background-fetch';
+import * as TaskManager from 'expo-task-manager';
+
+// Background fetch task name for stationary heartbeat fallback
+const BACKGROUND_HEARTBEAT_TASK = 'BACKGROUND_HEARTBEAT_TASK';
+
+// Define background fetch task (runs every 15min minimum when location updates stop)
+TaskManager.defineTask(BACKGROUND_HEARTBEAT_TASK, async () => {
+  try {
+    console.log('📡 [BACKGROUND FETCH] Running stationary heartbeat fallback...');
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.warn('⚠️ No user found for background heartbeat');
+      return BackgroundFetch.BackgroundFetchResult.Failed;
+    }
+    
+    // Send heartbeat
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        last_heartbeat: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+    
+    if (error) {
+      console.error('❌ Background heartbeat failed:', error);
+      return BackgroundFetch.BackgroundFetchResult.Failed;
+    }
+    
+    console.log('✅ Background heartbeat sent (stationary fallback)');
+    return BackgroundFetch.BackgroundFetchResult.NewData;
+  } catch (err) {
+    console.error('❌ Background fetch error:', err);
+    return BackgroundFetch.BackgroundFetchResult.Failed;
+  }
+});
 
 // Responsive helper
 const { width } = Dimensions.get('window');
@@ -163,14 +203,14 @@ export default function PartnerDashboardScreen() {
       
       // App went to background
       if (appState.current.match(/active/) && nextAppState === 'background') {
-        console.log('⏸️  App backgrounded at:', new Date().toISOString());
+        console.log('⏸️  App backgrounded at:', new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
         setBackgroundTime(Date.now());
         // Keep online - barber can still receive notifications
       }
       
       // App came back to foreground
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('▶️  App resumed at:', new Date().toISOString());
+        console.log('▶️  App resumed at:', new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
         
         // Check how long app was backgrounded
         if (backgroundTime && isOnline) {
@@ -341,32 +381,62 @@ export default function PartnerDashboardScreen() {
       // Update local state immediately for better UX
       setIsOnline(newStatus);
       
-      // Start/stop heartbeat (for all account types)
+      // PRODUCTION: Start all tracking services (Grab/Foodpanda standard)
       if (newStatus) {
-        // Going online - start heartbeat
-        await heartbeatService.startHeartbeat(currentUser.id);
-        console.log('💓 Heartbeat started');
-      } else {
-        // Going offline - stop heartbeat
-        await heartbeatService.stopHeartbeat();
-        console.log('🛑 Heartbeat stopped');
-      }
-      
-      // Start/stop location tracking for freelance barbers
-      if (accountType === 'freelance') {
-        if (newStatus) {
-          // Going online - start tracking
+        // 1. Start WebSocket connection monitor (instant disconnect detection)
+        await connectionMonitor.startMonitoring(currentUser.id);
+        console.log('✅ Connection monitor started');
+        
+        // 2. Start heartbeat for barbershop partners (freelancers get it from location)
+        if (accountType === 'barbershop') {
+          await heartbeatService.startHeartbeat(currentUser.id);
+          console.log('💓 Heartbeat started');
+        }
+        
+        // 3. Start location tracking for freelance barbers (includes heartbeat)
+        if (accountType === 'freelance') {
           try {
             await locationTrackingService.startTracking(currentUser.id);
-            console.log('✅ Location tracking started');
+            console.log('✅ Location tracking started (continuous + background)');
           } catch (locationError) {
             console.error('❌ Failed to start location tracking:', locationError);
             // Don't block the online toggle if location fails
           }
-        } else {
-          // Going offline - stop tracking
-          locationTrackingService.stopTracking();
+        }
+        
+        // 4. Register BackgroundFetch as fallback (for stationary periods)
+        try {
+          await BackgroundFetch.registerTaskAsync(BACKGROUND_HEARTBEAT_TASK, {
+            minimumInterval: 15 * 60, // 15 minutes (iOS minimum)
+            stopOnTerminate: true, // Stop when app is force closed
+            startOnBoot: false, // Don't auto-start on device boot
+          });
+          console.log('✅ Background fetch registered (stationary fallback)');
+        } catch (err) {
+          console.warn('⚠️ Background fetch registration failed:', err);
+        }
+      } else {
+        // PRODUCTION: Stop all tracking services
+        // 1. Stop connection monitor
+        await connectionMonitor.stopMonitoring();
+        console.log('🛑 Connection monitor stopped');
+        
+        // 2. Stop heartbeat
+        await heartbeatService.stopHeartbeat();
+        console.log('🛑 Heartbeat stopped');
+        
+        // 3. Stop location tracking
+        if (accountType === 'freelance') {
+          await locationTrackingService.stopTracking();
           console.log('🛑 Location tracking stopped');
+        }
+        
+        // 4. Unregister background fetch
+        try {
+          await BackgroundFetch.unregisterTaskAsync(BACKGROUND_HEARTBEAT_TASK);
+          console.log('🛑 Background fetch unregistered');
+        } catch (err) {
+          console.warn('⚠️ Background fetch unregister failed:', err);
         }
       }
       

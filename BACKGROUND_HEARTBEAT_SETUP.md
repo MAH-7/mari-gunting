@@ -2,22 +2,23 @@
 
 ## What We Implemented
 
-Simple foreground heartbeat + push notification readiness.
+Full background heartbeat support with automatic offline detection.
 
 ### How It Works:
 
-1. **App in Foreground:**
+1. **App in Foreground (Active):**
    - Heartbeat sends every 60 seconds ✓
    - Real-time updates ✓
    - Barber visible to customers ✓
 
 2. **App Minimized (Background):**
-   - Heartbeat stops (iOS limitation)
+   - Background heartbeat runs every 15-30 minutes ✓
    - Barber stays marked as "online" in DB ✓
+   - Barber stays visible to customers ✓
    - Will get push notifications when jobs come in ✓
-   - Customer app checks heartbeat age before showing barber
 
 3. **App Force Closed:**
+   - Background task stops (stopOnTerminate=true) ✓
    - Heartbeat stops completely ✓
    - After 3 minutes → Auto-removed from customer list ✓
    - Marked offline automatically ✓
@@ -65,10 +66,11 @@ Go to: **Settings → General → Background App Refresh**
 - Not guaranteed (iOS decides when to run based on usage patterns)
 - Works best for frequently used apps
 
-**For more frequent updates:**
-- Foreground: Heartbeat every 60 seconds ✓
-- Background: iOS decides (typically 15-30 min)
-- Force close: Detected after 3 min of no heartbeat ✓
+**Heartbeat Intervals:**
+- Foreground: Every 60 seconds ✓
+- Background: Every 15-30 minutes (iOS controlled) ✓
+- Auto-offline: After 3 minutes of no heartbeat ✓
+- Force close detection: stopOnTerminate=true stops background task immediately
 
 ### 5. Monitor in Production
 
@@ -91,12 +93,28 @@ Check logs in production:
 - More frequent app usage = more frequent background execution
 - Check iPhone Settings → Battery → Background Activity
 
-## Alternative: Push Notifications
+## What Changed
 
-If background fetch isn't reliable enough, we can switch to push notification-based approach:
-- Barber goes offline when minimized
-- BUT gets push notification when job comes in
-- Can respond even if app was backgrounded
-- More reliable, less battery usage
+**Before:**
+- Minimize = offline after 3 min (same as force close)
+- Background heartbeat not implemented
 
-Let me know if you want to implement push notifications instead!
+**After:**
+- Minimize = stays online (background heartbeat every 15-30 min)
+- Force close = offline after 3 min (stopOnTerminate stops background task)
+- Customers can book barbers even when app is minimized
+
+## Testing
+
+**Test 1: Minimize (Should stay online)**
+1. Toggle barber online
+2. Minimize app (don't force close)
+3. Wait 5-10 minutes
+4. Check customer app → Barber should still be visible ✓
+5. Even after 30+ minutes → Barber should still be visible (background fetch keeps heartbeat alive) ✓
+
+**Test 2: Force Close (Should go offline)**
+1. Toggle barber online
+2. Force close app (swipe up in app switcher)
+3. Wait 3 minutes
+4. Check customer app → Barber should disappear ✓

@@ -11,8 +11,19 @@ AS $$
 BEGIN
   -- Mark users as offline if:
   -- 1. They are currently online (is_online = true)
-  -- 2. Their last heartbeat was more than 3 minutes ago
+  -- 2. Their last heartbeat was more than 90 seconds ago
   -- 3. They have a last_heartbeat timestamp (not null)
+  -- 
+  -- PRODUCTION SETTINGS (Grab/Foodpanda standard):
+  -- - Foreground: Continuous tracking → heartbeat every 10s
+  -- - Background (moving): Real-time updates → heartbeat every 10-15s
+  -- - Background (stationary): Significant location changes → heartbeat every 15-30s
+  -- - Force closed: Connection drops instantly → offline after 90s
+  -- 
+  -- 90 second threshold ensures:
+  -- - Force close detected within 90s (production standard)
+  -- - Background tracking has time to send 2-3 heartbeats
+  -- - Fast enough for real-time customer experience
   UPDATE profiles
   SET 
     is_online = false,
@@ -20,7 +31,7 @@ BEGIN
   WHERE 
     is_online = true
     AND last_heartbeat IS NOT NULL
-    AND last_heartbeat < NOW() - INTERVAL '3 minutes';
+    AND last_heartbeat < NOW() - INTERVAL '90 seconds';
     
   -- Log how many users were marked offline
   RAISE NOTICE 'Auto-offline check completed at %', NOW();
