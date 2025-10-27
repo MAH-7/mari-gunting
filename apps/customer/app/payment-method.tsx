@@ -12,6 +12,7 @@ import { curlecService, type CurlecOrder } from '@mari-gunting/shared/services/c
 import RazorpayCheckout from 'react-native-razorpay';
 import { BarberResponseWaitingModal } from '@/components/BarberResponseWaitingModal';
 import { FEATURE_FLAGS } from '@mari-gunting/shared/constants';
+import { useBarberOffline } from '@/contexts/BarberOfflineContext';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -114,11 +115,97 @@ export default function PaymentMethodScreen() {
   // Wait-for-barber-accept flow state
   const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [waitingBookingId, setWaitingBookingId] = useState<string | null>(null);
+  const [barberData, setBarberData] = useState<any>(null);
+  const [previousBarberState, setPreviousBarberState] = useState<{
+    isOnline: boolean;
+    isAvailable: boolean;
+  } | null>(null);
+  const { showBarberOfflineModal } = useBarberOffline();
 
   // Load current user and their vouchers
   useEffect(() => {
     loadUserVouchers();
+    loadBarberData();
   }, []);
+
+  // Load barber data
+  const loadBarberData = async () => {
+    if (!params.barberId) return;
+    try {
+      const response = await api.getBarberById(params.barberId);
+      setBarberData(response.data);
+    } catch (error) {
+      console.error('[payment-method] Error loading barber:', error);
+    }
+  };
+
+  // Monitor barber status in real-time
+  useEffect(() => {
+    if (!params.barberId || !barberData) return;
+
+    console.log('🔌 Setting up barber status subscription (Payment)');
+
+    const channel = supabase
+      .channel(`barber-status-payment-${params.barberId}`);
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'barbers',
+        filter: `id=eq.${params.barberId}`,
+      },
+      async (payload) => {
+        console.log('🔔 Barber status changed (Payment):', payload);
+        // Reload barber data
+        await loadBarberData();
+      }
+    );
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${params.barberId}`,
+      },
+      async (payload) => {
+        console.log('🔔 Profile status changed (Payment):', payload);
+        await loadBarberData();
+      }
+    );
+
+    channel.subscribe();
+
+    return () => {
+      console.log('🔌 Cleaning up barber status subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [params.barberId, barberData]);
+
+  // Track when barber goes offline
+  useEffect(() => {
+    if (!barberData) return;
+
+    const currentState = {
+      isOnline: barberData.isOnline,
+      isAvailable: barberData.isAvailable,
+    };
+
+    if (previousBarberState) {
+      const wasAvailable = previousBarberState.isOnline && previousBarberState.isAvailable;
+      const isNowAvailable = currentState.isOnline && currentState.isAvailable;
+
+      if (wasAvailable && !isNowAvailable) {
+        console.log('⚠️ Barber became unavailable (Payment)!');
+        showBarberOfflineModal(params.barberName);
+      }
+    }
+
+    setPreviousBarberState(currentState);
+  }, [barberData?.isOnline, barberData?.isAvailable]);
 
   const loadUserVouchers = async () => {
     try {

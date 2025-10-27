@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Platform, Alert, Modal, NativeScrollEvent, NativeSyntheticEvent, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Platform, Modal, NativeScrollEvent, NativeSyntheticEvent, FlatList } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { api } from '@/services/api';
 import { formatCurrency, formatDistance } from '@/utils/format';
 import { SkeletonCircle, SkeletonText, SkeletonBase, SkeletonImage } from '@/components/Skeleton';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { useBarberOffline } from '@/contexts/BarberOfflineContext';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +25,7 @@ export default function BarberProfileScreen() {
     isOnline: boolean;
     isAvailable: boolean;
   } | null>(null);
+  const { showBarberOfflineModal } = useBarberOffline();
   
   const { data: barberResponse, isLoading, refetch } = useQuery({
     queryKey: ['barber', id],
@@ -178,19 +180,7 @@ export default function BarberProfileScreen() {
 
       if (wasAvailable && !isNowAvailable) {
         console.log('⚠️ Barber became unavailable!');
-        Alert.alert(
-          'Barber Went Offline',
-          `${barber.name} is no longer available right now.`,
-          [
-            { 
-              text: 'Find Another Barber', 
-              onPress: () => {
-                router.dismissAll();
-                router.replace('/(tabs)/');
-              }
-            }
-          ]
-        );
+        showBarberOfflineModal(barber.name);
       }
     }
 

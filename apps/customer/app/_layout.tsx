@@ -8,12 +8,37 @@ import SplashScreen from '../components/SplashScreen';
 import { LogBox } from 'react-native';
 import { initializeMapbox } from '../utils/mapbox';
 import { BookingProvider } from '@/contexts/BookingContext';
+import { BarberOfflineProvider, useBarberOffline } from '@/contexts/BarberOfflineContext';
+import AlertModal from '@/components/AlertModal';
 
 // Ignore LogBox errors during development
 // Customers will see user-friendly Alert messages instead
 LogBox.ignoreAllLogs(true);
 
 const queryClient = new QueryClient();
+
+// Global modal component that listens to context
+function GlobalBarberOfflineModal() {
+  const { isOfflineModalVisible, barberName, hideBarberOfflineModal } = useBarberOffline();
+
+  return (
+    <AlertModal
+      visible={isOfflineModalVisible}
+      onClose={hideBarberOfflineModal}
+      title="Barber Went Offline"
+      message={`${barberName || 'This barber'} is no longer available right now.`}
+      icon="alert-circle-outline"
+      iconColor="#F59E0B"
+      buttonText="Find Another Barber"
+      buttonIcon="search"
+      onButtonPress={() => {
+        hideBarberOfflineModal();
+        router.dismissAll();
+        router.replace('/(tabs)/');
+      }}
+    />
+  );
+}
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
@@ -48,22 +73,27 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <BookingProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Auth Screens */}
-          <Stack.Screen name="welcome" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="register" />
-          <Stack.Screen name="select-role" />
-          <Stack.Screen name="otp-verification" />
-          <Stack.Screen name="forgot-password" />
+        <BarberOfflineProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* Auth Screens */}
+            <Stack.Screen name="welcome" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="register" />
+            <Stack.Screen name="select-role" />
+            <Stack.Screen name="otp-verification" />
+            <Stack.Screen name="forgot-password" />
+            
+            {/* Main App */}
+            <Stack.Screen name="(tabs)" />
+            
+            {/* Other Screens */}
+            <Stack.Screen name="barber-verification" />
+          </Stack>
           
-          {/* Main App */}
-          <Stack.Screen name="(tabs)" />
-          
-          {/* Other Screens */}
-          <Stack.Screen name="barber-verification" />
-        </Stack>
+          {/* Global Barber Offline Modal */}
+          <GlobalBarberOfflineModal />
+        </BarberOfflineProvider>
       </BookingProvider>
     </QueryClientProvider>
   );

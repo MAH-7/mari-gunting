@@ -14,6 +14,7 @@ import { useBooking } from '@/contexts/BookingContext';
 import { batchCalculateDistances } from '@mari-gunting/shared/utils/directions';
 import { ENV } from '@mari-gunting/shared/config/env';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { useBarberOffline } from '@/contexts/BarberOfflineContext';
 
 export default function CreateBookingScreen() {
   const { barberId } = useLocalSearchParams<{ barberId: string }>();
@@ -24,6 +25,11 @@ export default function CreateBookingScreen() {
   const [serviceNotes, setServiceNotes] = useState<string>('');
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMinutes: number } | null>(null);
+  const [previousBarberState, setPreviousBarberState] = useState<{
+    isOnline: boolean;
+    isAvailable: boolean;
+  } | null>(null);
+  const { showBarberOfflineModal } = useBarberOffline();
 
   // Initialize booking flow on mount
   useEffect(() => {
@@ -122,6 +128,75 @@ export default function CreateBookingScreen() {
     
     calculateRoute();
   }, [selectedAddress, barber, addresses]);
+
+  // Monitor barber status in real-time
+  useEffect(() => {
+    if (!barberId || !barber) return;
+
+    console.log('🔌 Setting up barber status subscription (Confirm Booking)');
+
+    const channel = supabase
+      .channel(`barber-status-booking-${barberId}`);
+
+    // Subscribe to barbers table changes
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'barbers',
+        filter: `id=eq.${barberId}`,
+      },
+      (payload) => {
+        console.log('🔔 Barber status changed:', payload);
+        // Refetch barber data
+        // Note: useQuery will handle refetch
+      }
+    );
+
+    // Subscribe to profiles table changes
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${barberId}`,
+      },
+      (payload) => {
+        console.log('🔔 Profile status changed:', payload);
+      }
+    );
+
+    channel.subscribe();
+
+    return () => {
+      console.log('🔌 Cleaning up barber status subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [barberId, barber]);
+
+  // Track when barber goes offline
+  useEffect(() => {
+    if (!barber) return;
+
+    const currentState = {
+      isOnline: barber.isOnline,
+      isAvailable: barber.isAvailable,
+    };
+
+    if (previousBarberState) {
+      const wasAvailable = previousBarberState.isOnline && previousBarberState.isAvailable;
+      const isNowAvailable = currentState.isOnline && currentState.isAvailable;
+
+      if (wasAvailable && !isNowAvailable) {
+        console.log('⚠️ Barber became unavailable (Confirm Booking)!');
+        showBarberOfflineModal(barber.name);
+      }
+    }
+
+    setPreviousBarberState(currentState);
+  }, [barber?.isOnline, barber?.isAvailable]);
   
   // Toggle service selection
   const toggleService = (serviceId: string) => {

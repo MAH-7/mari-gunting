@@ -60,7 +60,9 @@
         "expo-background-fetch",
         {
           "ios": {
-            "backgroundModes": ["fetch"]
+            "backgroundModes": [
+              "fetch"
+            ]
           }
         }
       ],
