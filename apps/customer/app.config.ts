@@ -87,13 +87,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ],
       [
-        '@sentry/react-native/expo',
-        {
-          organization: process.env.SENTRY_ORG,
-          project: process.env.SENTRY_PROJECT,
-        }
-      ],
-      [
         'expo-build-properties',
         {
           android: {
@@ -133,9 +126,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       cloudinaryPortfolioPreset: process.env.EXPO_PUBLIC_CLOUDINARY_PORTFOLIO_PRESET,
       cloudinaryBarbershopPreset: process.env.EXPO_PUBLIC_CLOUDINARY_BARBERSHOP_PRESET,
       
-      // Sentry
-      sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-      
       // Payment
       stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
       fpxMerchantId: process.env.EXPO_PUBLIC_FPX_MERCHANT_ID,
@@ -171,19 +161,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       eas: {
         projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID
       }
-    },
-
-    hooks: {
-      postPublish: [
-        {
-          file: 'sentry-expo/upload-sourcemaps',
-          config: {
-            organization: process.env.SENTRY_ORG,
-            project: process.env.SENTRY_PROJECT,
-            authToken: process.env.SENTRY_AUTH_TOKEN,
-          }
-        }
-      ]
     }
   };
 };

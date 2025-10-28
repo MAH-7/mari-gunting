@@ -36,7 +36,6 @@ export * from './config/env';
 // Temporarily disabled for Expo Go compatibility
 // export * from './config/mapbox';
 export * from './config/cloudinary';
-export * from './config/sentry';
 
 // Export Secure Storage
 export * from './utils/secureStorage';

@@ -87,13 +87,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ],
       [
-        '@sentry/react-native/expo',
-        {
-          organization: process.env.SENTRY_ORG,
-          project: process.env.SENTRY_PROJECT,
-        }
-      ],
-      [
         'expo-build-properties',
         {
           android: {
@@ -132,9 +125,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       cloudinaryAvatarPreset: process.env.EXPO_PUBLIC_CLOUDINARY_AVATAR_PRESET,
       cloudinaryPortfolioPreset: process.env.EXPO_PUBLIC_CLOUDINARY_PORTFOLIO_PRESET,
       cloudinaryBarbershopPreset: process.env.EXPO_PUBLIC_CLOUDINARY_BARBERSHOP_PRESET,
-      
-      // Sentry
-      sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
       
       // Payment
       stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,

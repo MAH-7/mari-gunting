@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { captureException } from '../config/sentry';
 
 /**
  * Error Boundary Component
@@ -37,17 +36,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to Sentry
-    captureException(error, {
-      tags: {
-        component: errorInfo.componentStack?.split('\n')[1]?.trim() || 'Unknown',
-      },
-      extra: {
-        componentStack: errorInfo.componentStack,
-      },
-      level: 'error',
-    });
-
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
 

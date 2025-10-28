@@ -13,7 +13,6 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "^5.0.1",
     "@react-navigation/native": "^7.1.17",
-    "@sentry/react-native": "~7.2.0",
     "@supabase/supabase-js": "^2.74.0",
     "@tanstack/react-query": "^5.90.2",
     "axios": "^1.12.2",
@@ -48,7 +47,6 @@
   },
   "devDependencies": {
     "@rnmapbox/maps": "^10.1.45",
-    "@sentry/react-native": "^6.22.0",
     "@types/react": "~19.1.0",
     "@types/react-native": "^0.72.8",
     "babel-preset-expo": "^54.0.3",
