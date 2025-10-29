@@ -78,6 +78,21 @@
     "scheme": "marigunting",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "appEnv": "development",
+      "enableAnalytics": false,
+      "enableErrorTracking": false,
+      "enablePushNotifications": false,
+      "enableChat": false,
+      "enableVideoCall": false,
+      "commissionRate": 0.15,
+      "cancellationWindow": 24,
+      "defaultSearchRadius": 10,
+      "router": {},
+      "eas": {
+        "projectId": "dd2da2ed-7f01-4dc7-8af5-708ffa6d2930"
+      }
     }
   }
 }

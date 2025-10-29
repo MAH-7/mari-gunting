@@ -2222,30 +2222,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSentry (6.22.0):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-hermes
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Sentry/HybridSDK (= 8.56.2)
-    - Yoga
   - RNWorklets (0.6.1):
     - hermes-engine
     - RCTRequired
@@ -2317,7 +2293,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - Sentry/HybridSDK (8.56.2)
   - Turf (2.8.0)
   - UMAppLoader (6.0.7)
   - Yoga (0.0.0)
@@ -2430,7 +2405,6 @@ DEPENDENCIES:
   - "rnmapbox-maps (from `../../../node_modules/@rnmapbox/maps`)"
   - RNReanimated (from `../../../node_modules/react-native-reanimated`)
   - RNScreens (from `../../../node_modules/react-native-screens`)
-  - "RNSentry (from `../../../node_modules/@sentry/react-native`)"
   - RNWorklets (from `../../../node_modules/react-native-worklets`)
   - UMAppLoader (from `../../../node_modules/unimodules-app-loader/ios`)
   - Yoga (from `../../../node_modules/react-native/ReactCommon/yoga`)
@@ -2441,7 +2415,6 @@ SPEC REPOS:
     - MapboxCoreMaps
     - MapboxMaps
     - MapboxMobileEvents
-    - Sentry
     - Turf
 
 EXTERNAL SOURCES:
@@ -2658,8 +2631,6 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../../../node_modules/react-native-screens"
-  RNSentry:
-    :path: "../../../node_modules/@sentry/react-native"
   RNWorklets:
     :path: "../../../node_modules/react-native-worklets"
   UMAppLoader:
@@ -2778,9 +2749,7 @@ SPEC CHECKSUMS:
   rnmapbox-maps: 5a53c6fc0b35b3a4ca84a4379a76fb05aca2f454
   RNReanimated: 3b235ceb296e5073416466a2fed70812a17a0213
   RNScreens: d8d6f1792f6e7ac12b0190d33d8d390efc0c1845
-  RNSentry: 335031a0c365889cf8f217eefca1af5c5f05f84b
   RNWorklets: c27a3e7ac7e71c8b8df3d8380eee64929b9a6744
-  Sentry: b53951377b78e21a734f5dc8318e333dbfc682d7
   Turf: aa2ede4298009639d10db36aba1a7ebaad072a5e
   UMAppLoader: e1234c45d2b7da239e9e90fc4bbeacee12afd5b6
   Yoga: 051f086b5ccf465ff2ed38a2cf5a558ae01aaaa1
