@@ -34,7 +34,8 @@ export interface UserProfile {
   full_name: string;
   email: string;
   avatar_url?: string;
-  role: 'customer' | 'barber';
+  role: 'customer' | 'barber'; // DEPRECATED: Use 'roles' array instead
+  roles: ('customer' | 'barber')[]; // NEW: Support multiple roles
   created_at: string;
   updated_at: string;
 }
@@ -144,7 +145,8 @@ export const authService = {
           full_name: params.fullName,
           email: params.email,
           avatar_url: params.avatarUrl,
-          role: params.role,
+          role: params.role, // Keep for backward compatibility
+          roles: [params.role], // NEW: Initialize with single role
         })
         .select()
         .single();
@@ -308,11 +310,11 @@ export const authService = {
   /**
    * Check if phone number is registered
    */
-  async checkPhoneExists(phoneNumber: string): Promise<ApiResponse<{ exists: boolean; role?: string }>> {
+  async checkPhoneExists(phoneNumber: string): Promise<ApiResponse<{ exists: boolean; role?: string; roles?: string[] }>> {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, role')
+        .select('id, role, roles')
         .eq('phone_number', phoneNumber)
         .maybeSingle();
 
@@ -328,7 +330,8 @@ export const authService = {
         success: true,
         data: {
           exists: !!data,
-          role: data?.role,
+          role: data?.role, // Backward compatibility
+          roles: data?.roles, // NEW: Include roles array
         },
       };
     } catch (error: any) {

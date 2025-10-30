@@ -35,8 +35,10 @@ import {
 } from "@mari-gunting/shared/utils/directions";
 import { ENV } from "@mari-gunting/shared/config/env";
 import { useFocusEffect } from "@react-navigation/native";
+import { useStore } from "@/store/useStore";
 
 export default function BarbersScreen() {
+  const currentUser = useStore((state) => state.currentUser); // Get current user to filter out self
   const [searchQuery, setSearchQuery] = useState("");
   const [radius, setRadius] = useState(5);
   const [showRadiusModal, setShowRadiusModal] = useState(false);
@@ -46,7 +48,7 @@ export default function BarbersScreen() {
   const [showSortModal, setShowSortModal] = useState(false);
   const [calculatingDistances, setCalculatingDistances] = useState(false);
   const queryClient = useQueryClient();
-  const { location, getCurrentLocation, hasPermission } = useLocation();
+  const { location, getCurrentLocation, hasPermission, requestPermission } = useLocation();
   const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get user location on mount
@@ -443,12 +445,16 @@ export default function BarbersScreen() {
       barber.distance !== undefined &&
       barber.distance <= barber.serviceRadiusKm;
 
+    // GRAB-STYLE: Prevent self-booking (don't show user's own barber account)
+    const isNotSelf = currentUser ? barber.userId !== currentUser.id : true;
+
     return (
       matchesSearch &&
       withinCustomerRadius &&
       withinBarberServiceArea &&
       barber.isOnline &&
-      barber.isAvailable
+      barber.isAvailable &&
+      isNotSelf // Don't show your own barber account
     );
   });
 
@@ -540,7 +546,26 @@ export default function BarbersScreen() {
           </View>
         )}
 
-        {isLoading ? (
+        {!location ? (
+          // Location Required State (Fallback safety net)
+          <View style={styles.emptyState}>
+            <View style={styles.locationRequiredIcon}>
+              <Ionicons name="location-outline" size={48} color="#00B14F" />
+            </View>
+            <Text style={styles.emptyTitle}>Location Required</Text>
+            <Text style={styles.emptyText}>
+              Enable location to find nearby barbers within your chosen radius
+            </Text>
+            <TouchableOpacity
+              style={styles.enableLocationButton}
+              onPress={requestPermission}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="location" size={20} color="#FFFFFF" />
+              <Text style={styles.enableLocationButtonText}>Enable Location</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isLoading ? (
           // Skeleton Loading Cards
           <>
             {[1, 2, 3, 4].map((item) => (
@@ -962,6 +987,38 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 15,
     color: "#8E8E93",
+    textAlign: "center",
+    paddingHorizontal: 32,
+    lineHeight: 22,
+  },
+  locationRequiredIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#F0FDF4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  enableLocationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#00B14F",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 12,
+    shadowColor: "#00B14F",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  enableLocationButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   card: {
     backgroundColor: "#FFFFFF",

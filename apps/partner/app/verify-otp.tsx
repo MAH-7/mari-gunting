@@ -146,6 +146,36 @@ export default function VerifyOTPScreen() {
         return;
       }
       
+      // GRAB-STYLE: Add 'barber' role if user only has 'customer' role
+      // This allows same phone number to access both apps
+      const userRoles = profile.roles || [profile.role]; // Backward compatibility
+      const hasBarberRole = userRoles.includes('barber');
+      
+      if (!hasBarberRole) {
+        console.log('➕ Customer logging into partner app - adding barber role...');
+        
+        // Add 'barber' to roles array
+        const updatedRoles = [...userRoles, 'barber'];
+        
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ 
+            roles: updatedRoles,
+            role: 'barber', // Update primary role for backward compatibility
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', profile.id);
+        
+        if (updateError) {
+          console.error('⚠️ Failed to add barber role:', updateError);
+          // Don't fail login, just log the error
+        } else {
+          console.log('✅ Barber role added successfully');
+          profile.roles = updatedRoles;
+          profile.role = 'barber';
+        }
+      }
+      
       console.log('✅ Setting current user in store:', profile);
       setCurrentUser(profile);
       

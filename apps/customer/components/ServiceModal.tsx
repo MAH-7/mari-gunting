@@ -2,37 +2,17 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 
 interface ServiceModalProps {
   visible: boolean;
   onClose: () => void;
+  onServiceAction: (action: 'quick-book' | 'barbers' | 'barbershops') => void;
 }
 
-export function ServiceModal({ visible, onClose }: ServiceModalProps) {
-  const handleQuickBook = () => {
-    onClose();
-    setTimeout(() => {
-      // Navigate to Quick Book flow - instant booking without choosing barber
-      router.push('/quick-book');
-    }, 300);
-  };
-
-  const handleChooseBarber = () => {
-    onClose();
-    setTimeout(() => {
-      // Navigate to full barbers list
-      router.push('/barbers');
-    }, 300);
-  };
-
-  const handleBarbershop = () => {
-    onClose();
-    setTimeout(() => {
-      // Navigate to barbershops list
-      router.push('/barbershops');
-    }, 300);
-  };
+export function ServiceModal({ visible, onClose, onServiceAction }: ServiceModalProps) {
+  const handleQuickBook = () => onServiceAction('quick-book');
+  const handleChooseBarber = () => onServiceAction('barbers');
+  const handleBarbershop = () => onServiceAction('barbershops');
 
   return (
     <Modal

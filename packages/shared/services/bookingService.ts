@@ -87,6 +87,24 @@ export const bookingService = {
    */
   async createBooking(params: CreateBookingParams): Promise<ApiResponse<BookingResult>> {
     try {
+      // GRAB-STYLE: Prevent self-booking (customer booking their own barber account)
+      if (params.customerId && params.barberId) {
+        // Fetch barber's user_id to check if it matches customer
+        const { data: barberData, error: barberError } = await supabase
+          .from('barbers')
+          .select('user_id')
+          .eq('id', params.barberId)
+          .single();
+        
+        if (!barberError && barberData?.user_id === params.customerId) {
+          console.error('❌ Self-booking prevented:', params.customerId);
+          return {
+            success: false,
+            error: 'You cannot book yourself. Please choose another barber.',
+          };
+        }
+      }
+
       const { data, error } = await supabase.rpc('create_booking', {
         p_customer_id: params.customerId,
         p_barber_id: params.barberId,

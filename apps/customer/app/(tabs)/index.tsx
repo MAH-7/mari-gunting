@@ -271,6 +271,27 @@ export default function HomeScreen() {
     console.log('⏭️ User dismissed location prompt');
   };
 
+  // Handle navigation to barbers/barbershops - check location first (Grab pattern)
+  const handleNavigateToBarbers = () => {
+    if (locationStatus === 'granted') {
+      router.push('/barbers');
+    } else {
+      // Show location permission modal first
+      setShowLocationModal(true);
+      console.log('🚫 Location required - showing permission modal');
+    }
+  };
+
+  const handleNavigateToBarbershops = () => {
+    if (locationStatus === 'granted') {
+      router.push('/barbershops');
+    } else {
+      // Show location permission modal first
+      setShowLocationModal(true);
+      console.log('🚫 Location required - showing permission modal');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.screen}>
@@ -353,7 +374,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.actionBtn}
               activeOpacity={0.9}
-              onPress={() => router.push('/barbers')}
+              onPress={handleNavigateToBarbers}
             >
               <Ionicons name="person-outline" size={22} color="#00B14F" />
               <Text style={styles.actionLabel}>Freelance</Text>
@@ -361,7 +382,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.actionBtn}
               activeOpacity={0.9}
-              onPress={() => router.push('/barbershops')}
+              onPress={handleNavigateToBarbershops}
             >
               <Ionicons name="business-outline" size={22} color="#00B14F" />
               <Text style={styles.actionLabel}>Barbershop</Text>

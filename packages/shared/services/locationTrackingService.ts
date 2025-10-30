@@ -43,19 +43,18 @@ class LocationTrackingService {
     this.currentUserId = userId;
     console.log(`📍 Starting location tracking for user: ${userId} (mode: ${mode})`);
 
-    // Request background location permission ("Always Allow")
-    let { status } = await Location.requestForegroundPermissionsAsync();
+    // Check if permission is already granted (should be done during onboarding/dashboard load)
+    const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== 'granted') {
-      console.error('❌ Location permission denied');
-      throw new Error('Location permission not granted');
+      console.error('❌ Location permission not granted - cannot start tracking');
+      throw new Error('Location permission not granted. Please enable it in app settings.');
     }
 
-    // Request background permission
-    const bgStatus = await Location.requestBackgroundPermissionsAsync();
-    if (bgStatus.status !== 'granted') {
-      console.warn('⚠️ Background location permission denied - will only track in foreground');
+    const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+    if (bgStatus !== 'granted') {
+      console.warn('⚠️ Background location permission not granted - will only track in foreground');
     } else {
-      console.log('✅ Background location permission granted');
+      console.log('✅ Background location permission confirmed');
     }
 
     this.isTracking = true;

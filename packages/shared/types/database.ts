@@ -60,7 +60,8 @@ export type MessageType = 'text' | 'image' | 'location';
 
 export interface Profile {
   id: string;
-  role: UserRole;
+  role: UserRole; // DEPRECATED: Use 'roles' array instead. Kept for backward compatibility.
+  roles: UserRole[]; // NEW: Support multiple roles (e.g., ['customer', 'barber'])
   full_name: string;
   email: string | null;
   phone_number: string | null;

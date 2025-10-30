@@ -65,11 +65,29 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           console.warn('⚠️ No user found for background location update');
+          // Stop location tracking if no user
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          console.log('🛑 Stopped location tracking (no user)');
           return;
         }
         console.log('✅ User found:', user.id);
 
-        // Update location in database
+        // CHECK IF USER IS STILL ONLINE - Critical for battery!
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_online')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile?.is_online) {
+          console.warn('⚠️ User is offline or error checking status - stopping location tracking');
+          // User went offline (force close) - stop tracking immediately!
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          console.log('🛑 Stopped location tracking (user offline/force close)');
+          return;
+        }
+
+        // User is online - update location in database
         const { error: locationError } = await supabase
           .from('profiles')
           .update({
@@ -86,6 +104,13 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         }
       } catch (err) {
         console.error('❌ Exception in background location update:', err);
+        // On exception, stop tracking to prevent battery drain
+        try {
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          console.log('🛑 Stopped location tracking (exception)');
+        } catch (stopErr) {
+          console.error('❌ Failed to stop location tracking:', stopErr);
+        }
       }
     }
   }

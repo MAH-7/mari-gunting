@@ -3,6 +3,9 @@ import { Platform, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { ServiceModal } from '@/components/ServiceModal';
+import { LocationPermissionModal } from '@/components/LocationPermissionModal';
+import { useLocationPermission } from '@/hooks/useLocationPermission';
+import { router } from 'expo-router';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -21,6 +24,33 @@ function TabBarIcon({ name, focused }: { name: IconName; focused: boolean }) {
 
 export default function TabLayout() {
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const { status: locationStatus, requestPermission } = useLocationPermission();
+
+  const handleServiceAction = (action: 'quick-book' | 'barbers' | 'barbershops') => {
+    setShowServiceModal(false);
+    
+    if (locationStatus === 'granted') {
+      const routes = {
+        'quick-book': '/quick-book',
+        'barbers': '/barbers',
+        'barbershops': '/barbershops',
+      };
+      setTimeout(() => router.push(routes[action]), 200);
+    } else {
+      setTimeout(() => setShowLocationModal(true), 200);
+    }
+  };
+
+  const handleRequestLocationPermission = async () => {
+    setShowLocationModal(false);
+    await requestPermission();
+  };
+
+  const handleManualLocation = () => {
+    setShowLocationModal(false);
+    router.push('/profile/addresses');
+  };
 
   return (
     <>
@@ -107,7 +137,16 @@ export default function TabLayout() {
       {/* Service Modal */}
       <ServiceModal 
         visible={showServiceModal} 
-        onClose={() => setShowServiceModal(false)} 
+        onClose={() => setShowServiceModal(false)}
+        onServiceAction={handleServiceAction}
+      />
+
+      {/* Location Permission Modal - Managed at layout level */}
+      <LocationPermissionModal
+        visible={showLocationModal}
+        onRequestPermission={handleRequestLocationPermission}
+        onManualLocation={handleManualLocation}
+        onDismiss={() => setShowLocationModal(false)}
       />
     </>
   );

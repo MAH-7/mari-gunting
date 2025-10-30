@@ -150,7 +150,7 @@ export const addressService = {
     updates: Partial<AddAddressParams>
   ): Promise<ApiResponse<CustomerAddress>> {
     try {
-      // Use RPC function - note: lat/lng are accepted but ignored (generated columns)
+      // Use RPC function - lat/lng update the location geography column
       const { data, error } = await supabase.rpc('update_customer_address', {
         p_address_id: addressId,
         // Only send non-null values to avoid overwriting with nulls
@@ -160,7 +160,7 @@ export const addressService = {
         ...(updates.city && { p_city: updates.city }),
         ...(updates.state && { p_state: updates.state }),
         ...(updates.postalCode !== undefined && { p_postal_code: updates.postalCode }),
-        // ⚠️ lat/lng are passed but ignored - they're generated from location geography column
+        // ✅ lat/lng update the location geography column (lat/lng columns are generated from it)
         ...(updates.latitude !== undefined && { p_latitude: updates.latitude }),
         ...(updates.longitude !== undefined && { p_longitude: updates.longitude }),
         ...(updates.isDefault !== undefined && { p_is_default: updates.isDefault }),

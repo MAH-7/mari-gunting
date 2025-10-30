@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Dimensions, Animated, Easing, Platform, AppState, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Dimensions, Animated, Easing, Platform, AppState, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +18,7 @@ import { heartbeatService } from '@/services/heartbeatService';
 import { connectionMonitor } from '@mari-gunting/shared/services/connectionMonitor';
 import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
+import * as Location from 'expo-location';
 
 // Background fetch task name for stationary heartbeat fallback
 const BACKGROUND_HEARTBEAT_TASK = 'BACKGROUND_HEARTBEAT_TASK';
@@ -159,6 +160,9 @@ export default function PartnerDashboardScreen() {
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const toggleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const appState = useRef(AppState.currentState);
+  const isOnlineRef = useRef(isOnline);
+  const backgroundTimeRef = useRef<number | null>(null);
+  const permissionCheckedRef = useRef(false);
 
   // Animation
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -170,15 +174,33 @@ export default function PartnerDashboardScreen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
     ]).start();
 
-    // Load account type
+    // Load account type from database (single source of truth)
     const loadAccountType = async () => {
+      if (!currentUser?.id) return;
+      
       try {
-        const type = await AsyncStorage.getItem('partnerAccountType');
-        if (type === 'freelance' || type === 'barbershop') {
-          setAccountType(type);
+        // Get user role from database
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (error) {
+          console.error('Error loading account type from database:', error);
+          return;
         }
+        
+        // Map database role to account type
+        const accountType = data.role === 'barber' ? 'freelance' : 'barbershop';
+        setAccountType(accountType);
+        
+        // Cache in AsyncStorage for faster subsequent access
+        await AsyncStorage.setItem('partnerAccountType', accountType);
+        
+        console.log('✅ Account type loaded from database:', { role: data.role, accountType });
       } catch (error) {
-        console.error('Error loading account type:', error);
+        console.error('Exception loading account type:', error);
       }
     };
 
@@ -187,6 +209,7 @@ export default function PartnerDashboardScreen() {
     loadVerificationStatus();
     // Load initial online status
     loadOnlineStatus();
+    // Note: checkLocationPermission() is called separately after accountType loads
     
     // Cleanup timeout on unmount
     return () => {
@@ -196,6 +219,22 @@ export default function PartnerDashboardScreen() {
     };
   }, []);
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    isOnlineRef.current = isOnline;
+  }, [isOnline]);
+
+  useEffect(() => {
+    backgroundTimeRef.current = backgroundTime;
+  }, [backgroundTime]);
+
+  // Check location permission AFTER account type is loaded
+  useEffect(() => {
+    if (accountType) {
+      checkLocationPermission();
+    }
+  }, [accountType]); // Only run when accountType changes
+
   // AppState listener: Handle app backgrounding and force quit
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
@@ -203,8 +242,10 @@ export default function PartnerDashboardScreen() {
       
       // App went to background
       if (appState.current.match(/active/) && nextAppState === 'background') {
+        const now = Date.now();
         console.log('⏸️  App backgrounded at:', new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
-        setBackgroundTime(Date.now());
+        backgroundTimeRef.current = now;
+        setBackgroundTime(now);
         // Keep online - barber can still receive notifications
       }
       
@@ -212,17 +253,73 @@ export default function PartnerDashboardScreen() {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         console.log('▶️  App resumed at:', new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
         
-        // Check how long app was backgrounded
-        if (backgroundTime && isOnline) {
-          const idleMinutes = (Date.now() - backgroundTime) / 1000 / 60;
+        // Check how long app was backgrounded - use refs to avoid stale closure
+        const bgTime = backgroundTimeRef.current;
+        const online = isOnlineRef.current;
+        
+        console.log('📊 Idle check:', { bgTime, online, hasBgTime: !!bgTime });
+        
+        // CRITICAL: Check if location permission was changed while app was backgrounded (freelance only)
+        if (online && accountType === 'freelance') {
+          try {
+            const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+            
+            if (bgStatus !== 'granted') {
+              console.warn('⚠️ Background permission was revoked - forcing offline');
+              
+              // Force offline immediately
+              setIsOnline(false);
+              
+              // Update database
+              if (currentUser?.id) {
+                await supabase
+                  .from('profiles')
+                  .update({ is_online: false })
+                  .eq('id', currentUser.id);
+              }
+              
+              // Stop all tracking services
+              await locationTrackingService.stopTracking();
+              await heartbeatService.stopHeartbeat();
+              await connectionMonitor.stopMonitoring();
+              
+              // Show alert
+              Alert.alert(
+                'Location Permission Changed',
+                'Your location permission was changed to "While Using App". You have been taken offline.\n\nTo go online, please enable "Always Allow" in Settings.',
+                [
+                  { text: 'OK', style: 'cancel' },
+                  { 
+                    text: 'Open Settings', 
+                    onPress: () => Linking.openSettings() 
+                  },
+                ]
+              );
+              
+              // Skip idle check if we forced offline
+              backgroundTimeRef.current = null;
+              setBackgroundTime(null);
+              appState.current = nextAppState;
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking permission on resume:', error);
+          }
+        }
+        
+        // Idle warning check (if still online)
+        if (bgTime && online) {
+          const idleMinutes = (Date.now() - bgTime) / 1000 / 60;
           console.log(`⏱️  Was idle for ${idleMinutes.toFixed(1)} minutes`);
           
           // Show warning if idle for more than 15 minutes
           if (idleMinutes > 15) {
+            console.log('⚠️ Showing idle warning (idle > 15 min)');
             setShowIdleWarning(true);
           }
         }
         
+        backgroundTimeRef.current = null;
         setBackgroundTime(null);
       }
       
@@ -232,7 +329,7 @@ export default function PartnerDashboardScreen() {
     return () => {
       subscription.remove();
     };
-  }, [isOnline, backgroundTime]);
+  }, []); // Empty deps - uses refs instead
 
   const loadVerificationStatus = async () => {
     if (!currentUser?.id) return;
@@ -272,6 +369,66 @@ export default function PartnerDashboardScreen() {
       setIsOnline(false);
     } catch (error) {
       console.error('Failed to load online status:', error);
+    }
+  };
+
+  // Check location permission for returning users (after reinstall)
+  const checkLocationPermission = async () => {
+    // Only check once per app session
+    if (permissionCheckedRef.current) return;
+    permissionCheckedRef.current = true;
+
+    // Only check for freelance barbers
+    if (accountType !== 'freelance') {
+      console.log('ℹ️ Barbershop account - skipping location permission check');
+      return;
+    }
+
+    try {
+      // Check if permission was already granted
+      const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
+      const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
+
+      console.log('📍 Permission status check:', { foregroundStatus, backgroundStatus });
+
+      // If both permissions granted, no need to ask
+      if (foregroundStatus === 'granted' && backgroundStatus === 'granted') {
+        console.log('✅ Location permissions already granted');
+        return;
+      }
+
+      // Permission missing - request directly (iOS will show its own popups)
+      console.log('⚠️ Location permission missing - requesting now');
+      await requestLocationPermission();
+    } catch (error) {
+      console.error('Error checking location permission:', error);
+    }
+  };
+
+  // Request location permission (for returning users)
+  const requestLocationPermission = async () => {
+    try {
+      console.log('📍 Requesting location permissions...');
+
+      // Request foreground first
+      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+      if (foregroundStatus !== 'granted') {
+        console.warn('⚠️ Foreground permission denied');
+        return;
+      }
+
+      // Request background permission
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus !== 'granted') {
+        console.warn('⚠️ Background permission denied');
+        return;
+      }
+
+      console.log('✅ Location permissions granted');
+      setToast({ message: 'Location permission granted!', type: 'success', visible: true });
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      Alert.alert('Error', 'Failed to request location permission. Please try again.');
     }
   };
 
@@ -376,6 +533,43 @@ export default function PartnerDashboardScreen() {
     
     setIsTogglingStatus(true);
     const newStatus = !isOnline;
+    
+    // CRITICAL: Check background location permission before going online (freelance only)
+    if (newStatus && accountType === 'freelance') {
+      try {
+        const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+        
+        if (bgStatus !== 'granted') {
+          console.warn('⚠️ Background location not granted - blocking online toggle');
+          
+          Alert.alert(
+            'Background Location Required',
+            'To go online, you need to enable "Always Allow" for location access. This lets customers see your location even when the app is minimized.\n\nPlease go to Settings and change location permission to "Always Allow".',
+            [
+              { 
+                text: 'Cancel', 
+                style: 'cancel',
+                onPress: () => setIsTogglingStatus(false),
+              },
+              { 
+                text: 'Open Settings', 
+                onPress: () => {
+                  Linking.openSettings();
+                  setIsTogglingStatus(false);
+                },
+              },
+            ]
+          );
+          return; // Don't proceed with going online
+        }
+        
+        console.log('✅ Background location permission confirmed - proceeding');
+      } catch (error) {
+        console.error('Error checking background permission:', error);
+        setIsTogglingStatus(false);
+        return;
+      }
+    }
     
     try {
       // Update local state immediately for better UX

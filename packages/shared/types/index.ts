@@ -6,7 +6,8 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  role: UserRole;
+  role: UserRole; // DEPRECATED: Use 'roles' array instead. Kept for backward compatibility.
+  roles: UserRole[]; // NEW: Support multiple roles (e.g., ['customer', 'barber'])
   avatar?: string;
   createdAt: string;
 }

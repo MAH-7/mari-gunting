@@ -3,10 +3,25 @@ import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useNavigation } from 'expo-router';
+import { useLocationPermission } from '@/hooks/useLocationPermission';
+import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 
 export default function ServiceScreen() {
   const [showModal, setShowModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const navigation = useNavigation();
+  const { status: locationStatus, requestPermission } = useLocationPermission();
+
+  // TEST: Verify file is loading
+  useEffect(() => {
+    console.log('✨✨✨ SERVICE SCREEN MOUNTED - FILE IS LOADED ✨✨✨');
+    console.log('Initial locationStatus:', locationStatus);
+  }, []);
+
+  // Debug: Log when showLocationModal changes
+  useEffect(() => {
+    console.log('🔴 showLocationModal state changed:', showLocationModal);
+  }, [showLocationModal]);
 
   // Show modal every time this screen is focused
   useEffect(() => {
@@ -25,34 +40,84 @@ export default function ServiceScreen() {
   };
 
   const handleQuickBook = () => {
-    console.log('Quick Book selected');
-    setShowModal(false);
-    // Navigate to Quick Book flow - instant booking without choosing barber
-    router.push('/quick-book');
+    console.log('🔍 Quick Book pressed - locationStatus:', locationStatus);
+    if (locationStatus === 'granted') {
+      console.log('✅ Quick Book selected - navigating');
+      setShowModal(false);
+      router.push('/quick-book');
+    } else {
+      console.log('🚫 Location required for Quick Book - showing modal');
+      setShowModal(false);
+      setTimeout(() => {
+        console.log('📍 Setting showLocationModal to true');
+        setShowLocationModal(true);
+      }, 300);
+    }
   };
 
   const handleChooseBarber = () => {
-    console.log('Choose Barber selected');
-    setShowModal(false);
-    // Navigate to full barbers list
-    router.push('/barbers');
+    console.log('🔍 Choose Barber pressed - locationStatus:', locationStatus);
+    if (locationStatus === 'granted') {
+      console.log('✅ Choose Barber selected - navigating');
+      setShowModal(false);
+      router.push('/barbers');
+    } else {
+      console.log('🚫 Location required for Choose Barber - showing modal');
+      setShowModal(false);
+      setTimeout(() => {
+        console.log('📍 Setting showLocationModal to true');
+        setShowLocationModal(true);
+      }, 300);
+    }
   };
 
   const handleBarbershop = () => {
-    console.log('Barbershop selected');
-    setShowModal(false);
-    // Navigate to barbershops list
-    router.push('/barbershops');
+    console.log('🔍 Barbershop pressed - locationStatus:', locationStatus);
+    if (locationStatus === 'granted') {
+      console.log('✅ Barbershop selected - navigating');
+      setShowModal(false);
+      router.push('/barbershops');
+    } else {
+      console.log('🚫 Location required for Barbershop - showing modal');
+      setShowModal(false);
+      setTimeout(() => {
+        console.log('📍 Setting showLocationModal to true');
+        setShowLocationModal(true);
+      }, 300);
+    }
+  };
+
+  // Handle location permission request
+  const handleRequestLocationPermission = async () => {
+    setShowLocationModal(false);
+    const granted = await requestPermission();
+    
+    if (granted) {
+      console.log('✅ Location enabled from Service tab');
+      // User can now tap the service tab again
+    }
+  };
+
+  // Handle manual location entry
+  const handleManualLocation = () => {
+    setShowLocationModal(false);
+    router.push('/profile/addresses');
+  };
+
+  // Handle dismiss modal
+  const handleDismissLocationModal = () => {
+    setShowLocationModal(false);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Modal
-        visible={showModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleClose}
-      >
+    <>
+      <SafeAreaView style={styles.safeArea}>
+        <Modal
+          visible={showModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={handleClose}
+        >
         <View style={styles.modalOverlay}>
           <TouchableOpacity 
             style={styles.backdrop} 
@@ -62,7 +127,7 @@ export default function ServiceScreen() {
           <View style={styles.modalContent}>
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Book Service</Text>
+              <Text style={styles.modalTitle}>🔥 TESTING - Book Service 🔥</Text>
               <TouchableOpacity
                 onPress={handleClose}
                 style={styles.closeButton}
@@ -130,11 +195,20 @@ export default function ServiceScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-      
-      {/* Empty placeholder - modal shows on top */}
-      <View style={styles.placeholder} />
-    </SafeAreaView>
+        </Modal>
+        
+        {/* Empty placeholder - modal shows on top */}
+        <View style={styles.placeholder} />
+      </SafeAreaView>
+
+      {/* Location Permission Modal - Render OUTSIDE SafeAreaView for higher z-index */}
+      <LocationPermissionModal
+        visible={showLocationModal}
+        onRequestPermission={handleRequestLocationPermission}
+        onManualLocation={handleManualLocation}
+        onDismiss={handleDismissLocationModal}
+      />
+    </>
   );
 }
 
