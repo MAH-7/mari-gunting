@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
@@ -12,6 +12,7 @@ import * as Device from 'expo-device';
 import { locationTrackingService } from '@mari-gunting/shared/services/locationTrackingService';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { useLocalSearchParams } from 'expo-router';
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'completed';
 
@@ -24,6 +25,7 @@ type ChecklistItem = {
 export default function PartnerJobsScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{ jobId?: string }>();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedJob, setSelectedJob] = useState<Booking | null>(null);
@@ -41,6 +43,7 @@ export default function PartnerJobsScreen() {
   ]);
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
+  const processedJobId = useRef<string | null>(null);
 
   // Fetch barber ID from barbers table using user_id
   useEffect(() => {
@@ -77,6 +80,30 @@ export default function PartnerJobsScreen() {
   });
 
   const partnerJobs = bookingsResponse?.data || [];
+
+  // Auto-open job detail when navigating from Dashboard with jobId param
+  useEffect(() => {
+    // Only process if jobId exists, jobs loaded, and we haven't processed this jobId yet
+    if (params.jobId && partnerJobs.length > 0 && processedJobId.current !== params.jobId) {
+      const jobToOpen = partnerJobs.find(j => j.id === params.jobId);
+      if (jobToOpen) {
+        console.log('📂 Auto-opening job from Dashboard:', params.jobId);
+        setSelectedJob(jobToOpen);
+        // Mark this jobId as processed
+        processedJobId.current = params.jobId;
+        // Set filter to show this job's category
+        if (jobToOpen.status === 'pending') {
+          setFilterStatus('pending');
+        } else if (['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(jobToOpen.status)) {
+          setFilterStatus('active');
+        }
+      }
+    }
+    // Reset processed jobId when params.jobId is cleared
+    if (!params.jobId && processedJobId.current) {
+      processedJobId.current = null;
+    }
+  }, [params.jobId, partnerJobs]);
 
   // CRITICAL: Auto-update selectedJob when data refreshes from backend
   useEffect(() => {
@@ -272,19 +299,19 @@ export default function PartnerJobsScreen() {
 
   const handleRejectJob = (job: Booking) => {
     Alert.alert(
-      'Reject Job',
-      `Are you sure you want to reject this booking?`,
+      'Decline Booking',
+      `Are you sure you want to decline this booking?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reject',
+          text: 'Decline',
           style: 'destructive',
           onPress: async () => {
             await updateStatusMutation.mutateAsync({ 
               bookingId: job.id, 
               newStatus: 'rejected' 
             });
-            Alert.alert('Job Rejected', 'You can still view this in your history.');
+            Alert.alert('Booking Declined', 'You can still view this in your history.');
             setSelectedJob(null);
           },
         },

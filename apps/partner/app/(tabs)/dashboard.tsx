@@ -7,8 +7,10 @@ import { router } from 'expo-router';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '@mari-gunting/shared/store/useStore';
-import { mockBookings } from '@/services/mockData';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { bookingService } from '@mari-gunting/shared/services/bookingService';
+import { Booking } from '@/types';
 import { verificationService, VerificationInfo } from '@mari-gunting/shared/services/verificationService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import VerificationProgressWidget from '@/components/VerificationProgressWidget';
@@ -108,11 +110,12 @@ const Toast = ({ message, type = 'success', visible, onHide }: { message: string
 
 export default function PartnerDashboardScreen() {
   const currentUser = useStore((state) => state.currentUser);
+  const queryClient = useQueryClient();
+  const [barberId, setBarberId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(false); // Default to offline
   const [refreshing, setRefreshing] = useState(false);
   const [dailyGoal] = useState(200);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({ message: '', type: 'success', visible: false });
-  const [acceptingJob, setAcceptingJob] = useState<string | null>(null);
   const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
   const [loadingVerification, setLoadingVerification] = useState(true);
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
@@ -128,6 +131,95 @@ export default function PartnerDashboardScreen() {
   // Animation
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Timer state for countdown on pending orders
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Fetch barber ID from barbers table using user_id
+  useEffect(() => {
+    const fetchBarberId = async () => {
+      if (!currentUser?.id) return;
+      
+      const { data, error } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .single();
+      
+      if (error) {
+        console.error('❌ Error fetching barber ID:', error);
+        return;
+      }
+      
+      console.log('✅ Barber ID found:', data.id);
+      setBarberId(data.id);
+    };
+    
+    fetchBarberId();
+  }, [currentUser?.id]);
+
+  // Update timer every second for countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // REAL SUPABASE QUERY - Fetch barber bookings
+  const { data: bookingsResponse, isLoading: loadingBookings, error: bookingsError } = useQuery({
+    queryKey: ['barber-bookings', barberId],
+    queryFn: async () => {
+      const result = await bookingService.getBarberBookings(barberId || '');
+      return result;
+    },
+    enabled: !!barberId,
+    staleTime: 5 * 60 * 1000, // 5 min - rely on realtime for updates
+    // No polling - realtime handles updates instantly
+  });
+
+  const partnerBookings = bookingsResponse?.data || [];
+
+  // Real-time subscription for ALL booking changes (INSERT + UPDATE + DELETE)
+  useEffect(() => {
+    if (!barberId) return;
+
+    console.log('🔊 Setting up realtime subscription for barber:', barberId);
+
+    const channel = supabase
+      .channel('dashboard-bookings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'bookings',
+          filter: `barber_id=eq.${barberId}`,
+        },
+        (payload) => {
+          console.log('🔔 Booking changed:', payload.eventType, payload);
+          
+          // Refresh bookings data
+          queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+          
+          // Show toast for new bookings only
+          if (payload.eventType === 'INSERT') {
+            setToast({ 
+              message: '🔔 New booking request!', 
+              type: 'success', 
+              visible: true 
+            });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [barberId, queryClient]);
 
   useEffect(() => {
     Animated.parallel([
@@ -430,7 +522,7 @@ export default function PartnerDashboardScreen() {
   };
 
   const stats = useMemo(() => {
-    if (!currentUser)
+    if (!currentUser || !barberId)
       return {
         todayEarnings: 0,
         weekEarnings: 0,
@@ -443,14 +535,13 @@ export default function PartnerDashboardScreen() {
       };
 
     const today = new Date().toISOString().split('T')[0];
-    const partnerBookings = mockBookings.filter((b) => b.barberId === currentUser.id);
 
     const todayBookings = partnerBookings.filter((b) => b.scheduledDate === today);
     const completed = todayBookings.filter((b) => b.status === 'completed');
     const todayEarnings = completed.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    const weekEarnings = todayEarnings * 3.5; // Mock week earnings
+    const weekEarnings = todayEarnings * 3.5; // Estimate week earnings
 
-    const activeCount = partnerBookings.filter((b) => ['accepted', 'on-the-way', 'in-progress'].includes(b.status)).length;
+    const activeCount = partnerBookings.filter((b) => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(b.status)).length;
     const pendingCount = partnerBookings.filter((b) => b.status === 'pending').length;
 
     return {
@@ -463,60 +554,60 @@ export default function PartnerDashboardScreen() {
       avgRating: ('rating' in currentUser ? currentUser.rating : 4.8),
       acceptance: 95,
     };
-  }, [currentUser, dailyGoal]);
+  }, [currentUser, barberId, partnerBookings, dailyGoal]);
 
   const nextJob = useMemo(() => {
-    if (!currentUser) return null;
+    if (!currentUser || !barberId) return null;
     return (
-      mockBookings
-        .filter((b) => b.barberId === currentUser.id && ['accepted', 'on-the-way'].includes(b.status))
+      partnerBookings
+        .filter((b) => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(b.status))
         .sort((a, b) => {
           const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`);
           const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`);
           return dateA.getTime() - dateB.getTime();
         })[0] || null
     );
-  }, [currentUser]);
+  }, [currentUser, barberId, partnerBookings]);
 
   const pendingRequests = useMemo(() => {
-    if (!currentUser) return [];
-    return mockBookings
-      .filter((b) => b.barberId === currentUser.id && b.status === 'pending')
+    if (!currentUser || !barberId) return [];
+    
+    const TIMEOUT_SECONDS = 180; // 3 minutes
+    
+    return partnerBookings
+      .filter((b) => {
+        if (b.status !== 'pending') return false;
+        
+        // Calculate time elapsed since booking creation
+        const createdAt = new Date(b.createdAt || b.created_at).getTime();
+        const timeElapsed = (currentTime - createdAt) / 1000;
+        const timeRemaining = Math.max(0, TIMEOUT_SECONDS - timeElapsed);
+        
+        // Filter out expired bookings (timeRemaining === 0)
+        return timeRemaining > 0;
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 2);
-  }, [currentUser]);
+  }, [currentUser, barberId, partnerBookings, currentTime]);
 
   // Memoize completed today list
   const completedToday = useMemo(() => {
-    if (!currentUser) return [];
-    return mockBookings
-      .filter((b) => b.barberId === currentUser.id && b.status === 'completed')
+    if (!currentUser || !barberId) return [];
+    return partnerBookings
+      .filter((b) => b.status === 'completed')
       .slice(0, 3);
-  }, [currentUser]);
+  }, [currentUser, barberId, partnerBookings]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
       loadVerificationStatus(),
+      queryClient.invalidateQueries({ queryKey: ['barber-bookings'] }),
       new Promise((resolve) => setTimeout(resolve, 1000)),
     ]);
     setRefreshing(false);
   };
 
-  const handleAcceptJob = useCallback(async (jobId: string) => {
-    setAcceptingJob(jobId);
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setTimeout(() => {
-      setAcceptingJob(null);
-      setToast({ message: 'Booking accepted!', type: 'success', visible: true });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 600);
-  }, []);
-
-  const handleRejectJob = useCallback(async (jobId: string) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setToast({ message: 'Booking declined', type: 'error', visible: true });
-  }, []);
 
   const toggleOnlineStatus = useCallback(async () => {
     if (!currentUser?.id || isTogglingStatus) return;
@@ -763,6 +854,26 @@ export default function PartnerDashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Error Banner */}
+        {bookingsError && (
+          <View style={styles.errorBanner}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="warning" size={24} color="#FF3B30" />
+            </View>
+            <View style={styles.errorContent}>
+              <Text style={styles.errorTitle}>Failed to load bookings</Text>
+              <Text style={styles.errorSubtitle}>Please check your connection</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={() => queryClient.invalidateQueries({ queryKey: ['barber-bookings'] })}
+            >
+              <Ionicons name="refresh" size={20} color={COLORS.primary} />
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Verification Progress Widget */}
         <VerificationProgressWidget />
         
@@ -797,6 +908,114 @@ export default function PartnerDashboardScreen() {
             </Text>
           </TouchableOpacity>
         </Animated.View>
+
+        {/* New Orders - Show immediately after toggle for visibility */}
+        {pendingRequests.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>New Orders ({pendingRequests.length})</Text>
+              <Text style={styles.sectionSubtitle}>Tap to view details</Text>
+            </View>
+
+            {pendingRequests.map((job, idx) => (
+              <TouchableOpacity
+                key={job.id}
+                activeOpacity={0.9}
+                onPress={() => {
+                  // Navigate to Jobs tab and open this job's detail
+                  router.push({
+                    pathname: '/(tabs)/jobs',
+                    params: { jobId: job.id }
+                  });
+                }}
+              >
+                <Animated.View
+                  style={[
+                    styles.orderCard,
+                    {
+                      opacity: fadeAnim,
+                      transform: [
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [50, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <View style={styles.orderHeader}>
+                    <View style={styles.orderInfo}>
+                      <View style={styles.orderAvatar}>
+                        <Ionicons name="person" size={24} color={COLORS.primary} />
+                      </View>
+                      <View style={styles.orderDetails}>
+                        <Text style={styles.orderName}>{job.customer?.name}</Text>
+                        <View style={styles.orderMeta}>
+                          <Ionicons name="location" size={14} color="#999" />
+                          <Text style={styles.orderMetaText}>
+                            {job.distance ? `${Number(job.distance).toFixed(1)} km away` : 'Distance N/A'}
+                          </Text>
+                          <Text style={styles.orderDot}>•</Text>
+                          <Text style={styles.orderMetaText}>{job.scheduledTime}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.orderPrice}>
+                      <Text style={styles.orderPriceText}>
+                        RM {(() => {
+                          const servicesTotal = job.services?.reduce((sum, s) => sum + s.price, 0) || 0;
+                          const travelCost = job.travelCost || 0;
+                          const earnings = (servicesTotal * 0.85) + travelCost;
+                          return earnings.toFixed(2);
+                        })()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Countdown Timer */}
+                  {(() => {
+                    const TIMEOUT_SECONDS = 180; // 3 minutes
+                    const createdAt = new Date(job.createdAt || job.created_at).getTime();
+                    const timeElapsed = (currentTime - createdAt) / 1000;
+                    const timeRemaining = Math.max(0, TIMEOUT_SECONDS - timeElapsed);
+                    
+                    const minutes = Math.floor(timeRemaining / 60);
+                    const seconds = Math.floor(timeRemaining % 60);
+                    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    // Determine urgency color
+                    let timerColor = '#00B14F'; // Green: > 2 min
+                    let bgColor = '#E8F5E9';
+                    if (timeRemaining <= 60) {
+                      timerColor = '#FF3B30'; // Red: < 1 min
+                      bgColor = '#FFE8E8';
+                    } else if (timeRemaining <= 120) {
+                      timerColor = '#FFB800'; // Orange: 1-2 min
+                      bgColor = '#FFF8E1';
+                    }
+                    
+                    return (
+                      <View style={[styles.timerContainer, { backgroundColor: bgColor }]}>
+                        <Ionicons name="timer-outline" size={16} color={timerColor} />
+                        <Text style={[styles.timerText, { color: timerColor }]}>
+                          Respond within {formattedTime}
+                        </Text>
+                      </View>
+                    );
+                  })()}
+
+                  {/* Tap to view details hint */}
+                  <View style={styles.orderFooter}>
+                    <Text style={styles.orderFooterText}>Tap to view details and respond</Text>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                  </View>
+                </Animated.View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -833,84 +1052,17 @@ export default function PartnerDashboardScreen() {
           </View>
         </View>
 
-        {/* New Orders */}
-        {pendingRequests.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>New Orders ({pendingRequests.length})</Text>
-              <Text style={styles.sectionSubtitle}>Accept or decline</Text>
-            </View>
-
-            {pendingRequests.map((job, idx) => (
-              <Animated.View
-                key={job.id}
-                style={[
-                  styles.orderCard,
-                  {
-                    opacity: fadeAnim,
-                    transform: [
-                      {
-                        translateY: slideAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [50, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <View style={styles.orderHeader}>
-                  <View style={styles.orderInfo}>
-                    <View style={styles.orderAvatar}>
-                      <Ionicons name="person" size={24} color={COLORS.primary} />
-                    </View>
-                    <View style={styles.orderDetails}>
-                      <Text style={styles.orderName}>{job.customer?.name}</Text>
-                      <View style={styles.orderMeta}>
-                        <Ionicons name="location" size={14} color="#999" />
-                        <Text style={styles.orderMetaText}>{job.distance} km away</Text>
-                        <Text style={styles.orderDot}>•</Text>
-                        <Text style={styles.orderMetaText}>{job.scheduledTime}</Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.orderPrice}>
-                    <Text style={styles.orderPriceText}>RM {job.totalPrice}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.orderActions}>
-                  <TouchableOpacity
-                    style={styles.declineBtn}
-                    onPress={() => handleRejectJob(job.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.declineBtnText}>Decline</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.acceptButton, acceptingJob === job.id && styles.acceptButtonLoading]}
-                    onPress={() => handleAcceptJob(job.id)}
-                    disabled={acceptingJob === job.id}
-                    activeOpacity={0.8}
-                  >
-                    {acceptingJob === job.id ? (
-                      <Text style={styles.acceptButtonText}>Accepting...</Text>
-                    ) : (
-                      <Text style={styles.acceptButtonText}>Accept</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            ))}
-          </View>
-        )}
-
-        {/* Active Order */}
+        {/* Active Order - Show after stats */}
         {nextJob && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Active Order</Text>
-              <Text style={styles.sectionSubtitle}>On the way</Text>
+              <Text style={styles.sectionSubtitle}>
+                {nextJob.status === 'accepted' && 'Accepted - Preparing'}
+                {nextJob.status === 'on_the_way' && 'On the way'}
+                {nextJob.status === 'arrived' && 'Arrived at location'}
+                {nextJob.status === 'in_progress' && 'Service in progress'}
+              </Text>
             </View>
             <TouchableOpacity style={styles.activeCard} activeOpacity={0.9}>
               <View style={styles.activeLeft}>
@@ -923,7 +1075,9 @@ export default function PartnerDashboardScreen() {
                   <Text style={styles.activeName}>{nextJob.customer?.name}</Text>
                   <View style={styles.activeMeta}>
                     <Ionicons name="location" size={12} color="#999" />
-                    <Text style={styles.activeMetaText}>{nextJob.distance} km • {nextJob.scheduledTime}</Text>
+                    <Text style={styles.activeMetaText}>
+                      {nextJob.distance ? `${Number(nextJob.distance).toFixed(1)} km` : 'N/A'} • {nextJob.scheduledTime}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -934,19 +1088,6 @@ export default function PartnerDashboardScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Quick Actions Grid */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            {accountType === 'barbershop' && (
-              <ActionCard icon="calendar" label="Schedule" color="#3B82F6" onPress={() => router.push('/(tabs)/schedule')} />
-            )}
-            <ActionCard icon="briefcase" label="My Orders" color="#8B5CF6" onPress={() => router.push('/(tabs)/jobs')} />
-            <ActionCard icon="person" label="Profile" color="#F59E0B" onPress={() => router.push('/(tabs)/profile')} />
-            <ActionCard icon="help-circle" label="Help" color="#EF4444" onPress={() => {}} />
-          </View>
-        </View>
 
       </ScrollView>
     </View>
@@ -971,17 +1112,6 @@ function StatCard({ icon, label, value, color, onPress }: { icon: string; label:
   );
 }
 
-// Action Card Component
-function ActionCard({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.actionCard} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.actionIcon, { backgroundColor: color }]}>
-        <Ionicons name={icon as any} size={24} color="#FFF" />
-      </View>
-      <Text style={styles.actionLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
 
 function KPI({ icon, color, label, value, accessibilityLabel }: { icon: keyof typeof Ionicons.glyphMap; color: string; label: string; value: string; accessibilityLabel?: string }) {
   return (
@@ -1146,6 +1276,57 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+  },
+
+  // Error Banner
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFE8E8',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#FF3B3015',
+  },
+  errorIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FF3B3020',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  errorContent: {
+    flex: 1,
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF3B30',
+    marginBottom: 2,
+  },
+  errorSubtitle: {
+    fontSize: 12,
+    color: '#FF3B30',
+    opacity: 0.8,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
 
   // Online/Offline Toggle (Prominent)
@@ -1340,6 +1521,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
   },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  timerText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  orderFooterText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   orderActions: {
     flexDirection: 'row',
     gap: 12,
@@ -1433,38 +1641,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 
-  // Quick Actions Grid
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 12,
-  },
-  actionCard: {
-    width: (width - 52) / 2,
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  actionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#000',
-  },
 
   // Verification Banner
   verificationBannerContainer: {

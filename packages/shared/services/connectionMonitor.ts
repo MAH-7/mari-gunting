@@ -34,13 +34,9 @@ class ConnectionMonitor {
     console.log('🔌 Starting connection monitor for user:', userId);
     
     // Subscribe to a presence channel - this maintains WebSocket connection
-    this.channel = supabase.channel(`barber:${userId}:presence`, {
-      config: {
-        presence: {
-          key: userId,
-        },
-      },
-    });
+    // Note: Supabase auto-generates presence key for connection identity
+    // User identity is stored in track() payload below
+    this.channel = supabase.channel(`barber:${userId}:presence`);
     
     // Track presence (online/offline state)
     this.channel
@@ -65,8 +61,9 @@ class ConnectionMonitor {
         
         if (status === 'SUBSCRIBED') {
           // Track presence (marks us as online in the channel)
+          // Use instance variable to ensure userId is always in scope
           await this.channel!.track({
-            user_id: userId,
+            user_id: this.userId,  // ✅ Instance variable (best practice)
             online_at: new Date().toISOString(),
           });
           
