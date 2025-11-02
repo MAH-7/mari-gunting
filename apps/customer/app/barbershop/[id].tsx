@@ -5,36 +5,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
-import { formatCurrency, formatDistance, formatTimeRange } from '@/utils/format';
+import { formatCurrency, formatDistance, formatTimeRange } from '@mari-gunting/shared/utils/format';
 import { SkeletonImage, SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 
 const { width, height } = Dimensions.get('window');
 
-// Get current day for highlighting in operating hours (using Malaysia time)
+// Get current day in user's local timezone (Grab-style)
 const getCurrentDay = () => {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  // Get Malaysia time (GMT+8) by converting UTC to Malaysia timezone
   const now = new Date();
-  const malaysiaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours
-  return days[malaysiaTime.getUTCDay()]; // Use UTC methods since we adjusted the time
+  return days[now.getDay()]; // Use device's local timezone
 };
 
-// Check if shop is currently open based on Malaysia time (GMT+8)
+// Check if shop is currently open based on user's local time (Grab-style)
 const isShopOpenNow = (detailedHours: any) => {
   if (!detailedHours) return false;
 
-  // Get current Malaysia time (GMT+8) - React Native doesn't support timeZone in toLocaleString
   const now = new Date();
-  const malaysiaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours to UTC
-  
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const currentDay = days[malaysiaTime.getUTCDay()]; // Use UTC methods since we adjusted the time
+  const currentDay = days[now.getDay()]; // Use device's local timezone
   const dayInfo = detailedHours[currentDay];
   
   if (!dayInfo || !dayInfo.isOpen) return false;
   
-  const currentHour = malaysiaTime.getUTCHours();
-  const currentMinute = malaysiaTime.getUTCMinutes();
+  const currentHour = now.getHours(); // User's local time
+  const currentMinute = now.getMinutes();
   const currentTimeInMinutes = currentHour * 60 + currentMinute;
   
   // Parse opening time

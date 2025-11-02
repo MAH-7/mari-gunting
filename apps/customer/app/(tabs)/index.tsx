@@ -15,7 +15,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
 import { useStore } from "@/store/useStore";
-import { formatCurrency, formatDistance } from "@/utils/format";
+import { formatCurrency, formatDistance } from '@mari-gunting/shared/utils/format';
 import { Barber } from "@/types";
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';

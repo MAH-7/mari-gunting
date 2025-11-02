@@ -17,7 +17,8 @@ export type BookingStatus =
   | 'completed'
   | 'cancelled'
   | 'rejected'
-  | 'no_show';
+  | 'no_show'
+  | 'expired';          // Auto-expired after 3 minutes no response
 
 export type PaymentStatus = 
   | 'pending'
@@ -233,9 +234,9 @@ export interface Booking {
   services: ServiceItem[];
   
   // Scheduling
-  scheduled_date: string;
-  scheduled_time: string;
-  scheduled_datetime: string;
+  scheduled_date: string; // Kept for backward compatibility
+  scheduled_time: string; // Kept for backward compatibility
+  scheduled_datetime: string; // ISO 8601 timestamp - SOURCE OF TRUTH (Grab production standard)
   estimated_duration_minutes: number;
   
   // Location

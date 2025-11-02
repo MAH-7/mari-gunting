@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { addressService } from '@mari-gunting/shared/services/addressService';
-import { formatCurrency, formatPrice } from '@/utils/format';
+import { formatCurrency, formatPrice } from '@mari-gunting/shared/utils/format';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { ACTIVE_OPACITY } from '@/constants/animations';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';

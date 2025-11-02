@@ -283,9 +283,10 @@ export default function PaymentMethodScreen() {
       const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
       const isBarbershop = bookingType === 'scheduled-shop';
       
+      // Use local date, not UTC (Grab-style)
       const scheduledDate = isBarbershop && params.scheduledDate 
         ? params.scheduledDate 
-        : new Date().toISOString().split('T')[0];
+        : new Date().toLocaleDateString('en-CA'); // en-CA formats as YYYY-MM-DD in local timezone
       
       const scheduledTime = isBarbershop && params.scheduledTime
         ? params.scheduledTime
@@ -397,9 +398,10 @@ export default function PaymentMethodScreen() {
       const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
       const isBarbershop = bookingType === 'scheduled-shop';
       
+      // Use local date, not UTC (Grab-style)
       const scheduledDate = isBarbershop && params.scheduledDate 
         ? params.scheduledDate 
-        : new Date().toISOString().split('T')[0];
+        : new Date().toLocaleDateString('en-CA'); // en-CA formats as YYYY-MM-DD in local timezone
       
       const scheduledTime = isBarbershop && params.scheduledTime
         ? params.scheduledTime
@@ -637,25 +639,27 @@ export default function PaymentMethodScreen() {
    * Handle timeout - no barber response
    */
   const handleBarberTimeout = async () => {
-    console.log('[Wait-for-Barber] Timeout - no response');
+    console.log('[Wait-for-Barber] Timeout - no response (3 minutes)');
     
     setShowWaitingModal(false);
     setIsProcessing(false);
     
-    // Cancel the booking
+    // Update booking to 'expired' status (PRIMARY mechanism)
+    // Cron job is backup in case this fails (app closed, network error, etc.)
     if (waitingBookingId) {
       await supabase
         .from('bookings')
         .update({ 
-          status: 'cancelled',
-          cancellation_reason: 'No barber response (timeout)'
+          status: 'expired',  // Changed from 'cancelled' to 'expired'
+          cancellation_reason: 'No response within 3 minutes',
+          cancelled_at: new Date().toISOString()
         })
         .eq('id', waitingBookingId);
     }
     
     Alert.alert(
       'No Response',
-      'The barber hasn\'t responded yet. Your booking has been cancelled. Please try another barber.',
+      'The barber hasn\'t responded yet. We\'ll find you another barber.',
       [{ text: 'OK', onPress: () => router.back() }]
     );
   };
@@ -829,9 +833,10 @@ export default function PaymentMethodScreen() {
           const isBarbershop = bookingType === 'scheduled-shop';
           
           // Prepare booking params for Supabase RPC
+          // Use local date, not UTC (Grab-style)
           const scheduledDate = isBarbershop && params.scheduledDate 
             ? params.scheduledDate 
-            : new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            : new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local timezone
           
           const scheduledTime = isBarbershop && params.scheduledTime
             ? params.scheduledTime

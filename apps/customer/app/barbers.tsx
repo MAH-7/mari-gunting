@@ -20,7 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
-import { formatCurrency, formatDistance } from "@/utils/format";
+import { formatCurrency, formatDistance } from '@mari-gunting/shared/utils/format';
 import { Barber } from "@/types";
 import {
   SkeletonCircle,

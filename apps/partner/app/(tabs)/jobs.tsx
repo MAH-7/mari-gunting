@@ -13,6 +13,7 @@ import { locationTrackingService } from '@mari-gunting/shared/services/locationT
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useLocalSearchParams } from 'expo-router';
+import { formatTime, formatLocalDate, formatLocalTime } from '@/utils/format';
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'completed';
 
@@ -203,7 +204,7 @@ export default function PartnerJobsScreen() {
     } else if (filterStatus === 'active') {
       jobs = jobs.filter(j => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(j.status));
     } else if (filterStatus === 'completed') {
-      jobs = jobs.filter(j => ['completed', 'cancelled'].includes(j.status));
+      jobs = jobs.filter(j => ['completed', 'cancelled', 'rejected', 'expired'].includes(j.status));
     }
 
     // Apply search
@@ -224,7 +225,7 @@ export default function PartnerJobsScreen() {
     all: partnerJobs.length,
     pending: partnerJobs.filter(j => j.status === 'pending').length,
     active: partnerJobs.filter(j => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(j.status)).length,
-    completed: partnerJobs.filter(j => ['completed', 'cancelled'].includes(j.status)).length,
+    completed: partnerJobs.filter(j => ['completed', 'cancelled', 'rejected', 'expired'].includes(j.status)).length,
   }), [partnerJobs]);
 
   // Calculate analytics for completed jobs
@@ -234,11 +235,12 @@ export default function PartnerJobsScreen() {
     const totalJobs = completed.length;
     const averageEarning = totalJobs > 0 ? totalEarnings / totalJobs : 0;
     
-    // Calculate this month's stats
+    // Calculate this month's stats (using UTC to avoid timezone issues - Grab-style)
     const now = new Date();
     const thisMonth = completed.filter(job => {
       const jobDate = new Date(job.completedAt || job.updatedAt);
-      return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
+      // Use UTC methods for consistent month boundaries across timezones
+      return jobDate.getUTCMonth() === now.getUTCMonth() && jobDate.getUTCFullYear() === now.getUTCFullYear();
     });
     const monthlyEarnings = thisMonth.reduce((sum, job) => sum + (job.totalPrice || 0), 0);
     const monthlyJobs = thisMonth.length;
@@ -898,7 +900,11 @@ export default function PartnerJobsScreen() {
                   <View>
                     <Text style={styles.jobCustomerName}>{job.customer?.name || 'Customer'}</Text>
                     <Text style={styles.jobDate}>
-                      {job.scheduledDate} • {job.scheduledTime}
+                      {/* PRODUCTION: Use scheduled_datetime for timezone-aware display */}
+                      {job.scheduled_datetime 
+                        ? `${formatLocalDate(job.scheduled_datetime, 'short')} • ${formatLocalTime(job.scheduled_datetime)}`
+                        : `${job.scheduledDate} • ${formatTime(job.scheduledTime)}`
+                      }
                     </Text>
                   </View>
                 </View>
@@ -1022,11 +1028,13 @@ export default function PartnerJobsScreen() {
                   {selectedJob.status === 'in_progress' && 'Job in progress'}
                   {selectedJob.status === 'completed' && 'Job completed successfully'}
                   {selectedJob.status === 'cancelled' && 'This job was cancelled'}
+                  {selectedJob.status === 'rejected' && 'You declined this booking'}
+                  {selectedJob.status === 'expired' && 'No response within 3 minutes - booking expired'}
                 </Text>
               </View>
 
               {/* Progress Timeline - Only show for active jobs */}
-              {!['completed', 'cancelled', 'pending'].includes(selectedJob.status) && selectedJob.status !== 'arrived' && (
+              {!['completed', 'cancelled', 'rejected', 'expired', 'pending'].includes(selectedJob.status) && selectedJob.status !== 'arrived' && (
                 <View style={styles.timelineSection}>
                   <Text style={styles.timelineSectionTitle}>Job Progress</Text>
                   <View style={styles.timeline}>
@@ -1144,14 +1152,30 @@ export default function PartnerJobsScreen() {
               <View style={styles.detailSection}>
                 <Text style={styles.detailSectionTitle}>Schedule</Text>
                 <View style={styles.scheduleInfo}>
-                  <View style={styles.scheduleRow}>
-                    <Ionicons name="calendar" size={20} color={COLORS.text.secondary} />
-                    <Text style={styles.scheduleText}>{selectedJob.scheduledDate}</Text>
-                  </View>
-                  <View style={styles.scheduleRow}>
-                    <Ionicons name="time" size={20} color={COLORS.text.secondary} />
-                    <Text style={styles.scheduleText}>{selectedJob.scheduledTime}</Text>
-                  </View>
+                  {/* PRODUCTION: Use scheduled_datetime for timezone-aware display */}
+                  {selectedJob.scheduled_datetime ? (
+                    <>
+                      <View style={styles.scheduleRow}>
+                        <Ionicons name="calendar" size={20} color={COLORS.text.secondary} />
+                        <Text style={styles.scheduleText}>{formatLocalDate(selectedJob.scheduled_datetime, 'long')}</Text>
+                      </View>
+                      <View style={styles.scheduleRow}>
+                        <Ionicons name="time" size={20} color={COLORS.text.secondary} />
+                        <Text style={styles.scheduleText}>{formatLocalTime(selectedJob.scheduled_datetime)}</Text>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.scheduleRow}>
+                        <Ionicons name="calendar" size={20} color={COLORS.text.secondary} />
+                        <Text style={styles.scheduleText}>{selectedJob.scheduledDate}</Text>
+                      </View>
+                      <View style={styles.scheduleRow}>
+                        <Ionicons name="time" size={20} color={COLORS.text.secondary} />
+                        <Text style={styles.scheduleText}>{formatTime(selectedJob.scheduledTime)}</Text>
+                      </View>
+                    </>
+                  )}
                 </View>
               </View>
 
@@ -1240,7 +1264,7 @@ export default function PartnerJobsScreen() {
             </ScrollView>
 
             {/* Action Buttons */}
-            {selectedJob.status !== 'completed' && selectedJob.status !== 'cancelled' && (
+            {!['completed', 'cancelled', 'rejected', 'expired'].includes(selectedJob.status) && (
               <View style={styles.modalActions}>
                 {selectedJob.status === 'pending' && (
                   <>

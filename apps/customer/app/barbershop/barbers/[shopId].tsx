@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency } from '@mari-gunting/shared/utils/format';
 import { ACTIVE_OPACITY } from '@/constants/animations';
 import { Barber, BarbershopStaff } from '@/types';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';

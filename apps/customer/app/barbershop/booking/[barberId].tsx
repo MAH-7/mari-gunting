@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
-import { formatCurrency, formatPrice, formatTime } from '@/utils/format';
+import { formatCurrency, formatPrice, formatTime } from '@mari-gunting/shared/utils/format';
 
 export default function BarbershopBookingScreen() {
   const { barberId, shopId } = useLocalSearchParams<{ barberId: string; shopId: string }>();

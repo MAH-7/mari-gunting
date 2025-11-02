@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@mari-gunting/shared/store/useStore';
-import { formatPhoneNumber } from '@/utils/format';
+import { formatPhoneNumber } from '@mari-gunting/shared/utils/format';
 import { useProfile } from '@/hooks/useProfile';
 import { SkeletonText } from '@/components/Skeleton';
 import { useEffect, useRef, useCallback, useState } from 'react';

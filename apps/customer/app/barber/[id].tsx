@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
-import { formatCurrency, formatDistance } from '@/utils/format';
+import { formatCurrency, formatDistance } from '@mari-gunting/shared/utils/format';
 import { SkeletonCircle, SkeletonText, SkeletonBase, SkeletonImage } from '@/components/Skeleton';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useBarberOffline } from '@/contexts/BarberOfflineContext';

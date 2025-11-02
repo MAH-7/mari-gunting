@@ -4,7 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
-import { formatCurrency, formatPrice, formatShortDate, formatTime } from '@/utils/format';
+import { formatCurrency, formatPrice, formatShortDate, formatTime, formatLocalTime, formatLocalDate, formatLocalDateTime } from '@mari-gunting/shared/utils/format';
 import { BookingStatus } from '@/types';
 import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@mari-gunting/shared/store/useStore';
@@ -157,6 +157,27 @@ export default function BookingDetailScreen() {
     return methods[method] || method;
   };
 
+  // Helper to display payment status based on booking + payment status combination
+  const getPaymentStatusDisplay = (bookingStatus: string, paymentStatus: string) => {
+    // For rejected/cancelled bookings that never had payment
+    if ((bookingStatus === 'rejected' || bookingStatus === 'cancelled') && paymentStatus === 'pending') {
+      return 'NOT PAID';
+    }
+    
+    // For pending/accepted bookings awaiting payment
+    if ((bookingStatus === 'pending' || bookingStatus === 'accepted') && paymentStatus === 'pending') {
+      return 'AWAITING PAYMENT';
+    }
+    
+    // Payment completed
+    if (paymentStatus === 'completed') {
+      return 'PAID';
+    }
+    
+    // Fallback to raw status
+    return paymentStatus.toUpperCase();
+  };
+
   const getStatusConfig = (status: BookingStatus) => {
     const configs = {
       pending: { 
@@ -214,6 +235,13 @@ export default function BookingDetailScreen() {
         label: 'Rejected',
         iconName: 'close-circle-outline' as const,
         description: 'Barber declined this booking'
+      },
+      expired: { 
+        color: '#F97316', 
+        bg: '#FFF7ED', 
+        label: 'Expired',
+        iconName: 'time-outline' as const,
+        description: 'No barber response within 3 minutes'
       },
     };
     return configs[status] || configs.pending;
@@ -581,7 +609,7 @@ export default function BookingDetailScreen() {
         </View>
 
         {/* Progress Tracker - Grab Style */}
-        {booking.status !== 'cancelled' && booking.status !== 'rejected' && (
+        {!['cancelled', 'rejected', 'expired'].includes(booking.status) && (
           <View style={styles.progressCard}>
             {/* Completed Steps */}
             {booking.status !== 'pending' && (
@@ -590,28 +618,28 @@ export default function BookingDetailScreen() {
                   <View style={styles.completedStep}>
                     <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
                     <Text style={styles.completedStepText}>Accepted</Text>
-                    <Text style={styles.completedStepTime}>{formatTime(booking.acceptedAt)}</Text>
+                    <Text style={styles.completedStepTime}>{formatLocalTime(booking.acceptedAt)}</Text>
                   </View>
                 )}
                 {booking.onTheWayAt && (
                   <View style={styles.completedStep}>
                     <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
                     <Text style={styles.completedStepText}>On The Way</Text>
-                    <Text style={styles.completedStepTime}>{formatTime(booking.onTheWayAt)}</Text>
+                    <Text style={styles.completedStepTime}>{formatLocalTime(booking.onTheWayAt)}</Text>
                   </View>
                 )}
                 {booking.arrivedAt && (
                   <View style={styles.completedStep}>
                     <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
                     <Text style={styles.completedStepText}>Arrived</Text>
-                    <Text style={styles.completedStepTime}>{formatTime(booking.arrivedAt)}</Text>
+                    <Text style={styles.completedStepTime}>{formatLocalTime(booking.arrivedAt)}</Text>
                   </View>
                 )}
                 {booking.startedAt && (
                   <View style={styles.completedStep}>
                     <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
                     <Text style={styles.completedStepText}>Service Started</Text>
-                    <Text style={styles.completedStepTime}>{formatTime(booking.startedAt)}</Text>
+                    <Text style={styles.completedStepTime}>{formatLocalTime(booking.startedAt)}</Text>
                   </View>
                 )}
               </View>
@@ -826,7 +854,7 @@ export default function BookingDetailScreen() {
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Date & Time</Text>
                 <Text style={styles.infoValue}>
-                  {formatShortDate(booking.scheduledDate)} at {formatTime(booking.scheduledTime)}
+                  {formatLocalDate(booking.scheduledDate)} at {formatTime(booking.scheduledTime)}
                 </Text>
               </View>
             </View>
@@ -838,7 +866,7 @@ export default function BookingDetailScreen() {
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Scheduled At</Text>
                 <Text style={styles.infoValue}>
-                  {new Date(booking.scheduledAt).toLocaleString()}
+                  {formatLocalDateTime(booking.scheduledAt)}
                 </Text>
               </View>
             </View>
@@ -898,7 +926,7 @@ export default function BookingDetailScreen() {
             <Text style={styles.sectionTitle}>Cancellation Reason</Text>
             <Text style={styles.cancelReason}>{booking.cancellationReason}</Text>
             <Text style={styles.cancelDate}>
-              Cancelled on {formatShortDate(booking.cancelledAt || '')}
+              Cancelled on {formatLocalDate(booking.cancelledAt || '')}
             </Text>
           </View>
         )}
@@ -912,7 +940,7 @@ export default function BookingDetailScreen() {
             </Text>
             {booking.cancelledAt && (
               <Text style={styles.cancelDate}>
-                Rejected on {formatShortDate(booking.cancelledAt)}
+                Rejected on {formatLocalDate(booking.cancelledAt)}
               </Text>
             )}
           </View>
@@ -946,7 +974,7 @@ export default function BookingDetailScreen() {
                 styles.paymentBadgeText,
                 booking.payment_status === 'completed' && styles.paymentBadgeTextPaid
               ]}>
-                {(booking.payment_status || 'pending').toUpperCase()}
+                {getPaymentStatusDisplay(booking.status, booking.payment_status || 'pending')}
               </Text>
             </View>
           </View>
@@ -1007,7 +1035,7 @@ export default function BookingDetailScreen() {
         {booking.status === 'rejected' && (
           <TouchableOpacity
             style={styles.findAnotherBarberButton}
-            onPress={() => router.push('/(tabs)/home' as any)}
+            onPress={() => router.push('/(tabs)' as any)}
           >
             <Ionicons name="search" size={20} color="#FFFFFF" />
             <Text style={styles.findAnotherBarberButtonText}>Find Another Barber</Text>

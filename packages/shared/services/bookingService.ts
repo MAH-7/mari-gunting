@@ -5,6 +5,7 @@
 
 import { supabase } from '../config/supabase';
 import { Booking, ApiResponse } from '../types';
+import { createScheduledDateTime } from '../utils/format';
 
 export interface CreateBookingParams {
   customerId: string;
@@ -15,7 +16,7 @@ export interface CreateBookingParams {
     duration: number;
   }>;
   scheduledDate: string; // YYYY-MM-DD
-  scheduledTime: string; // HH:MM
+  scheduledTime: string; // HH:MM (will be converted to ISO timestamp)
   serviceType: 'home_service' | 'walk_in';
   barbershopId?: string | null;
   customerAddress?: {
@@ -105,20 +106,32 @@ export const bookingService = {
         }
       }
 
+      // PRODUCTION FIX: Convert date + time to ISO timestamp with device timezone
+      // This ensures bookings are scheduled correctly regardless of user's location
+      const scheduledDatetime = createScheduledDateTime(
+        params.scheduledDate,
+        params.scheduledTime
+      );
+
+      console.log('📅 Booking scheduled for:', {
+        input: `${params.scheduledDate} ${params.scheduledTime}`,
+        iso: scheduledDatetime,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+
       const { data, error } = await supabase.rpc('create_booking', {
         p_customer_id: params.customerId,
         p_barber_id: params.barberId,
         p_services: params.services,
-        p_scheduled_date: params.scheduledDate,
-        p_scheduled_time: params.scheduledTime,
+        p_scheduled_datetime: scheduledDatetime, // CHANGED: Send ISO timestamp
         p_service_type: params.serviceType,
         p_barbershop_id: params.barbershopId || null,
         p_customer_address: params.customerAddress || null,
         p_customer_notes: params.customerNotes || null,
         p_payment_method: params.paymentMethod || 'cash',
         p_travel_fee: params.travelFee || null,
-        p_distance_km: params.distanceKm || null,
         p_discount_amount: params.discountAmount || null,
+        p_distance_km: params.distanceKm || null,
         p_curlec_payment_id: params.curlecPaymentId || null,
         p_curlec_order_id: params.curlecOrderId || null,
       });

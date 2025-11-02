@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@mari-gunting/shared/store/useStore';
-import { formatPrice, formatShortDate, formatTime } from '@/utils/format';
+import { formatPrice, formatShortDate, formatTime, formatLocalDate, formatLocalTime } from '@mari-gunting/shared/utils/format';
 import { Booking, BookingStatus } from '@/types';
 import BookingFilterModal, { BookingFilterOptions } from '@/components/BookingFilterModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
@@ -112,7 +112,7 @@ export default function BookingsScreen() {
   );
 
   const completedBookings = bookings.filter(
-    (b: any) => ['completed', 'cancelled'].includes(b.status)
+    (b: any) => ['completed', 'cancelled', 'rejected', 'expired'].includes(b.status)
   );
 
   // Apply filters
@@ -464,6 +464,20 @@ function BookingCard({ booking }: { booking: any }) {
         iconName: 'close-circle' as const,
         progress: 0
       },
+      rejected: { 
+        color: '#DC2626', 
+        bg: '#FEE2E2', 
+        label: 'Declined',
+        iconName: 'close-circle-outline' as const,
+        progress: 0
+      },
+      expired: { 
+        color: '#F97316', 
+        bg: '#FFF7ED', 
+        label: 'Expired',
+        iconName: 'time-outline' as const,
+        progress: 0
+      },
     };
     return configs[status] || configs.pending;
   };
@@ -488,7 +502,7 @@ function BookingCard({ booking }: { booking: any }) {
       </View>
 
       {/* Progress Indicator */}
-      {mappedBooking.status !== 'cancelled' && mappedBooking.status !== 'completed' && (
+      {!['cancelled', 'completed', 'rejected', 'expired'].includes(mappedBooking.status) && (
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
             <View 
@@ -560,9 +574,11 @@ function BookingCard({ booking }: { booking: any }) {
               <Ionicons name="calendar" size={16} color="#6B7280" />
             </View>
             <Text style={styles.detailText}>
-              {mappedBooking.scheduledDate && mappedBooking.scheduledTime ? 
-                `${formatShortDate(mappedBooking.scheduledDate)} at ${formatTime(mappedBooking.scheduledTime)}` : 
-                'Date not set'}
+              {booking.scheduled_datetime ? 
+                `${formatLocalDate(booking.scheduled_datetime)} at ${formatLocalTime(booking.scheduled_datetime)}` :
+                mappedBooking.scheduledDate && mappedBooking.scheduledTime ? 
+                  `${formatLocalDate(mappedBooking.scheduledDate)} at ${formatTime(mappedBooking.scheduledTime)}` : 
+                  'Date not set'}
             </Text>
           </View>
           <View style={styles.detailRow}>

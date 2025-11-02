@@ -163,7 +163,9 @@ export type BookingStatus =
   | 'arrived'           // Partner has arrived at location
   | 'in-progress'
   | 'completed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'rejected'          // Barber declined the booking
+  | 'expired';          // Auto-expired after 3 minutes no response
 
 export interface Booking {
   id: string;

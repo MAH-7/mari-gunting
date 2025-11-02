@@ -17,7 +17,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useProfile } from '@/hooks/useProfile';
-import { formatPhoneNumber } from '@/utils/format';
+import { formatPhoneNumber } from '@mari-gunting/shared/utils/format';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 
 // Helper function to safely get avatar URL

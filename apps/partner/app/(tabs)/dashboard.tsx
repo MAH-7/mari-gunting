@@ -8,6 +8,7 @@ import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
+import { formatTime } from '@/utils/format';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { Booking } from '@/types';
@@ -572,23 +573,13 @@ export default function PartnerDashboardScreen() {
   const pendingRequests = useMemo(() => {
     if (!currentUser || !barberId) return [];
     
-    const TIMEOUT_SECONDS = 180; // 3 minutes
-    
+    // Trust database status - no frontend time calculations needed
+    // Database (via cron) and Customer app handle expiration
     return partnerBookings
-      .filter((b) => {
-        if (b.status !== 'pending') return false;
-        
-        // Calculate time elapsed since booking creation
-        const createdAt = new Date(b.createdAt || b.created_at).getTime();
-        const timeElapsed = (currentTime - createdAt) / 1000;
-        const timeRemaining = Math.max(0, TIMEOUT_SECONDS - timeElapsed);
-        
-        // Filter out expired bookings (timeRemaining === 0)
-        return timeRemaining > 0;
-      })
+      .filter((b) => b.status === 'pending')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 2);
-  }, [currentUser, barberId, partnerBookings, currentTime]);
+  }, [currentUser, barberId, partnerBookings]);
 
   // Memoize completed today list
   const completedToday = useMemo(() => {
@@ -958,7 +949,7 @@ export default function PartnerDashboardScreen() {
                             {job.distance ? `${Number(job.distance).toFixed(1)} km away` : 'Distance N/A'}
                           </Text>
                           <Text style={styles.orderDot}>•</Text>
-                          <Text style={styles.orderMetaText}>{job.scheduledTime}</Text>
+                          <Text style={styles.orderMetaText}>{formatTime(job.scheduledTime)}</Text>
                         </View>
                       </View>
                     </View>
@@ -1076,7 +1067,7 @@ export default function PartnerDashboardScreen() {
                   <View style={styles.activeMeta}>
                     <Ionicons name="location" size={12} color="#999" />
                     <Text style={styles.activeMetaText}>
-                      {nextJob.distance ? `${Number(nextJob.distance).toFixed(1)} km` : 'N/A'} • {nextJob.scheduledTime}
+                      {nextJob.distance ? `${Number(nextJob.distance).toFixed(1)} km` : 'N/A'} • {formatTime(nextJob.scheduledTime)}
                     </Text>
                   </View>
                 </View>

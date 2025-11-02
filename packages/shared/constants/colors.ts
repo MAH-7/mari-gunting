@@ -52,6 +52,8 @@ export const COLORS = {
     'in-progress': '#00B14F',
     completed: '#10B981',
     cancelled: '#EF4444',
+    rejected: '#EF4444',
+    expired: '#F97316',
   },
 } as const;
 
@@ -72,6 +74,8 @@ export const getStatusBackground = (status: string): string => {
     'in-progress': '#D1FAE5',
     completed: '#D1FAE5',
     cancelled: '#FEE2E2',
+    rejected: '#FEE2E2',
+    expired: '#FFF7ED',
   };
   return statusColors[status] || '#F3F4F6';
 };
