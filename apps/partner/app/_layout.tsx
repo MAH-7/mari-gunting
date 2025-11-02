@@ -71,6 +71,16 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
           return;
         }
         console.log('✅ User found:', user.id);
+        
+        // CRITICAL: Check if task should even be running (handles iOS auto-restart)
+        const shouldStop = await AsyncStorage.getItem('shouldStopLocationTask');
+        if (shouldStop === 'true') {
+          console.warn('🚫 Background task marked for stop - stopping now');
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          await AsyncStorage.removeItem('shouldStopLocationTask');
+          console.log('🛑 Stopped location tracking (marked for stop)');
+          return;
+        }
 
         // CHECK IF USER IS STILL ONLINE - Critical for battery!
         const { data: profile, error: profileError } = await supabase

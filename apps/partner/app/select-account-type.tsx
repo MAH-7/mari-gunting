@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,14 +8,56 @@ import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { partnerAccountService } from '@mari-gunting/shared/services/partnerAccountService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 export default function SelectAccountTypeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const userId = params.userId as string | undefined;
+  const logout = useStore((state) => state.logout);
+  const currentUser = useStore((state) => state.currentUser);
   
   const [selectedType, setSelectedType] = useState<'freelance' | 'barbershop' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  
+  // Fetch phone number from current user or database
+  useEffect(() => {
+    const fetchPhoneNumber = async () => {
+      if (currentUser?.phone_number) {
+        setPhoneNumber(currentUser.phone_number);
+      } else if (userId) {
+        // Fallback: fetch from database
+        const { data } = await supabase
+          .from('profiles')
+          .select('phone_number')
+          .eq('id', userId)
+          .single();
+        if (data?.phone_number) {
+          setPhoneNumber(data.phone_number);
+        }
+      }
+    };
+    fetchPhoneNumber();
+  }, [userId, currentUser]);
+  
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout? You can login again with a different number.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
 
   const handleContinue = async () => {
     if (!selectedType || isLoading) return;
@@ -55,9 +97,9 @@ export default function SelectAccountTypeScreen() {
         if (userError || !user) {
           Alert.alert(
             'Session Error',
-            'User session not found. Please complete registration again.',
+            'User session not found. Please login again.',
             [
-              { text: 'OK', onPress: () => router.replace('/register') }
+              { text: 'OK', onPress: () => router.replace('/login') }
             ]
           );
           setIsLoading(false);
@@ -127,6 +169,23 @@ export default function SelectAccountTypeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Phone Number & Logout Bar */}
+      {phoneNumber && (
+        <View style={styles.topBar}>
+          <View style={styles.phoneNumberContainer}>
+            <Text style={styles.phoneNumberLabel}>Logged in as</Text>
+            <Text style={styles.phoneNumberText}>{phoneNumber}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.logoutIconButton}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
+      )}
+      
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Choose Your Account Type</Text>
@@ -285,6 +344,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background.secondary,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: COLORS.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
+  phoneNumberContainer: {
+    flex: 1,
+  },
+  phoneNumberLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  phoneNumberText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 2,
+  },
+  logoutIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     padding: 24,

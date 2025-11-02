@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { mockBookings } from '@/services/mockData';
 import { Booking } from '@/types';
 import { Ionicons } from '@expo/vector-icons';

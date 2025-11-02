@@ -1,23 +1,16 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator, AppState, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { formatPhoneNumber } from '@/utils/format';
 import { useProfile } from '@/hooks/useProfile';
 import { SkeletonText } from '@/components/Skeleton';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 // Helper function to safely get avatar URL
 const getAvatarUrl = (user: any) => {
-  // Check avatar field
-  if (user?.avatar && typeof user.avatar === 'string') {
-    const trimmedAvatar = user.avatar.trim();
-    if (trimmedAvatar !== '' && !trimmedAvatar.includes('placeholder')) {
-      return trimmedAvatar;
-    }
-  }
-  
-  // Check avatar_url field
+  // Check avatar_url field (database field name)
   if (user?.avatar_url && typeof user.avatar_url === 'string') {
     const trimmedAvatarUrl = user.avatar_url.trim();
     if (trimmedAvatarUrl !== '' && !trimmedAvatarUrl.includes('placeholder')) {
@@ -33,12 +26,48 @@ export default function ProfileScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const setCurrentUser = useStore((state) => state.setCurrentUser);
   const logout = useStore((state) => state.logout);
-  const { stats, isLoadingStats } = useProfile();
+  const { stats, isLoadingStats, refreshProfile } = useProfile();
+  const appState = useRef(AppState.currentState);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Pull to refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshProfile();
+    } catch (error) {
+      console.error('[Profile] Manual refresh failed:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshProfile]);
+
+  // Also refresh when app comes to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('[Profile] App came to foreground, refreshing profile...');
+        refreshProfile().catch(err => console.error('[Profile] Refresh failed:', err));
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [refreshProfile]);
 
   const handleSwitchRole = () => {
     if (!currentUser) return;
     
-    if (currentUser.role === 'customer') {
+    // Check roles array for multi-role support
+    const userRoles = (currentUser as any).roles || [currentUser.role];
+    const hasBarberRole = userRoles.includes('barber') || userRoles.includes('barbershop_owner');
+    
+    if (!hasBarberRole) {
       // Customer wants to become Barber - needs KYC verification
       Alert.alert(
         'Become a Barber',
@@ -164,7 +193,7 @@ export default function ProfileScreen() {
     {
       title: 'Account',
       items: [
-        { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.role === 'customer' ? currentUser.savedAddresses?.length : 0, color: '#00B14F' },
+        { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.savedAddresses?.length || 0, color: '#00B14F' },
         { id: 'favorites', icon: 'heart', label: 'Favorite Barbers', badge: null, color: '#EF4444' },
       ]
     },
@@ -188,7 +217,18 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        bounces={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#00B14F"
+            colors={['#00B14F']}
+          />
+        }
+      >
         {/* Hero Section */}
         <View style={styles.heroSection}>
           {/* Profile Card */}
@@ -205,9 +245,11 @@ export default function ProfileScreen() {
                 <Ionicons name="pencil" size={14} color="#00B14F" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.userName}>{currentUser.name}</Text>
+            <Text style={styles.userName}>{currentUser.full_name}</Text>
             <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{currentUser.role.toUpperCase()}</Text>
+              <Text style={styles.roleText}>
+                {((currentUser as any).roles || [currentUser.role]).map((r: string) => r.toUpperCase()).join(' + ')}
+              </Text>
             </View>
           </View>
 
@@ -223,13 +265,13 @@ export default function ProfileScreen() {
               <View style={styles.contactIconContainer}>
                 <Ionicons name="call" size={18} color="#FFFFFF" />
               </View>
-              <Text style={styles.contactText}>{formatPhoneNumber(currentUser.phone)}</Text>
+              <Text style={styles.contactText}>{formatPhoneNumber(currentUser.phone_number)}</Text>
             </View>
           </View>
         </View>
 
-        {/* Stats Section */}
-        {currentUser.role === 'customer' && (
+        {/* Stats Section - Show for all users */}
+        {(
           <View style={styles.statsSection}>
             {isLoadingStats ? (
               <>

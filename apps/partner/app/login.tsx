@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
@@ -79,12 +80,12 @@ export default function PartnerLoginScreen() {
         return;
       }
 
-      // Navigate to OTP verification with barber role
+      // Navigate to OTP verification
+      // OTP screen will handle new vs existing user routing
       router.push({
         pathname: '/verify-otp',
         params: { 
           phoneNumber: fullPhone,
-          role: 'barber', // Partner app = barber role
         },
       });
     } catch (error: any) {
@@ -99,6 +100,35 @@ export default function PartnerLoginScreen() {
   };
 
   const isButtonDisabled = !validatePhoneNumber(phoneNumber) || isLoading;
+
+  const handleContactSupport = () => {
+    Alert.alert(
+      'Contact Support',
+      'How would you like to reach us?',
+      [
+        {
+          text: 'WhatsApp',
+          onPress: () => {
+            // Replace with your actual support WhatsApp number
+            const whatsappNumber = '60123456789'; // Example
+            const message = 'Hi, I need help with partner login';
+            Linking.openURL(`whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`);
+          },
+        },
+        {
+          text: 'Email',
+          onPress: () => {
+            // Replace with your actual support email
+            Linking.openURL('mailto:support@mari-gunting.com?subject=Partner Login Support');
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -121,7 +151,7 @@ export default function PartnerLoginScreen() {
               />
             </View>
             
-            <Text style={styles.title}>Partner Login</Text>
+            <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>
               Sign in to manage your business
             </Text>
@@ -132,17 +162,17 @@ export default function PartnerLoginScreen() {
             <Text style={styles.label}>Phone Number</Text>
             
             <View style={styles.phoneInputContainer}>
-              {/* Country Code Selector */}
-              <TouchableOpacity style={styles.countryCodeButton} activeOpacity={0.7}>
+              {/* Country Code (Locked to Malaysia) */}
+              <View style={styles.countryCodeButton}>
                 <Text style={styles.flag}>🇲🇾</Text>
                 <Text style={styles.countryCode}>{countryCode}</Text>
-                <Ionicons name="chevron-down" size={16} color="#6B7280" />
-              </TouchableOpacity>
+                <Ionicons name="lock-closed" size={14} color="#9CA3AF" />
+              </View>
 
               {/* Phone Number Input */}
               <TextInput
                 style={styles.phoneInput}
-                placeholder="22-222 2222"
+                placeholder="12-345 6789"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="phone-pad"
                 maxLength={13} // Formatted: 12-345 6789
@@ -179,18 +209,25 @@ export default function PartnerLoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Register Link */}
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>
-              Don't have an account?{' '}
-              <Text 
-                style={styles.registerLink}
-                onPress={() => router.push('/register')}
-              >
-                Register
-              </Text>
+          {/* Helper Text for New Partners */}
+          <View style={styles.newPartnerContainer}>
+            <Ionicons name="information-circle" size={20} color="#00B14F" />
+            <Text style={styles.newPartnerText}>
+              First time? We'll set up your partner account automatically
             </Text>
           </View>
+
+          {/* Contact Support Link */}
+          <TouchableOpacity 
+            style={styles.supportContainer}
+            onPress={handleContactSupport}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="help-circle-outline" size={18} color="#6B7280" />
+            <Text style={styles.supportText}>
+              Need help? <Text style={styles.supportLink}>Contact Support</Text>
+            </Text>
+          </TouchableOpacity>
 
           {/* Terms & Conditions */}
           <View style={styles.termsContainer}>
@@ -223,16 +260,16 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
     marginTop: 20,
   },
   logoContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
     alignItems: 'center',
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: 80,
+    height: 80,
   },
   title: {
     fontSize: 28,
@@ -324,16 +361,36 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
-  registerContainer: {
+  newPartnerContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
     marginBottom: 8,
+    paddingHorizontal: 24,
+    gap: 8,
   },
-  registerText: {
+  newPartnerText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+    textAlign: 'center',
+    flex: 1,
+    lineHeight: 20,
+  },
+  supportContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    gap: 6,
+  },
+  supportText: {
     fontSize: 14,
     color: '#6B7280',
   },
-  registerLink: {
+  supportLink: {
     fontSize: 14,
     color: '#00B14F',
     fontWeight: '600',

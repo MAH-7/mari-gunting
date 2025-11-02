@@ -5,7 +5,7 @@ import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 interface OperatingHours {
   open: string;

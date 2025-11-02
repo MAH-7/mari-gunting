@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { profileService } from '@/services/profileService';
 import { statsService, UserStats } from '@/services/statsService';
 
@@ -50,16 +50,9 @@ export const useProfile = () => {
     try {
       const data = await profileService.refreshProfile(currentUser.id);
       
-      // Map database fields to UI fields for consistency
-      const updatedUser = {
-        ...data,
-        name: data.full_name || data.name,
-        avatar: data.avatar || data.avatar_url,
-        avatar_url: data.avatar_url || data.avatar,
-      };
-      
-      setCurrentUser(updatedUser);
-      return updatedUser;
+      // Use database fields directly (no mapping needed)
+      setCurrentUser(data);
+      return data;
     } catch (err) {
       console.error('Failed to refresh profile:', err);
       setError('Failed to refresh profile');
@@ -78,13 +71,10 @@ export const useProfile = () => {
     try {
       const data = await profileService.updateProfile(currentUser.id, updates);
       
-      // Map database fields to UI fields for consistency
+      // Use database fields directly (no mapping needed)
       const updatedUser = {
         ...currentUser,
         ...data,
-        name: data.full_name || data.name || currentUser.name,
-        avatar: data.avatar || data.avatar_url || currentUser.avatar,
-        avatar_url: data.avatar_url || data.avatar || currentUser.avatar_url,
       };
       
       setCurrentUser(updatedUser);
@@ -107,18 +97,15 @@ export const useProfile = () => {
     try {
       const data = await profileService.updateAvatar(currentUser.id, imageUri);
       
-      // Map database fields to UI fields for consistency
+      // Use database fields directly (no mapping needed)
       const updatedUser = {
         ...currentUser,
         ...data,
-        name: data.full_name || data.name || currentUser.name,
-        avatar: data.avatar || data.avatar_url,
-        avatar_url: data.avatar_url || data.avatar,
       };
       
       console.log('[useProfile] Avatar updated successfully:', {
-        oldAvatar: currentUser.avatar,
-        newAvatar: updatedUser.avatar,
+        oldAvatar: currentUser.avatar_url,
+        newAvatar: updatedUser.avatar_url,
       });
       
       setCurrentUser(updatedUser);

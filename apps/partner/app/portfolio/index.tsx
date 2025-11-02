@@ -19,7 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { portfolioService } from '@mari-gunting/shared';
 
 const { width } = Dimensions.get('window');
@@ -106,10 +106,11 @@ export default function PortfolioManagementScreen() {
 
       console.log('📸 Launching image library...');
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images' as any,
-        allowsEditing: true,
-        aspect: [1, 1] as [number, number],
-        quality: 0.8,
+        mediaTypes: ['images'],
+        allowsEditing: false,  // Match onboarding - no cropping
+        quality: 0.5,  // Match onboarding - 50% quality
+        maxWidth: 1920,  // Match onboarding - optimize size
+        maxHeight: 1920,
       });
 
       console.log('📸 Image picker result:', result);
@@ -156,9 +157,10 @@ export default function PortfolioManagementScreen() {
 
       console.log('📷 Launching camera...');
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1] as [number, number],
-        quality: 0.8,
+        allowsEditing: false,  // Match onboarding - no cropping
+        quality: 0.7,  // Match onboarding camera quality
+        maxWidth: 1920,  // Match onboarding - optimize size
+        maxHeight: 1920,
       });
 
       console.log('📷 Camera result:', result);
@@ -575,6 +577,8 @@ export default function PortfolioManagementScreen() {
                       source={{ uri: image.uri }} 
                       style={styles.portfolioImage}
                       resizeMode="cover"
+                      onError={(e) => console.log('❌ Image load error:', image.uri, e.nativeEvent.error)}
+                      onLoad={() => console.log('✅ Image loaded:', image.uri)}
                     />
                     
                     {isSelectionMode && (

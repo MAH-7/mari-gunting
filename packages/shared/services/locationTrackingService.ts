@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { calculateDistance } from '@mari-gunting/shared/utils/location';
 
@@ -368,6 +369,10 @@ class LocationTrackingService {
 
       // Task is defined in app/_layout.tsx at startup
       console.log('🚀 Starting PRODUCTION background location updates...');
+      
+      // Clear stop flag (allow task to run)
+      await AsyncStorage.removeItem('shouldStopLocationTask');
+      console.log('✅ Cleared stop flag - task allowed to run');
 
       // PRODUCTION SETTINGS (Grab/Foodpanda standard)
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
@@ -419,6 +424,10 @@ class LocationTrackingService {
    */
   private async stopBackgroundLocationTracking(): Promise<void> {
     try {
+      // CRITICAL: Set flag to prevent iOS auto-restart
+      await AsyncStorage.setItem('shouldStopLocationTask', 'true');
+      console.log('🚫 Marked background task for stop (prevents iOS auto-restart)');
+      
       const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
       
       if (isRegistered) {

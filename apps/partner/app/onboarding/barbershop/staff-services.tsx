@@ -11,6 +11,7 @@ import {
   Modal,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboardingService';
 
@@ -19,6 +20,7 @@ const ROLES = ['Senior Barber', 'Barber', 'Junior Barber', 'Stylist', 'Trainee']
 const SPECIALIZATIONS = ['Haircut', 'Fade', 'Beard Trim', 'Shaving', 'Hair Coloring', 'Perm', 'Kids Haircut'];
 
 export default function StaffServicesScreen() {
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   
   // Staff state
@@ -117,6 +119,26 @@ export default function StaffServicesScreen() {
     ]);
   };
 
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
+
   const validateForm = (): boolean => {
     if (staff.length === 0) {
       Alert.alert('Staff Required', 'Please add at least 1 staff member.');
@@ -148,8 +170,8 @@ export default function StaffServicesScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
@@ -345,7 +367,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  logoutButton: { width: 40,
+
+    borderRadius: 20,
+
+    backgroundColor: '#FEE2E2', height: 40, alignItems: 'center', justifyContent: 'center' },
   progressContainer: { flexDirection: 'row', gap: 6 },
   progressDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#e0e0e0' },
   progressDotCompleted: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4CAF50' },

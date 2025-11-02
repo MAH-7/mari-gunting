@@ -12,16 +12,16 @@
       "bundleIdentifier": "com.marigunting.app",
       "deploymentTarget": "15.1",
       "backgroundModes": [
-        "fetch",
-        "location"
+        "location",
+        "fetch"
       ],
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Mari Gunting needs your location to show your availability to nearby customers and navigate to their locations.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Mari Gunting needs continuous location access to keep you visible to customers even when the app is minimized. This helps you receive booking requests and provides real-time location updates to customers.",
         "NSLocationAlwaysUsageDescription": "Mari Gunting needs continuous location access to keep you visible to customers even when the app is minimized. This helps you receive booking requests and provides real-time location updates to customers.",
         "UIBackgroundModes": [
-          "fetch",
-          "location"
+          "location",
+          "fetch"
         ]
       }
     },
@@ -54,16 +54,6 @@
           "locationAlwaysAndWhenInUsePermission": "Mari Gunting needs continuous location access to keep you visible to customers even when the app is minimized. This helps you receive booking requests and provides real-time location updates to customers.",
           "isAndroidBackgroundLocationEnabled": true,
           "isIosBackgroundLocationEnabled": true
-        }
-      ],
-      [
-        "expo-background-fetch",
-        {
-          "ios": {
-            "backgroundModes": [
-              "fetch"
-            ]
-          }
         }
       ],
       [

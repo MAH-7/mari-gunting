@@ -110,7 +110,26 @@ export const useStore = create<AppState>()(persist(
       
       // Clear persisted storage
       try {
+        // Clear Zustand persisted state
         await AsyncStorage.removeItem('mari-gunting-storage');
+        
+        // Clear onboarding progress
+        await AsyncStorage.multiRemove([
+          // Barber onboarding keys
+          'onboarding_barber_basicInfo',
+          'onboarding_barber_ekyc',
+          'onboarding_barber_serviceDetails',
+          'onboarding_barber_payout',
+          'onboarding_barber_currentStep',
+          // Barbershop onboarding keys
+          'onboarding_barbershop_businessInfo',
+          'onboarding_barbershop_location',
+          'onboarding_barbershop_documents',
+          'onboarding_barbershop_operatingHours',
+          'onboarding_barbershop_staffServices',
+          'onboarding_barbershop_amenities',
+          'onboarding_barbershop_payout',
+        ]);
       } catch (error) {
         console.error('Error clearing storage:', error);
       }

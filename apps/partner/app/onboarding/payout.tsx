@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 

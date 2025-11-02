@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { barberOnboardingService, BarberOnboardingData } from '@mari-gunting/shared/services/onboardingService';
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 export default function ReviewScreen() {
   const { user } = useAuth();
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -23,6 +25,13 @@ export default function ReviewScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Reload data when screen comes back into focus (after editing)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const loadData = async () => {
     try {
@@ -42,7 +51,28 @@ export default function ReviewScreen() {
   };
 
   const handleEdit = (screen: string) => {
-    router.push(`/onboarding/barber/${screen}` as any);
+    router.push({
+      pathname: `/onboarding/barber/${screen}` as any,
+      params: { returnTo: 'review' },
+    });
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
   };
 
   const handleSubmit = async () => {
@@ -67,7 +97,7 @@ export default function ReviewScreen() {
               if (result.success) {
                 Alert.alert(
                   'Success!',
-                  'Your application has been submitted successfully. We will review it within 1-2 business days.',
+                  'Your application has been submitted successfully. We will review it within 2-3 business days.',
                   [
                     {
                       text: 'OK',
@@ -103,9 +133,7 @@ export default function ReviewScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
@@ -113,7 +141,9 @@ export default function ReviewScreen() {
           <View style={styles.progressDotCompleted} />
           <View style={[styles.progressDot, styles.progressActive]} />
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -236,7 +266,7 @@ export default function ReviewScreen() {
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>What happens next?</Text>
             <Text style={styles.infoText}>
-              • Your application will be reviewed within 1-2 business days{'\n'}
+              • Your application will be reviewed within 2-3 business days{'\\n'}
               • We'll verify your documents and information{'\n'}
               • You'll receive a notification once approved{'\n'}
               • After approval, you can start accepting bookings
@@ -310,8 +340,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

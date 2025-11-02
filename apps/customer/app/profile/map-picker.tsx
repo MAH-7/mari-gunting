@@ -14,7 +14,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { reverseGeocode } from '../../utils/mapbox';
 import AddressFormBottomSheet, { AddressFormMode } from '@/components/AddressFormBottomSheet';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { CustomerAddress } from '@mari-gunting/shared/services/addressService';
 import { useBookingIfActive } from '@/contexts/BookingContext';
 

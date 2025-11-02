@@ -13,7 +13,7 @@ import { useState, useRef, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 
 export default function VerifyOTPScreen() {
@@ -146,38 +146,64 @@ export default function VerifyOTPScreen() {
         return;
       }
       
-      // GRAB-STYLE: Add 'barber' role if user only has 'customer' role
-      // This allows same phone number to access both apps
+      // DEBUG: Log profile data to verify avatar_url is fetched
+      console.log('📋 [DEBUG] Profile fetched from database:', {
+        id: profile.id,
+        full_name: profile.full_name,
+        phone_number: profile.phone_number,
+        role: profile.role,
+        roles: profile.roles,
+        avatar_url: profile.avatar_url,
+        avatar: profile.avatar, // Check both fields
+      });
+      
+      // SECURITY: Check if user has barber/barbershop_owner role
+      // Partner app requires proper barber registration and verification
       const userRoles = profile.roles || [profile.role]; // Backward compatibility
-      const hasBarberRole = userRoles.includes('barber');
+      const hasBarberRole = userRoles.includes('barber') || userRoles.includes('barbershop_owner');
       
       if (!hasBarberRole) {
-        console.log('➕ Customer logging into partner app - adding barber role...');
+        console.log('❌ Customer attempting to access partner app - blocked');
         
-        // Add 'barber' to roles array
-        const updatedRoles = [...userRoles, 'barber'];
-        
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            roles: updatedRoles,
-            role: 'barber', // Update primary role for backward compatibility
-            updated_at: new Date().toISOString() 
-          })
-          .eq('id', profile.id);
-        
-        if (updateError) {
-          console.error('⚠️ Failed to add barber role:', updateError);
-          // Don't fail login, just log the error
-        } else {
-          console.log('✅ Barber role added successfully');
-          profile.roles = updatedRoles;
-          profile.role = 'barber';
-        }
+        Alert.alert(
+          'Partner Account Required',
+          'This app is for verified partners only (freelance barbers or barbershop owners). Please complete partner registration to continue.',
+          [
+            {
+              text: 'Register as Partner',
+              onPress: () => {
+                setIsLoading(false);
+                router.replace({
+                  pathname: '/complete-profile',
+                  params: { 
+                    phoneNumber,
+                    role: 'barber',
+                  },
+                });
+              },
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => {
+                setIsLoading(false);
+                router.replace('/login');
+              },
+            },
+          ]
+        );
+        return;
       }
       
-      console.log('✅ Setting current user in store:', profile);
+      console.log('✅ Setting current user in store:', {
+        id: profile.id,
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+      });
       setCurrentUser(profile);
+      
+      // DEBUG: Verify store was updated
+      console.log('📋 [DEBUG] User set in store - avatar should be:', profile.avatar_url || profile.avatar || 'NO AVATAR');
       
       setIsLoading(false);
       

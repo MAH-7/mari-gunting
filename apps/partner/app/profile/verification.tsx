@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS } from '@/shared/constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

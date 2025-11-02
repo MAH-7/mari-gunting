@@ -8,7 +8,7 @@ import { COLORS } from '@/shared/constants';
 import { profileService } from '@mari-gunting/shared/services/profileService';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
 import { supabase } from '@/shared/config/supabase';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { BARBER_SPECIALIZATIONS } from '@mari-gunting/shared/constants/specializations';
 
 export default function ProfileEditScreen() {
@@ -193,8 +193,16 @@ export default function ProfileEditScreen() {
         
         if (updatedProfile && updatedProfile.avatar_url) {
           setAvatarUrl(updatedProfile.avatar_url);
+          
+          // Update global store so other screens see the new avatar immediately
+          const updatedUser = {
+            ...currentUser,
+            avatar_url: updatedProfile.avatar_url,
+          };
+          useStore.getState().setCurrentUser(updatedUser);
+          
           Alert.alert('Success!', 'Profile photo uploaded successfully');
-          setHasChanges(true);
+          // Don't set hasChanges - avatar is already saved to database
         } else {
           throw new Error('No avatar URL returned from server');
         }

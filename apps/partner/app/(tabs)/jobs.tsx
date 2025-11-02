@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Booking, BookingStatus } from '@/types';
 import * as ImagePicker from 'expo-image-picker';
 import * as Device from 'expo-device';
@@ -855,31 +855,6 @@ export default function PartnerJobsScreen() {
                 ? 'Try adjusting your search or filters'
                 : 'Your bookings will appear here'}
             </Text>
-            
-            {/* Test Data Button */}
-            {!searchQuery && partnerJobs.length === 0 && (
-              <TouchableOpacity
-                style={styles.testDataButton}
-                onPress={() => {
-                  Alert.alert(
-                    '🧪 Testing Tip',
-                    'To see jobs with data:\n\n1. Jobs filter by your User ID\n2. Mock data has barber IDs: b1, b2, b3\n3. Your ID may not match\n\nTo test new features:\n• View existing mock jobs by ensuring user ID matches a barber ID\n• Or we can add test jobs for your user ID',
-                    [
-                      { text: 'Got it' },
-                      {
-                        text: 'Use Test Barber',
-                        onPress: () => {
-                          Alert.alert('Switch User', 'Log out and login with:\nEmail: amir.hafiz@email.com\n(Any password works in mock)');
-                        }
-                      }
-                    ]
-                  );
-                }}
-              >
-                <Ionicons name="flask" size={20} color={COLORS.info} />
-                <Text style={styles.testDataButtonText}>🧪 Why No Jobs?</Text>
-              </TouchableOpacity>
-            )}
           </View>
         ) : (
           filteredJobs.map((job) => (
@@ -1700,25 +1675,6 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body.regular,
     color: COLORS.text.secondary,
     textAlign: 'center',
-  },
-  testDataButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginTop: 20,
-    gap: 8,
-    borderWidth: 2,
-    borderColor: '#BFDBFE',
-    borderStyle: 'dashed',
-  },
-  testDataButtonText: {
-    ...TYPOGRAPHY.body.regular,
-    fontWeight: '700',
-    color: COLORS.info,
   },
   // Modal Styles
   modalContainer: {

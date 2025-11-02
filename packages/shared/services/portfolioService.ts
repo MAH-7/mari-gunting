@@ -5,6 +5,7 @@
 
 import { supabase } from '../config/supabase';
 import { File } from 'expo-file-system';
+import { convertToJpg } from './storage';
 
 export const portfolioService = {
   /**
@@ -74,6 +75,7 @@ export const portfolioService = {
 
   /**
    * Upload image to Supabase Storage
+   * Automatically converts all images to JPG format before upload
    */
   async uploadImage(
     userId: string,
@@ -81,20 +83,23 @@ export const portfolioService = {
     type: 'barber' | 'barbershop'
   ): Promise<string> {
     try {
+      // Convert to JPG first (ensures consistent format)
+      console.log('🔄 Converting image to JPG...');
+      const jpgUri = await convertToJpg(imageUri, 0.8, 1920);
+      
       // Create File instance and read as ArrayBuffer
-      const file = new File(imageUri);
+      const file = new File(jpgUri);
       const arrayBuffer = await file.bytes();
 
-      // Generate unique filename
-      const fileExt = imageUri.split('.').pop() || 'jpg';
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      // Generate unique filename (always .jpg now)
+      const fileName = `${userId}/${Date.now()}.jpg`;
       const bucket = type === 'barber' ? 'barber-portfolios' : 'barbershop-media';
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(fileName, arrayBuffer, {
-          contentType: `image/${fileExt}`,
+          contentType: 'image/jpeg',
           upsert: false,
         });
 
@@ -108,6 +113,7 @@ export const portfolioService = {
         .from(bucket)
         .getPublicUrl(data.path);
 
+      console.log('✅ Upload successful (JPG format)');
       return urlData.publicUrl;
     } catch (error) {
       console.error('Error in uploadImage:', error);

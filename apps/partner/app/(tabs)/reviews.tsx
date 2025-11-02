@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/shared/constants';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { 
   getPartnerReviews, 
   getReviewStats, 

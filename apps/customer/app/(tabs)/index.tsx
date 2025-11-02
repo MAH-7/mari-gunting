@@ -301,13 +301,13 @@ export default function HomeScreen() {
           <View style={styles.topBar}>
             <TouchableOpacity style={styles.profileRow} activeOpacity={0.9}>
               <Image 
-                source={{ uri: getAvatarUrl(currentUser?.avatar || currentUser?.avatar_url, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200') }} 
+                source={{ uri: getAvatarUrl(currentUser?.avatar_url, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200') }} 
                 style={styles.profilePhoto} 
               />
               <View style={styles.nameContainer}>
                 <Text style={styles.greeting}>Good day,</Text>
                 <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
-                  {currentUser?.name?.split(' ')[0] || 'Guest'}
+                  {currentUser?.full_name?.split(' ')[0] || 'Guest'}
                 </Text>
               </View>
             </TouchableOpacity>

@@ -23,7 +23,7 @@
     "@react-native-picker/picker": "^2.11.2",
     "dotenv": "^17.2.3",
     "expo": "~54.0.12",
-    "expo-background-fetch": "~14.0.7",
+    "expo-image-manipulator": "~14.0.7",
     "expo-notifications": "^0.32.12",
     "expo-task-manager": "~14.0.8",
     "react": "19.1.0",

@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { ServiceRadiusSettings } from '@/components/ServiceRadiusSettings';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
 import { COLORS } from '@/shared/constants';
 

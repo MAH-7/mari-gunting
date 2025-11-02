@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { VerificationStatus } from '@/types/onboarding';
 import { uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';

@@ -13,7 +13,7 @@ import { useState, useRef, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 export default function VerifyOTPScreen() {
   const params = useLocalSearchParams();
@@ -128,11 +128,13 @@ export default function VerifyOTPScreen() {
         if (response.data?.user) {
           setCurrentUser({
             id: response.data.user.id,
-            name: response.data.user.full_name,
+            full_name: response.data.user.full_name,
             email: response.data.user.email,
-            phone: response.data.user.phone_number,
-            avatar: response.data.user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(response.data.user.full_name),
+            phone_number: response.data.user.phone_number,
+            avatar_url: response.data.user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(response.data.user.full_name),
             role: response.data.user.role,
+            roles: response.data.user.roles || [response.data.user.role],
+            created_at: response.data.user.created_at,
           } as any);
         }
         

@@ -17,7 +17,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { profileService } from '@/services/profileService';
 
 export default function RegisterScreen() {
@@ -137,11 +137,13 @@ export default function RegisterScreen() {
       // Step 3: Save user to store
       setCurrentUser({
         id: response.data.id,
-        name: response.data.full_name,
+        full_name: response.data.full_name,
         email: response.data.email,
-        phone: response.data.phone_number,
-        avatar: avatarUrl || avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(fullName),
+        phone_number: response.data.phone_number,
+        avatar_url: avatarUrl || avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(fullName),
         role: response.data.role,
+        roles: response.data.roles || [response.data.role],
+        created_at: response.data.created_at,
       } as any);
 
       // Step 4: Success - navigate to app

@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import SplashScreen from '../components/SplashScreen';
 import { LogBox } from 'react-native';
 import { initializeMapbox } from '../utils/mapbox';

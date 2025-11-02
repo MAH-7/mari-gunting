@@ -3,13 +3,13 @@ export type UserRole = 'customer' | 'barber';
 
 export interface User {
   id: string;
-  name: string;
+  full_name: string;  // Changed from 'name' to match database
   email: string;
-  phone: string;
+  phone_number: string;  // Changed from 'phone' to match database
   role: UserRole; // DEPRECATED: Use 'roles' array instead. Kept for backward compatibility.
   roles: UserRole[]; // NEW: Support multiple roles (e.g., ['customer', 'barber'])
-  avatar?: string;
-  createdAt: string;
+  avatar_url?: string;  // Changed from 'avatar' to match database
+  created_at: string;  // Changed from 'createdAt' to match database
 }
 
 export interface Customer extends User {

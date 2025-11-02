@@ -4,7 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { reviewService } from '@mari-gunting/shared/services/reviewService';
 

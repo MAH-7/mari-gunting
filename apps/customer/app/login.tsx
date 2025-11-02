@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
@@ -98,6 +99,33 @@ export default function LoginScreen() {
 
   const isButtonDisabled = !validatePhoneNumber(phoneNumber) || isLoading;
 
+  const handleContactSupport = () => {
+    Alert.alert(
+      'Contact Support',
+      'How would you like to reach us?',
+      [
+        {
+          text: 'WhatsApp',
+          onPress: () => {
+            const whatsappNumber = '60123456789'; // Replace with actual support number
+            const message = 'Hi, I need help with login';
+            Linking.openURL(`whatsapp://send?phone=${whatsappNumber}&text=${encodeURIComponent(message)}`);
+          },
+        },
+        {
+          text: 'Email',
+          onPress: () => {
+            Linking.openURL('mailto:support@mari-gunting.com?subject=Login Support');
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
@@ -119,7 +147,7 @@ export default function LoginScreen() {
               />
             </View>
             
-            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.title}>Welcome to Mari Gunting</Text>
             <Text style={styles.subtitle}>
               Sign in to continue your grooming journey
             </Text>
@@ -130,12 +158,12 @@ export default function LoginScreen() {
             <Text style={styles.label}>Phone Number</Text>
             
             <View style={styles.phoneInputContainer}>
-              {/* Country Code Selector */}
-              <TouchableOpacity style={styles.countryCodeButton} activeOpacity={0.7}>
+              {/* Country Code (Locked to Malaysia) */}
+              <View style={styles.countryCodeButton}>
                 <Text style={styles.flag}>🇲🇾</Text>
                 <Text style={styles.countryCode}>{countryCode}</Text>
-                <Ionicons name="chevron-down" size={16} color="#6B7280" />
-              </TouchableOpacity>
+                <Ionicons name="lock-closed" size={14} color="#9CA3AF" />
+              </View>
 
               {/* Phone Number Input */}
               <TextInput
@@ -177,6 +205,26 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
+          {/* New User Helper */}
+          <View style={styles.newUserContainer}>
+            <Ionicons name="information-circle" size={20} color="#00B14F" />
+            <Text style={styles.newUserText}>
+              First time? We'll set up your account automatically
+            </Text>
+          </View>
+
+          {/* Contact Support Link */}
+          <TouchableOpacity 
+            style={styles.supportContainer}
+            onPress={handleContactSupport}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="help-circle-outline" size={18} color="#6B7280" />
+            <Text style={styles.supportText}>
+              Need help? <Text style={styles.supportLink}>Contact Support</Text>
+            </Text>
+          </TouchableOpacity>
+
           {/* Terms & Conditions */}
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
@@ -208,16 +256,16 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
     marginTop: 20,
   },
   logoContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
     alignItems: 'center',
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: 80,
+    height: 80,
   },
   title: {
     fontSize: 28,
@@ -309,14 +357,49 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
+  newUserContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  newUserText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+    textAlign: 'center',
+    flex: 1,
+    lineHeight: 20,
+  },
+  supportContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    gap: 6,
+  },
+  supportText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  supportLink: {
+    fontSize: 14,
+    color: '#00B14F',
+    fontWeight: '600',
+  },
   termsContainer: {
-    marginTop: 20,
+    marginTop: 12,
     paddingHorizontal: 32,
   },
   termsText: {
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 20,
+    textAlign: 'center',
   },
   termsLink: {
     fontSize: 13,

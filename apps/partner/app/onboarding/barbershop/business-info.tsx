@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboardingService';
 
 export default function BusinessInfoScreen() {
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -50,6 +52,26 @@ export default function BusinessInfoScreen() {
     }
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
   };
+
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
 
   const validateForm = (): boolean => {
     if (name.trim().length < 3) {
@@ -105,8 +127,8 @@ export default function BusinessInfoScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={[styles.progressDot, styles.progressActive]} />
@@ -249,8 +271,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+
+    borderRadius: 20,
+
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

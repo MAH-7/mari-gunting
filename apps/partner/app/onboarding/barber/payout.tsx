@@ -9,10 +9,11 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { barberOnboardingService } from '@mari-gunting/shared/services/onboardingService';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 const MALAYSIAN_BANKS = [
   'Maybank',
@@ -33,6 +34,8 @@ const MALAYSIAN_BANKS = [
 ];
 
 export default function PayoutScreen() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -85,6 +88,24 @@ export default function PayoutScreen() {
     return true;
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
   const handleContinue = async () => {
     if (!validateForm()) return;
 
@@ -98,7 +119,13 @@ export default function PayoutScreen() {
       };
 
       await barberOnboardingService.saveProgress('payout', data);
-      router.push('/onboarding/barber/review');
+      
+      // Navigate to next step or back to review
+      if (returnTo === 'review') {
+        router.back();
+      } else {
+        router.push('/onboarding/barber/review');
+      }
     } catch (error) {
       console.error('Error saving progress:', error);
       Alert.alert('Error', 'Failed to save progress. Please try again.');
@@ -111,9 +138,7 @@ export default function PayoutScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
@@ -121,7 +146,9 @@ export default function PayoutScreen() {
           <View style={[styles.progressDot, styles.progressActive]} />
           <View style={styles.progressDot} />
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -257,8 +284,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

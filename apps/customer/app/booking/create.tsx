@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { addressService } from '@mari-gunting/shared/services/addressService';
 import { formatCurrency, formatPrice } from '@/utils/format';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { ACTIVE_OPACITY } from '@/constants/animations';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import { useBooking } from '@/contexts/BookingContext';

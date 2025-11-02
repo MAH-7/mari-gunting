@@ -1,7 +1,7 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { getNextOnboardingRoute, calculateCompletionPercentage } from '@/utils/onboarding';
 import { COLORS } from '@/shared/constants';
 

@@ -6,7 +6,7 @@ import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { mockBookings } from '@/services/mockData';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { verificationService, VerificationInfo } from '@mari-gunting/shared/services/verificationService';
@@ -16,46 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationTrackingService } from '@/services/locationTrackingService';
 import { heartbeatService } from '@/services/heartbeatService';
 import { connectionMonitor } from '@mari-gunting/shared/services/connectionMonitor';
-import * as BackgroundFetch from 'expo-background-fetch';
-import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
-
-// Background fetch task name for stationary heartbeat fallback
-const BACKGROUND_HEARTBEAT_TASK = 'BACKGROUND_HEARTBEAT_TASK';
-
-// Define background fetch task (runs every 15min minimum when location updates stop)
-TaskManager.defineTask(BACKGROUND_HEARTBEAT_TASK, async () => {
-  try {
-    console.log('📡 [BACKGROUND FETCH] Running stationary heartbeat fallback...');
-    
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.warn('⚠️ No user found for background heartbeat');
-      return BackgroundFetch.BackgroundFetchResult.Failed;
-    }
-    
-    // Send heartbeat
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        last_heartbeat: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
-    
-    if (error) {
-      console.error('❌ Background heartbeat failed:', error);
-      return BackgroundFetch.BackgroundFetchResult.Failed;
-    }
-    
-    console.log('✅ Background heartbeat sent (stationary fallback)');
-    return BackgroundFetch.BackgroundFetchResult.NewData;
-  } catch (err) {
-    console.error('❌ Background fetch error:', err);
-    return BackgroundFetch.BackgroundFetchResult.Failed;
-  }
-});
 
 // Responsive helper
 const { width } = Dimensions.get('window');
@@ -179,10 +140,10 @@ export default function PartnerDashboardScreen() {
       if (!currentUser?.id) return;
       
       try {
-        // Get user role from database
+        // Get user role from database (check roles array for multi-role support)
         const { data, error } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, roles')
           .eq('id', currentUser.id)
           .single();
         
@@ -191,8 +152,9 @@ export default function PartnerDashboardScreen() {
           return;
         }
         
-        // Map database role to account type
-        const accountType = data.role === 'barber' ? 'freelance' : 'barbershop';
+        // Map database role to account type (check roles array first)
+        const userRoles = data.roles || [data.role];
+        const accountType = userRoles.includes('barbershop_owner') ? 'barbershop' : 'freelance';
         setAccountType(accountType);
         
         // Cache in AsyncStorage for faster subsequent access
@@ -307,13 +269,40 @@ export default function PartnerDashboardScreen() {
           }
         }
         
-        // Idle warning check (if still online)
+        // Idle warning and auto-offline check (if still online)
         if (bgTime && online) {
           const idleMinutes = (Date.now() - bgTime) / 1000 / 60;
           console.log(`⏱️  Was idle for ${idleMinutes.toFixed(1)} minutes`);
           
-          // Show warning if idle for more than 15 minutes
-          if (idleMinutes > 15) {
+          // CRITICAL: Auto-offline if idle for more than 30 minutes
+          if (idleMinutes > 30) {
+            console.log('🔴 Auto-offline: idle > 30 min');
+            
+            // Force offline immediately
+            setIsOnline(false);
+            
+            // Update database
+            if (currentUser?.id) {
+              await supabase
+                .from('profiles')
+                .update({ is_online: false })
+                .eq('id', currentUser.id);
+            }
+            
+            // Stop all tracking services
+            await locationTrackingService.stopTracking();
+            await heartbeatService.stopHeartbeat();
+            await connectionMonitor.stopMonitoring();
+            
+            // Show alert
+            Alert.alert(
+              'Taken Offline',
+              'You were taken offline due to 30+ minutes of inactivity.\n\nToggle online again when ready.',
+              [{ text: 'OK' }]
+            );
+          }
+          // Show warning if idle for more than 15 minutes (but less than 30)
+          else if (idleMinutes > 15) {
             console.log('⚠️ Showing idle warning (idle > 15 min)');
             setShowIdleWarning(true);
           }
@@ -364,6 +353,14 @@ export default function PartnerDashboardScreen() {
       } else {
         console.log('✅ Set offline on app startup (force close protection)');
       }
+      
+      // CRITICAL: Force stop all tracking services on startup (handles force close blue arrow)
+      // This stops lingering background location tasks that may still be running
+      console.log('🛑 Force stopping all tracking services on startup...');
+      await locationTrackingService.stopTracking();
+      await heartbeatService.stopHeartbeat();
+      await connectionMonitor.stopMonitoring();
+      console.log('✅ All tracking services stopped');
       
       // Keep local state as offline
       setIsOnline(false);
@@ -597,18 +594,6 @@ export default function PartnerDashboardScreen() {
             // Don't block the online toggle if location fails
           }
         }
-        
-        // 4. Register BackgroundFetch as fallback (for stationary periods)
-        try {
-          await BackgroundFetch.registerTaskAsync(BACKGROUND_HEARTBEAT_TASK, {
-            minimumInterval: 15 * 60, // 15 minutes (iOS minimum)
-            stopOnTerminate: true, // Stop when app is force closed
-            startOnBoot: false, // Don't auto-start on device boot
-          });
-          console.log('✅ Background fetch registered (stationary fallback)');
-        } catch (err) {
-          console.warn('⚠️ Background fetch registration failed:', err);
-        }
       } else {
         // PRODUCTION: Stop all tracking services
         // 1. Stop connection monitor
@@ -623,14 +608,6 @@ export default function PartnerDashboardScreen() {
         if (accountType === 'freelance') {
           await locationTrackingService.stopTracking();
           console.log('🛑 Location tracking stopped');
-        }
-        
-        // 4. Unregister background fetch
-        try {
-          await BackgroundFetch.unregisterTaskAsync(BACKGROUND_HEARTBEAT_TASK);
-          console.log('🛑 Background fetch unregistered');
-        } catch (err) {
-          console.warn('⚠️ Background fetch unregister failed:', err);
         }
       }
       
@@ -738,7 +715,7 @@ export default function PartnerDashboardScreen() {
           <View style={styles.headerContent}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.greeting}>Hi, {currentUser.name?.split(' ')[0] || 'Partner'}!</Text>
+                <Text style={styles.greeting}>Hi, {currentUser.full_name?.split(' ')[0] || 'Partner'}!</Text>
                 <View style={styles.statusBadge}>
                   <View style={[styles.statusDot, { backgroundColor: isOnline ? '#FFF' : '#FFD700' }]} />
                   <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>

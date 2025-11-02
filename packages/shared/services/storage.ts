@@ -65,7 +65,7 @@ export const uploadFile = async ({
       .from(bucket)
       .upload(filePath, arrayBuffer, {
         contentType,
-        upsert: false, // Each upload creates a new file
+        upsert: true, // Overwrite existing file if it exists
       });
 
     if (error) throw error;
@@ -395,29 +395,30 @@ export const validateImageFile = (uri: string): {
 };
 
 /**
- * Compress image before upload (optional, requires expo-image-manipulator)
+ * Convert and compress image to JPG format before upload
+ * Ensures all images are consistent JPG format regardless of source (HEIC, PNG, etc)
  */
-export const compressImage = async (
+export const convertToJpg = async (
   uri: string,
-  quality: number = 0.8
+  quality: number = 0.8,
+  maxWidth: number = 1920
 ): Promise<string> => {
-  // This requires: expo install expo-image-manipulator
-  // Uncomment when you add the dependency
-  
-  /*
-  const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
-  
-  const manipResult = await manipulateAsync(
-    uri,
-    [{ resize: { width: 1080 } }], // Max width 1080px
-    { compress: quality, format: SaveFormat.JPEG }
-  );
-  
-  return manipResult.uri;
-  */
-  
-  // For now, return original URI
-  return uri;
+  try {
+    const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
+    
+    const manipResult = await manipulateAsync(
+      uri,
+      [{ resize: { width: maxWidth } }], // Resize if larger than maxWidth
+      { compress: quality, format: SaveFormat.JPEG } // Force JPG format
+    );
+    
+    console.log('✅ Converted to JPG:', manipResult.uri);
+    return manipResult.uri;
+  } catch (error) {
+    console.error('❌ JPG conversion failed, using original:', error);
+    // Fallback to original URI if conversion fails
+    return uri;
+  }
 };
 
 /**

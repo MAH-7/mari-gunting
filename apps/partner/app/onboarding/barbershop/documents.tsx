@@ -10,12 +10,14 @@ import {
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { barbershopOnboardingService, uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 
 export default function DocumentsScreen() {
+  const logout = useStore((state) => state.logout);
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -95,6 +97,26 @@ export default function DocumentsScreen() {
   const removeCoverImage = (index: number) => {
     setCoverImageUris(coverImageUris.filter((_, i) => i !== index));
   };
+
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
 
   const validateForm = (): boolean => {
     if (coverImageUris.length < 1) {
@@ -204,8 +226,8 @@ export default function DocumentsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
@@ -391,8 +413,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+
+    borderRadius: 20,
+
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

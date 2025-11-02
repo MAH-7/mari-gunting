@@ -11,16 +11,19 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Device from 'expo-device';
 import { barberOnboardingService, uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 export default function EKYCScreen() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { user } = useAuth();
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -67,11 +70,16 @@ export default function EKYCScreen() {
 
   const pickImage = async (type: 'ic_front' | 'ic_back' | 'selfie' | 'certificate') => {
     try {
+      // Different quality settings for different photo types
+      const quality = type === 'certificate' ? 0.5 : 0.7;
+      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: type === 'selfie' ? [1, 1] : [16, 10],
-        quality: 0.8,
+        allowsEditing: false,
+        quality: quality,
+        // Resize to max dimensions to reduce file size
+        maxWidth: 1920,
+        maxHeight: 1920,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -102,6 +110,8 @@ export default function EKYCScreen() {
             break;
         }
         
+        // User selected new photo - need to upload on submit
+        setIsLoadedFromProgress(false);
         console.log('✅ Photo stored locally - will upload on submit');
       }
     } catch (error) {
@@ -125,9 +135,11 @@ export default function EKYCScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: type === 'selfie' ? [1, 1] : [16, 10],
-        quality: 0.8,
+        allowsEditing: false,
+        quality: 0.7,
+        // Resize to max dimensions to reduce file size
+        maxWidth: 1920,
+        maxHeight: 1920,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -155,6 +167,8 @@ export default function EKYCScreen() {
             break;
         }
         
+        // User took new photo - need to upload on submit
+        setIsLoadedFromProgress(false);
         console.log('✅ Photo stored locally - will upload on submit');
       }
     } catch (error: any) {
@@ -189,6 +203,30 @@ export default function EKYCScreen() {
   };
 
   /**
+   * Helper: Check if URI is already an uploaded URL
+   */
+  const isAlreadyUploaded = (uri: string): boolean => {
+    return uri.startsWith('http://') || uri.startsWith('https://');
+  };
+
+  /**
+   * Helper: Upload if needed, otherwise return existing URL
+   */
+  const uploadIfNeeded = async (
+    uri: string,
+    bucket: string,
+    folder: string,
+    filename: string
+  ): Promise<string | null> => {
+    if (isAlreadyUploaded(uri)) {
+      console.log('✅ Already uploaded, reusing URL:', uri.substring(0, 50) + '...');
+      return uri;
+    }
+    console.log('📤 Uploading new photo:', filename);
+    return await uploadOnboardingImage(uri, bucket, folder, filename);
+  };
+
+  /**
    * Upload all photos in parallel (batch upload on submit)
    */
   const uploadAllPhotos = async (): Promise<{
@@ -204,33 +242,33 @@ export default function EKYCScreen() {
       // Prepare upload tasks
       const uploadTasks: Promise<string | null>[] = [];
       
-      // IC Front
+      // IC Front (upload with consistent filename to overwrite old file)
       uploadTasks.push(
-        uploadOnboardingImage(
+        uploadIfNeeded(
           icFrontUri!,
           'barber-documents',
           user?.id || 'temp',
-          `ic_front_${Date.now()}.jpg`
+          `${user?.id}_ic_front.jpg`
         )
       );
 
       // IC Back
       uploadTasks.push(
-        uploadOnboardingImage(
+        uploadIfNeeded(
           icBackUri!,
           'barber-documents',
           user?.id || 'temp',
-          `ic_back_${Date.now()}.jpg`
+          `${user?.id}_ic_back.jpg`
         )
       );
 
       // Selfie
       uploadTasks.push(
-        uploadOnboardingImage(
+        uploadIfNeeded(
           selfieUri!,
           'barber-documents',
           user?.id || 'temp',
-          `selfie_${Date.now()}.jpg`
+          `${user?.id}_selfie.jpg`
         )
       );
 
@@ -240,13 +278,13 @@ export default function EKYCScreen() {
       // Upload certificates in parallel (if any)
       const certUrls: string[] = [];
       if (certificateUris.length > 0) {
-        console.log(`📝 Uploading ${certificateUris.length} certificates...`);
+        console.log(`📝 Processing ${certificateUris.length} certificates...`);
         const certTasks = certificateUris.map((uri, index) =>
-          uploadOnboardingImage(
+          uploadIfNeeded(
             uri,
             'barber-documents',
             user?.id || 'temp',
-            `certificate_${index}_${Date.now()}.jpg`
+            `${user?.id}_certificate_${index}.jpg`
           )
         );
         const certResults = await Promise.all(certTasks);
@@ -298,21 +336,32 @@ export default function EKYCScreen() {
     return true;
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
   const handleContinue = async () => {
     if (!validateForm()) return;
 
     try {
       setLoading(true);
 
-      // If loaded from progress, data is already uploaded
-      if (isLoadedFromProgress) {
-        console.log('✅ Using previously uploaded data');
-        router.push('/onboarding/barber/service-details');
-        return;
-      }
-
-      // Upload all photos in parallel
-      console.log('🚀 Uploading all photos...');
+      // Upload all photos (smart upload: only uploads new local files, reuses existing URLs)
+      console.log('🚀 Processing photos...');
       const uploadedUrls = await uploadAllPhotos();
 
       if (!uploadedUrls) {
@@ -329,7 +378,12 @@ export default function EKYCScreen() {
       await barberOnboardingService.saveProgress('ekyc', data);
       console.log('🎉 Progress saved successfully!');
       
-      router.push('/onboarding/barber/service-details');
+      // Navigate to next step or back to review
+      if (returnTo === 'review') {
+        router.back();
+      } else {
+        router.push('/onboarding/barber/service-details');
+      }
     } catch (error) {
       console.error('Error in handleContinue:', error);
       Alert.alert('Error', 'Failed to save progress. Please try again.');
@@ -342,9 +396,7 @@ export default function EKYCScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
           <View style={[styles.progressDot, styles.progressActive]} />
@@ -352,7 +404,9 @@ export default function EKYCScreen() {
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -388,30 +442,21 @@ export default function EKYCScreen() {
               <Image source={{ uri: icFrontUri }} style={styles.previewImage} />
               <TouchableOpacity
                 style={styles.changePhotoButton}
-                onPress={() => pickImage('ic_front')}
+                onPress={() => takePhoto('ic_front')}
               >
-                <Text style={styles.changePhotoText}>Change Photo</Text>
+                <Text style={styles.changePhotoText}>Retake Photo</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.uploadButtons}>
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={() => takePhoto('ic_front')}
-                disabled={uploading}
-              >
-                <Ionicons name="camera" size={24} color="#4CAF50" />
-                <Text style={styles.uploadButtonText}>Take Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={() => pickImage('ic_front')}
-                disabled={uploading}
-              >
-                <Ionicons name="images" size={24} color="#4CAF50" />
-                <Text style={styles.uploadButtonText}>Choose from Gallery</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => takePhoto('ic_front')}
+              disabled={uploading}
+            >
+              <Ionicons name="camera" size={32} color="#4CAF50" />
+              <Text style={styles.cameraButtonText}>Take Photo</Text>
+              <Text style={styles.cameraButtonHint}>Camera only for security</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -425,30 +470,21 @@ export default function EKYCScreen() {
               <Image source={{ uri: icBackUri }} style={styles.previewImage} />
               <TouchableOpacity
                 style={styles.changePhotoButton}
-                onPress={() => pickImage('ic_back')}
+                onPress={() => takePhoto('ic_back')}
               >
-                <Text style={styles.changePhotoText}>Change Photo</Text>
+                <Text style={styles.changePhotoText}>Retake Photo</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.uploadButtons}>
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={() => takePhoto('ic_back')}
-                disabled={uploading}
-              >
-                <Ionicons name="camera" size={24} color="#4CAF50" />
-                <Text style={styles.uploadButtonText}>Take Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={() => pickImage('ic_back')}
-                disabled={uploading}
-              >
-                <Ionicons name="images" size={24} color="#4CAF50" />
-                <Text style={styles.uploadButtonText}>Choose from Gallery</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => takePhoto('ic_back')}
+              disabled={uploading}
+            >
+              <Ionicons name="camera" size={32} color="#4CAF50" />
+              <Text style={styles.cameraButtonText}>Take Photo</Text>
+              <Text style={styles.cameraButtonHint}>Camera only for security</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -572,8 +608,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
@@ -662,6 +700,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#4CAF50',
+  },
+  cameraButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    borderStyle: 'dashed',
+    backgroundColor: '#f0f9f4',
+  },
+  cameraButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAF50',
+    marginTop: 8,
+  },
+  cameraButtonHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
   selfieButton: {
     alignItems: 'center',

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboardingService';
 
@@ -24,6 +25,7 @@ const DAYS = [
 ];
 
 export default function OperatingHoursScreen() {
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [operatingHours, setOperatingHours] = useState<Record<string, { start: string; end: string; isOpen: boolean }>>({
     mon: { start: '09:00', end: '18:00', isOpen: true },
@@ -86,6 +88,26 @@ export default function OperatingHoursScreen() {
     Alert.alert('Success', 'Hours copied to all days');
   };
 
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
+
   const validateForm = (): boolean => {
     const hasAtLeastOneDay = Object.values(operatingHours).some((day) => day.isOpen);
     if (!hasAtLeastOneDay) {
@@ -116,8 +138,8 @@ export default function OperatingHoursScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
@@ -239,8 +261,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+
+    borderRadius: 20,
+
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

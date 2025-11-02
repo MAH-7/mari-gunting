@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { mockBookings } from '@/services/mockData';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { Booking } from '@/types';

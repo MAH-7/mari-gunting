@@ -209,8 +209,6 @@ PODS:
     - Yoga
   - ExpoAsset (12.0.9):
     - ExpoModulesCore
-  - ExpoBackgroundFetch (14.0.7):
-    - ExpoModulesCore
   - ExpoBlur (15.0.7):
     - ExpoModulesCore
   - ExpoCalendar (15.0.7):
@@ -230,6 +228,10 @@ PODS:
   - ExpoHead (6.0.11):
     - ExpoModulesCore
     - RNScreens
+  - ExpoImageManipulator (14.0.7):
+    - EXImageLoader
+    - ExpoModulesCore
+    - SDWebImageWebPCoder
   - ExpoImagePicker (17.0.8):
     - ExpoModulesCore
   - ExpoKeepAwake (15.0.7):
@@ -278,6 +280,18 @@ PODS:
   - hermes-engine (0.81.4):
     - hermes-engine/Pre-built (= 0.81.4)
   - hermes-engine/Pre-built (0.81.4)
+  - libwebp (1.5.0):
+    - libwebp/demux (= 1.5.0)
+    - libwebp/mux (= 1.5.0)
+    - libwebp/sharpyuv (= 1.5.0)
+    - libwebp/webp (= 1.5.0)
+  - libwebp/demux (1.5.0):
+    - libwebp/webp
+  - libwebp/mux (1.5.0):
+    - libwebp/demux
+  - libwebp/sharpyuv (1.5.0)
+  - libwebp/webp (1.5.0):
+    - libwebp/sharpyuv
   - MapboxCommon (23.11.0)
   - MapboxCoreMaps (10.19.1):
     - MapboxCommon (~> 23.11)
@@ -2052,6 +2066,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNCPicker (2.11.4):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNGestureHandler (2.28.0):
     - hermes-engine
     - RCTRequired
@@ -2293,6 +2329,10 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - SDWebImage/Core (5.21.3)
+  - SDWebImageWebPCoder (0.14.6):
+    - libwebp (~> 1.0)
+    - SDWebImage/Core (~> 5.17)
   - Turf (2.8.0)
   - UMAppLoader (6.0.7)
   - Yoga (0.0.0)
@@ -2310,7 +2350,6 @@ DEPENDENCIES:
   - expo-dev-menu (from `../../../node_modules/expo-dev-menu`)
   - expo-dev-menu-interface (from `../../../node_modules/expo-dev-menu-interface/ios`)
   - ExpoAsset (from `../../../node_modules/expo/node_modules/expo-asset/ios`)
-  - ExpoBackgroundFetch (from `../../../node_modules/expo-background-fetch/ios`)
   - ExpoBlur (from `../../../node_modules/expo-blur/ios`)
   - ExpoCalendar (from `../../../node_modules/expo-calendar/ios`)
   - ExpoCrypto (from `../../../node_modules/expo-crypto/ios`)
@@ -2320,6 +2359,7 @@ DEPENDENCIES:
   - ExpoFont (from `../../../node_modules/expo-font/ios`)
   - ExpoHaptics (from `../../../node_modules/expo-haptics/ios`)
   - ExpoHead (from `../../../node_modules/expo-router/ios`)
+  - ExpoImageManipulator (from `../../../node_modules/expo-image-manipulator/ios`)
   - ExpoImagePicker (from `../../../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../../../node_modules/expo/node_modules/expo-keep-awake/ios`)
   - ExpoLinearGradient (from `../../../node_modules/expo-linear-gradient/ios`)
@@ -2401,6 +2441,7 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../../../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNCAsyncStorage (from `../../../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNCPicker (from `../../../node_modules/@react-native-picker/picker`)"
   - RNGestureHandler (from `../../../node_modules/react-native-gesture-handler`)
   - "rnmapbox-maps (from `../../../node_modules/@rnmapbox/maps`)"
   - RNReanimated (from `../../../node_modules/react-native-reanimated`)
@@ -2411,10 +2452,13 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - libwebp
     - MapboxCommon
     - MapboxCoreMaps
     - MapboxMaps
     - MapboxMobileEvents
+    - SDWebImage
+    - SDWebImageWebPCoder
     - Turf
 
 EXTERNAL SOURCES:
@@ -2442,8 +2486,6 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-dev-menu-interface/ios"
   ExpoAsset:
     :path: "../../../node_modules/expo/node_modules/expo-asset/ios"
-  ExpoBackgroundFetch:
-    :path: "../../../node_modules/expo-background-fetch/ios"
   ExpoBlur:
     :path: "../../../node_modules/expo-blur/ios"
   ExpoCalendar:
@@ -2462,6 +2504,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-haptics/ios"
   ExpoHead:
     :path: "../../../node_modules/expo-router/ios"
+  ExpoImageManipulator:
+    :path: "../../../node_modules/expo-image-manipulator/ios"
   ExpoImagePicker:
     :path: "../../../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
@@ -2623,6 +2667,8 @@ EXTERNAL SOURCES:
     :podspec: "../../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
   RNCAsyncStorage:
     :path: "../../../node_modules/@react-native-async-storage/async-storage"
+  RNCPicker:
+    :path: "../../../node_modules/@react-native-picker/picker"
   RNGestureHandler:
     :path: "../../../node_modules/react-native-gesture-handler"
   rnmapbox-maps:
@@ -2651,7 +2697,6 @@ SPEC CHECKSUMS:
   expo-dev-menu: 6db57f4d3001fe3992d84a0c2e285de381e4b51b
   expo-dev-menu-interface: 600df12ea01efecdd822daaf13cc0ac091775533
   ExpoAsset: 9ba6fbd677fb8e241a3899ac00fa735bc911eadf
-  ExpoBackgroundFetch: ed6e4bf58cab43d3d3fa29ece1661d88a08c882d
   ExpoBlur: 2dd8f64aa31f5d405652c21d3deb2d2588b1852f
   ExpoCalendar: 34fe3956dab6278057a8ad04c648fe43bd642ef5
   ExpoCrypto: a9f1d75baeea6ef8b03c1660621585196c382e85
@@ -2661,6 +2706,7 @@ SPEC CHECKSUMS:
   ExpoFont: cf9d90ec1d3b97c4f513211905724c8171f82961
   ExpoHaptics: 807476b0c39e9d82b7270349d6487928ce32df84
   ExpoHead: 0668c5814eaff7fbbe44e8690dbe04f0dc67bb73
+  ExpoImageManipulator: ead6e7cca441603bfaecc898a69a093adef8b4ef
   ExpoImagePicker: d251aab45a1b1857e4156fed88511b278b4eee1c
   ExpoKeepAwake: 1a2e820692e933c94a565ec3fbbe38ac31658ffe
   ExpoLinearGradient: a464898cb95153125e3b81894fd479bcb1c7dd27
@@ -2674,6 +2720,7 @@ SPEC CHECKSUMS:
   EXUpdatesInterface: 5adf50cb41e079c861da6d9b4b954c3db9a50734
   FBLazyVector: 9e0cd874afd81d9a4d36679daca991b58b260d42
   hermes-engine: 35c763d57c9832d0eef764316ca1c4d043581394
+  libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   MapboxCommon: 119f3759f7dc9457f0695848108ab323eb643cb4
   MapboxCoreMaps: ca17f67baced23f8c952166ac6314c35bad3f66c
   MapboxMaps: b7f29ec7c33f7dc6d2947c1148edce6db81db9a7
@@ -2745,11 +2792,14 @@ SPEC CHECKSUMS:
   ReactCommon: 149b6c05126f2e99f2ed0d3c63539369546f8cae
   ReactNativeDependencies: ed6d1e64802b150399f04f1d5728ec16b437251e
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4
+  RNCPicker: c8a3584b74133464ee926224463fcc54dfdaebca
   RNGestureHandler: 2914750df066d89bf9d8f48a10ad5f0051108ac3
   rnmapbox-maps: 5a53c6fc0b35b3a4ca84a4379a76fb05aca2f454
   RNReanimated: 3b235ceb296e5073416466a2fed70812a17a0213
   RNScreens: d8d6f1792f6e7ac12b0190d33d8d390efc0c1845
   RNWorklets: c27a3e7ac7e71c8b8df3d8380eee64929b9a6744
+  SDWebImage: 16309af6d214ba3f77a7c6f6fdda888cb313a50a
+  SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   Turf: aa2ede4298009639d10db36aba1a7ebaad072a5e
   UMAppLoader: e1234c45d2b7da239e9e90fc4bbeacee12afd5b6
   Yoga: 051f086b5ccf465ff2ed38a2cf5a558ae01aaaa1

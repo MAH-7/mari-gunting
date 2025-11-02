@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useProfile } from '@/hooks/useProfile';
 import { formatPhoneNumber } from '@/utils/format';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 // Helper function to safely get avatar URL
 const getAvatarUrl = (user: any) => {
@@ -95,6 +96,33 @@ export default function EditProfileScreen() {
       // Upload avatar if changed and not a placeholder
       const profileAvatar = profile.avatar || profile.avatar_url || '';
       if (avatarUri !== profileAvatar && !avatarUri.includes('placeholder')) {
+        // Delete old avatar file from storage if exists
+        if (profileAvatar && profileAvatar.includes('supabase.co/storage')) {
+          try {
+            // Extract file path from URL
+            // URL format: https://xxx.supabase.co/storage/v1/object/public/avatars/userId/avatar-123.jpg
+            const urlParts = profileAvatar.split('/avatars/');
+            if (urlParts.length > 1) {
+              const filePath = urlParts[1]; // userId/avatar-123.jpg
+              
+              const { error: deleteError } = await supabase.storage
+                .from('avatars')
+                .remove([filePath]);
+              
+              if (deleteError) {
+                console.warn('Could not delete old avatar:', deleteError);
+                // Don't fail the upload if deletion fails
+              } else {
+                console.log('✅ Old avatar deleted:', filePath);
+              }
+            }
+          } catch (cleanupError) {
+            console.warn('Avatar cleanup error:', cleanupError);
+            // Continue with upload even if cleanup fails
+          }
+        }
+        
+        // Upload new avatar
         await updateAvatar(avatarUri);
       }
 

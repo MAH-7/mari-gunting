@@ -7,7 +7,7 @@ import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { formatCurrency, formatPrice, formatShortDate, formatTime } from '@/utils/format';
 import { BookingStatus } from '@/types';
 import { useState, useEffect, useCallback } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import SuccessModal from '@/components/SuccessModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';

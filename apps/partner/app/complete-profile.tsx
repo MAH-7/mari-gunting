@@ -18,11 +18,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import { profileService } from '@mari-gunting/shared/services/profileService';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 export default function CompleteProfileScreen() {
   const params = useLocalSearchParams();
   const phoneNumber = params.phoneNumber as string || '';
   const role = (params.role as 'customer' | 'barber') || 'barber';
+  const logout = useStore((state) => state.logout);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,6 +34,24 @@ export default function CompleteProfileScreen() {
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout? You can login again with a different number.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
   };
 
   const handlePickImage = async () => {
@@ -51,7 +71,10 @@ export default function CompleteProfileScreen() {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.7,
+        // Resize to reasonable avatar size
+        maxWidth: 512,
+        maxHeight: 512,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -92,7 +115,28 @@ export default function CompleteProfileScreen() {
     setIsLoading(true);
 
     try {
-      // Step 1: Register user with Supabase with temporary 'barber' role (no avatar yet)
+      // Check if user already exists (customer upgrading to barber)
+      const existingUserCheck = await authService.checkPhoneExists(phoneNumber);
+      
+      if (existingUserCheck.success && existingUserCheck.data?.exists) {
+        console.log('ℹ️ Existing customer upgrading to barber partner');
+        // Handle existing customer - DON'T call register again
+        // Just proceed to account type selection
+        // The barber role will be added when they complete onboarding
+        Alert.alert(
+          'Welcome Back!',
+          'Let\'s set up your barber account.',
+          [
+            {
+              text: 'Continue',
+              onPress: () => router.replace('/select-account-type'),
+            },
+          ]
+        );
+        return;
+      }
+      
+      // Step 1: Register NEW user with Supabase with temporary 'barber' role (no avatar yet)
       // After account type selection, role will be finalized:
       // - Freelance: stays 'barber' + creates barbers table record
       // - Barbershop: updates to 'barbershop_owner' + creates barbershops table record
@@ -124,16 +168,34 @@ export default function CompleteProfileScreen() {
       console.log('✅ User registered successfully:', userId);
 
       // Step 2: Upload avatar if selected (post-registration)
+      let avatarUrl = null;
       if (avatar) {
         try {
           console.log('📤 Uploading avatar to UID folder:', userId);
-          await profileService.updateAvatar(avatar, userId);
-          console.log('✅ Avatar uploaded successfully');
+          const updatedProfile = await profileService.updateAvatar(userId, avatar);
+          avatarUrl = updatedProfile.avatar_url || updatedProfile.avatar;
+          console.log('✅ Avatar uploaded successfully:', avatarUrl);
         } catch (uploadError) {
           console.error('⚠️ Avatar upload failed (non-critical):', uploadError);
           // Don't fail registration if avatar upload fails
           // User can update avatar later from profile
         }
+      }
+      
+      // Step 3: Fetch the complete updated profile to ensure we have all data
+      try {
+        const finalProfile = await profileService.getProfile(userId);
+        console.log('✅ Final profile fetched:', {
+          id: finalProfile.id,
+          avatar_url: finalProfile.avatar_url,
+          full_name: finalProfile.full_name,
+        });
+        
+        // The profile will be loaded properly on next screen
+        // No need to manually set it here since select-account-type will handle routing
+      } catch (profileError) {
+        console.error('⚠️ Could not fetch profile:', profileError);
+        // Non-critical, proceed anyway
       }
       
       Alert.alert(
@@ -173,14 +235,21 @@ export default function CompleteProfileScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
+          {/* Header with Phone Number & Logout */}
           <View style={styles.header}>
+            <View style={{ width: 40 }} />
+            
+            <View style={styles.headerCenter}>
+              <Text style={styles.phoneNumberLabel}>Logged in as</Text>
+              <Text style={styles.phoneNumberText}>{phoneNumber}</Text>
+            </View>
+            
             <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
+              style={styles.logoutIconButton}
+              onPress={handleLogout}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={24} color="#111827" />
+              <Ionicons name="log-out-outline" size={22} color="#EF4444" />
             </TouchableOpacity>
           </View>
 
@@ -335,6 +404,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
@@ -343,6 +415,32 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 12,
+  },
+  phoneNumberLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  phoneNumberText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 2,
+  },
+  logoutIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },

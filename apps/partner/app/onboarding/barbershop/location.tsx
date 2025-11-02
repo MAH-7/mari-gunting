@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboardingService';
@@ -34,6 +35,7 @@ const MALAYSIAN_STATES = [
 ];
 
 export default function LocationScreen() {
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [addressLine1, setAddressLine1] = useState('');
@@ -122,6 +124,26 @@ export default function LocationScreen() {
     }
   };
 
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
+
   const validateForm = (): boolean => {
     if (addressLine1.trim().length < 5) {
       Alert.alert('Address Required', 'Please enter your street address (min 5 characters).');
@@ -178,8 +200,8 @@ export default function LocationScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
@@ -360,8 +382,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+
+    borderRadius: 20,
+
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

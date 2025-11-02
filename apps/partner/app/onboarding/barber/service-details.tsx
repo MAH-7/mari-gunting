@@ -10,16 +10,20 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import * as ImagePicker from 'expo-image-picker';
 import { barberOnboardingService, uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
+import { useStore } from '@mari-gunting/shared/store/useStore';
+import { supabase } from '@mari-gunting/shared/config/supabase';
 
 
 export default function ServiceDetailsScreen() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { user } = useAuth();
+  const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -56,9 +60,11 @@ export default function ServiceDetailsScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+        allowsEditing: false,
+        quality: 0.5,  // 50% quality - good balance for portfolio showcase
+        // Resize to Full HD resolution - better for portfolio display
+        maxWidth: 1920,
+        maxHeight: 1920,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -79,8 +85,43 @@ export default function ServiceDetailsScreen() {
     }
   };
 
-  const removePortfolioImage = (index: number) => {
-    setPortfolioUris(portfolioUris.filter((_, i) => i !== index));
+  const removePortfolioImage = async (index: number) => {
+    const imageUri = portfolioUris[index];
+    
+    // If it's an uploaded URL (from previous save), delete from storage
+    if (isUrl(imageUri)) {
+      Alert.alert(
+        'Delete Photo',
+        'Remove this photo from your portfolio?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // Extract path from URL and delete from storage
+                const urlObj = new URL(imageUri);
+                const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/barber-portfolios\/(.+)/);
+                if (pathMatch && pathMatch[1]) {
+                  await supabase.storage.from('barber-portfolios').remove([pathMatch[1]]);
+                  console.log('✅ Deleted from storage:', pathMatch[1]);
+                }
+              } catch (error) {
+                console.warn('Could not delete from storage:', error);
+                // Continue anyway - remove from UI even if storage deletion fails
+              }
+              
+              // Remove from local state
+              setPortfolioUris(portfolioUris.filter((_, i) => i !== index));
+            },
+          },
+        ]
+      );
+    } else {
+      // Local URI - just remove from state (not uploaded yet)
+      setPortfolioUris(portfolioUris.filter((_, i) => i !== index));
+    }
   };
 
 
@@ -95,6 +136,24 @@ export default function ServiceDetailsScreen() {
   };
 
   const isUrl = (uri: string) => uri.startsWith('http');
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
 
   const handleContinue = async () => {
     if (!validateForm()) return;
@@ -111,17 +170,22 @@ export default function ServiceDetailsScreen() {
         // All are already URLs from previous save
         finalPortfolioUrls = portfolioUris;
       } else {
-        // Upload local images in parallel
+        // Upload portfolio images with timestamp-based filenames to avoid overwrites
         console.log('📤 Uploading portfolio images...');
-        const uploadTasks = portfolioUris.map((uri, idx) => {
+        const uploadTasks = portfolioUris.map(async (uri) => {
           if (isUrl(uri)) {
-            return Promise.resolve(uri); // Already uploaded
+            console.log('✅ Already uploaded, reusing URL');
+            return uri; // Already uploaded
           }
+          // Use timestamp-based filename for unique portfolio photos (no overwrites)
+          const timestamp = Date.now();
+          const filename = `${user?.id}_portfolio_${timestamp}.jpg`;
+          console.log('📤 Uploading new portfolio photo:', filename);
           return uploadOnboardingImage(
             uri,
             'barber-portfolios',
             user?.id || 'temp',
-            `portfolio_${idx}_${Date.now()}.jpg`
+            filename
           );
         });
 
@@ -141,7 +205,13 @@ export default function ServiceDetailsScreen() {
       };
 
       await barberOnboardingService.saveProgress('serviceDetails', data);
-      router.push('/onboarding/barber/payout');
+      
+      // Navigate to next step or back to review
+      if (returnTo === 'review') {
+        router.back();
+      } else {
+        router.push('/onboarding/barber/payout');
+      }
     } catch (error) {
       console.error('Error saving progress:', error);
       Alert.alert('Error', 'Failed to save progress. Please try again.');
@@ -155,9 +225,7 @@ export default function ServiceDetailsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
@@ -165,7 +233,9 @@ export default function ServiceDetailsScreen() {
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -284,8 +354,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  backButton: {
+  logoutButton: {
     width: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

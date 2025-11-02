@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import type { Booking } from '@/types';
 
 interface UseBookingCompletionProps {

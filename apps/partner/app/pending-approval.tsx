@@ -12,10 +12,12 @@ export default function PendingApprovalScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'rejected' | 'verified'>('pending');
   const [statusMessage, setStatusMessage] = useState('Your documents are under review');
   const [verificationSteps, setVerificationSteps] = useState<VerificationStep[]>([]);
   const [estimatedDate, setEstimatedDate] = useState<string | null>(null);
   const [daysRemaining, setDaysRemaining] = useState<number>(0);
+  const [rejectionReasons, setRejectionReasons] = useState<string[]>([]);
 
   // Initial load
   useEffect(() => {
@@ -43,9 +45,18 @@ export default function PendingApprovalScreen() {
           return;
         }
         
-        // Update status message and details
+        // Update status and message
+        setVerificationStatus(status.status);
         setStatusMessage(status.message);
         setVerificationSteps(status.steps || []);
+        
+        // Set rejection reasons if rejected
+        if (status.status === 'rejected') {
+          setRejectionReasons([
+            'IC photos are unclear or don\'t match. Please upload clear, well-lit photos.',
+            'Account holder name doesn\'t match IC name. Please ensure they match exactly.',
+          ]);
+        }
         
         // Calculate days remaining
         if (status.estimatedCompletionDate) {
@@ -138,18 +149,62 @@ export default function PendingApprovalScreen() {
       >
         {/* Header */}
         <LinearGradient
-          colors={['#FF9800', '#F57C00']}
+          colors={verificationStatus === 'rejected' ? ['#EF4444', '#DC2626'] : ['#FF9800', '#F57C00']}
           style={styles.headerGradient}
         >
           <View style={styles.iconContainer}>
-            <Ionicons name="time" size={64} color="#FFF" />
+            <Ionicons name={verificationStatus === 'rejected' ? 'close-circle' : 'time'} size={64} color="#FFF" />
           </View>
-          <Text style={styles.headerTitle}>Account Under Review</Text>
-          <Text style={styles.headerSubtitle}>Hang tight! We're reviewing your application</Text>
+          <Text style={styles.headerTitle}>
+            {verificationStatus === 'rejected' ? 'Verification Rejected' : 'Account Under Review'}
+          </Text>
+          <Text style={styles.headerSubtitle}>
+            {verificationStatus === 'rejected' 
+              ? 'We couldn\'t approve your application' 
+              : 'Hang tight! We\'re reviewing your application'
+            }
+          </Text>
         </LinearGradient>
 
-        {/* Estimated Completion Card */}
-        {estimatedDate && daysRemaining >= 0 && (
+        {/* Rejection Reasons (if rejected) */}
+        {verificationStatus === 'rejected' && rejectionReasons.length > 0 && (
+          <View style={styles.rejectionCard}>
+            <View style={styles.rejectionHeader}>
+              <Ionicons name="alert-circle-outline" size={24} color="#EF4444" />
+              <Text style={styles.rejectionTitle}>Issues Found</Text>
+            </View>
+            <Text style={styles.rejectionDescription}>
+              Our team found the following issues:
+            </Text>
+            <View style={styles.rejectionList}>
+              {rejectionReasons.map((reason, index) => (
+                <View key={index} style={styles.rejectionItem}>
+                  <View style={styles.rejectionBullet} />
+                  <Text style={styles.rejectionText}>{reason}</Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.fixButton}
+              onPress={async () => {
+                // Reload data from database before navigating
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  const { loadBarberProgressFromDB } = await import('@mari-gunting/shared/services/onboardingService');
+                  await loadBarberProgressFromDB(user.id);
+                }
+                router.push('/onboarding/barber/review');
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={20} color="#FFF" />
+              <Text style={styles.fixButtonText}>Fix Issues & Resubmit</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Estimated Completion Card (only for pending) */}
+        {verificationStatus === 'pending' && estimatedDate && daysRemaining >= 0 && (
           <View style={styles.estimatedCard}>
             <View style={styles.estimatedHeader}>
               <Ionicons name="calendar-outline" size={24} color={COLORS.primary} />
@@ -236,7 +291,7 @@ export default function PendingApprovalScreen() {
               </View>
               <View style={styles.infoContent}>
                 <Text style={styles.infoTitle}>Review Timeline</Text>
-                <Text style={styles.infoDescription}>Our team will review your application within 1-2 business days</Text>
+                <Text style={styles.infoDescription}>Our team will review your application within 2-3 business days</Text>
               </View>
             </View>
 
@@ -542,6 +597,68 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body.regular,
     color: '#FFF',
     fontWeight: '600',
+  },
+  rejectionCard: {
+    backgroundColor: COLORS.background.primary,
+    margin: 20,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  rejectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  rejectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+  },
+  rejectionDescription: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    marginBottom: 16,
+  },
+  rejectionList: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  rejectionItem: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rejectionBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    marginTop: 6,
+  },
+  rejectionText: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    lineHeight: 20,
+  },
+  fixButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  fixButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFF',
   },
   estimatedCard: {
     backgroundColor: COLORS.background.primary,

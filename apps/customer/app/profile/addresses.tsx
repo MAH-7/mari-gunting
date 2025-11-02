@@ -5,7 +5,7 @@ import { useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { addressService, CustomerAddress } from '@mari-gunting/shared/services/addressService';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 
 export default function AddressesScreen() {
   const currentUser = useStore((state) => state.currentUser);

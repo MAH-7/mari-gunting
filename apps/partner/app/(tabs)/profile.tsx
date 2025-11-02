@@ -16,7 +16,7 @@ import { useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/shared/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useStore } from '@/store/useStore';
+import { useStore } from '@mari-gunting/shared/store/useStore';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
 import { locationTrackingService } from '@/services/locationTrackingService';
 
