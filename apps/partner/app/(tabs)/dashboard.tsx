@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { formatTime, formatLocalTime } from '@/utils/format';
+import { extractDateFromISO } from '@mari-gunting/shared/utils/format';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { Booking } from '@/types';
@@ -583,8 +584,13 @@ export default function PartnerDashboardScreen() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // Today's stats
-    const todayBookings = partnerBookings.filter((b) => b.scheduledDate === today);
+    // Today's stats (use scheduled_datetime, fallback to scheduledDate)
+    const todayBookings = partnerBookings.filter((b) => {
+      const bookingDate = b.scheduled_datetime 
+        ? extractDateFromISO(b.scheduled_datetime)
+        : b.scheduledDate;
+      return bookingDate === today;
+    });
     const completed = todayBookings.filter((b) => b.status === 'completed');
     const todayEarnings = completed.reduce((sum, b) => {
       const servicesTotal = b.services?.reduce((s, svc) => s + svc.price, 0) || 0;
@@ -595,7 +601,8 @@ export default function PartnerDashboardScreen() {
     // This month's stats (actual earnings after commission)
     const monthlyCompleted = partnerBookings.filter((b) => {
       if (b.status !== 'completed') return false;
-      const bookingDate = new Date(b.scheduledDate || b.scheduled_datetime);
+      const datetime = b.scheduled_datetime || `${b.scheduledDate}T00:00:00Z`;
+      const bookingDate = new Date(datetime);
       return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
     });
     

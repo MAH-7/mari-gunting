@@ -1,16 +1,18 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Modal, Alert, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, StatusBar, ActivityIndicator, Modal, TextInput, Alert, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isToday, isYesterday } from 'date-fns';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { Booking } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { extractDateFromISO } from '@mari-gunting/shared/utils/format';
+import { payoutService } from '@mari-gunting/shared/services/payoutService';
 
 const { width } = Dimensions.get('window');
 
@@ -18,11 +20,24 @@ type TimePeriod = 'today' | 'week' | 'month' | 'all';
 
 export default function GrabEarningsScreen() {
   const currentUser = useStore((state) => state.currentUser);
+  
+  // Handler for navigating to job details
+  const handleViewJobDetails = (jobId: string) => {
+    router.push({
+      pathname: '/(tabs)/jobs',
+      params: { jobId }
+    });
+  };
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('today');
   const [refreshing, setRefreshing] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
-  const [showTripDetails, setShowTripDetails] = useState<string | null>(null);
   const [barberId, setBarberId] = useState<string | null>(null);
+  const [visibleTrips, setVisibleTrips] = useState(10); // Pagination
+  
+  // Payout modal state
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [availableBalance, setAvailableBalance] = useState(0);
+  const [isSubmittingPayout, setIsSubmittingPayout] = useState(false);
 
   // Fetch barber ID from barbers table using user_id
   useEffect(() => {
@@ -73,7 +88,7 @@ export default function GrabEarningsScreen() {
     return allBookings.filter((b) => b.status === 'completed');
   }, [allBookings]);
 
-  // Filter by period (using scheduledDate like Dashboard)
+  // Filter by period (using scheduled_datetime with timezone)
   const filteredBookings = useMemo(() => {
     const now = new Date();
     // Get local date without UTC conversion
@@ -85,24 +100,42 @@ export default function GrabEarningsScreen() {
     const currentYear = now.getFullYear();
 
     return completedBookings.filter((booking) => {
-      const bookingDate = booking.scheduledDate || booking.scheduled_datetime;
-      if (!bookingDate) return false;
+      // Use scheduled_datetime (timestamptz) as source of truth, fallback to scheduledDate
+      const datetime = booking.scheduled_datetime || `${booking.scheduledDate}T00:00:00Z`;
+      if (!datetime) return false;
+
+      const jobDate = new Date(datetime);
+      const bookingDateStr = extractDateFromISO(datetime);
 
       switch (selectedPeriod) {
         case 'today':
-          return bookingDate === today;
+          return bookingDateStr === today;
         case 'week':
-          const jobDate = new Date(bookingDate);
           return jobDate >= startOfWeek(now) && jobDate <= endOfWeek(now);
         case 'month':
-          const monthDate = new Date(bookingDate);
-          return monthDate.getMonth() === currentMonth && monthDate.getFullYear() === currentYear;
+          return jobDate.getMonth() === currentMonth && jobDate.getFullYear() === currentYear;
         case 'all':
         default:
           return true;
       }
     });
   }, [completedBookings, selectedPeriod]);
+
+  // Paginated trips (show 10 at a time)
+  const displayedTrips = useMemo(() => {
+    return filteredBookings.slice(0, visibleTrips);
+  }, [filteredBookings, visibleTrips]);
+
+  const hasMoreTrips = filteredBookings.length > visibleTrips;
+
+  const loadMoreTrips = () => {
+    setVisibleTrips(prev => prev + 10);
+  };
+
+  // Reset pagination when period changes
+  useEffect(() => {
+    setVisibleTrips(10);
+  }, [selectedPeriod]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -131,6 +164,144 @@ export default function GrabEarningsScreen() {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
+  };
+
+  // Fetch available balance for payout
+  const fetchAvailableBalance = async () => {
+    if (!barberId) return;
+    try {
+      const balance = await payoutService.getAvailableBalance(barberId);
+      setAvailableBalance(balance);
+    } catch (error) {
+      console.error('Error fetching available balance:', error);
+    }
+  };
+
+  // Fetch balance when barberId is available
+  useEffect(() => {
+    fetchAvailableBalance();
+  }, [barberId, allBookings]); // Refetch when bookings change
+
+  // Handle Request Payout button press
+  const handleRequestPayout = async () => {
+    if (!barberId) return;
+
+    // Check for bank account
+    const { data: barberData } = await supabase
+      .from('barbers')
+      .select('bank_name, bank_account_number, bank_account_name')
+      .eq('id', barberId)
+      .single();
+
+    if (!barberData?.bank_account_number) {
+      Alert.alert(
+        'Bank Account Required',
+        'Please add your bank account details in Profile first.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go to Profile', onPress: () => router.push('/profile') }
+        ]
+      );
+      return;
+    }
+
+    // Check minimum balance
+    if (availableBalance < 50) {
+      Alert.alert(
+        'Insufficient Balance',
+        `Minimum payout amount is RM 50.00\nYour available balance: RM ${availableBalance.toFixed(2)}`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Check for pending payout
+    try {
+      const hasPending = await payoutService.hasPendingPayout(barberId);
+      if (hasPending) {
+        Alert.alert(
+          'Pending Request Exists',
+          'You already have a pending payout request. Please wait for it to be processed.',
+          [
+            { text: 'OK' },
+            { text: 'View History', onPress: () => router.push('/payout-history') }
+          ]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking pending payout:', error);
+    }
+
+    // Set default amount to available balance
+    setPayoutAmount(availableBalance.toFixed(2));
+    setShowPayoutModal(true);
+  };
+
+  // Handle payout submission
+  const handleSubmitPayout = async () => {
+    if (!barberId) return;
+
+    const amount = parseFloat(payoutAmount);
+    
+    // Validation
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid amount');
+      return;
+    }
+
+    if (amount < 50) {
+      Alert.alert('Minimum Amount', 'Minimum payout amount is RM 50.00');
+      return;
+    }
+
+    if (amount > availableBalance) {
+      Alert.alert('Insufficient Balance', `Maximum amount: RM ${availableBalance.toFixed(2)}`);
+      return;
+    }
+
+    setIsSubmittingPayout(true);
+
+    try {
+      // Fetch bank details
+      const { data: barberData } = await supabase
+        .from('barbers')
+        .select('bank_name, bank_account_number, bank_account_name')
+        .eq('id', barberId)
+        .single();
+
+      if (!barberData) {
+        throw new Error('Bank account details not found');
+      }
+
+      // Submit payout request
+      await payoutService.requestPayout({
+        barberId,
+        amount,
+        bankName: barberData.bank_name || '',
+        bankAccountNumber: barberData.bank_account_number || '',
+        bankAccountName: barberData.bank_account_name || '',
+      });
+
+      setShowPayoutModal(false);
+      setPayoutAmount('');
+      
+      Alert.alert(
+        '✅ Payout Requested',
+        `Your payout request of RM ${amount.toFixed(2)} has been submitted successfully.\n\nWe will process it within 3-5 business days.`,
+        [
+          { text: 'OK' },
+          { text: 'View History', onPress: () => router.push('/payout-history') }
+        ]
+      );
+
+      // Refresh balance
+      fetchAvailableBalance();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit payout request');
+    } finally {
+      setIsSubmittingPayout(false);
+    }
   };
 
   if (!currentUser) {
@@ -166,20 +337,15 @@ export default function GrabEarningsScreen() {
       >
         {/* Hero Section - Grab Style */}
         <LinearGradient colors={['#00B14F', '#00953F']} style={styles.heroSection}>
-          <View style={styles.heroHeader}>
-            <Text style={styles.heroLabel}>
-              {selectedPeriod === 'today'
-                ? "Today's Earnings"
-                : selectedPeriod === 'week'
-                ? "This Week's Earnings"
-                : selectedPeriod === 'month'
-                ? "This Month's Earnings"
-                : 'Total Earnings'}
-            </Text>
-            <TouchableOpacity style={styles.infoButton} onPress={() => setShowInfo(true)}>
-              <Ionicons name="information-circle-outline" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.heroLabel}>
+            {selectedPeriod === 'today'
+              ? "Today's Earnings"
+              : selectedPeriod === 'week'
+              ? "This Week's Earnings"
+              : selectedPeriod === 'month'
+              ? "This Month's Earnings"
+              : 'Total Earnings'}
+          </Text>
 
           <View style={styles.heroAmount}>
             <Text style={styles.currency}>RM</Text>
@@ -189,12 +355,12 @@ export default function GrabEarningsScreen() {
           <View style={styles.heroStats}>
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatValue}>{stats.trips}</Text>
-              <Text style={styles.heroStatLabel}>Trips</Text>
+              <Text style={styles.heroStatLabel}>Jobs</Text>
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatValue}>RM {stats.average.toFixed(2)}</Text>
-              <Text style={styles.heroStatLabel}>Per Trip</Text>
+              <Text style={styles.heroStatLabel}>Average</Text>
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroStatItem}>
@@ -228,10 +394,44 @@ export default function GrabEarningsScreen() {
           ))}
         </View>
 
+        {/* Payout Section - Minimal (Grab Standard) */}
+        <View style={styles.section}>
+          <View style={styles.payoutCard}>
+            {/* Available Balance - Primary Action */}
+            <TouchableOpacity 
+              style={styles.availableBalanceRow}
+              onPress={handleRequestPayout}
+              activeOpacity={0.7}
+            >
+              <View style={styles.availableBalanceContent}>
+                <Ionicons name="wallet-outline" size={18} color="#00B14F" style={{ marginRight: 8 }} />
+                <Text style={styles.availableBalanceText}>Available: </Text>
+                <Text style={styles.availableBalanceValue}>RM {availableBalance.toFixed(2)}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#757575" />
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.payoutDivider} />
+
+            {/* Payout History - Secondary Action */}
+            <TouchableOpacity 
+              style={styles.payoutHistoryRow}
+              onPress={() => router.push('/payout-history')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.payoutHistoryContent}>
+                <Ionicons name="receipt-outline" size={16} color="#757575" style={{ marginRight: 8 }} />
+                <Text style={styles.payoutHistoryText}>Payout History</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#BDBDBD" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Earnings Breakdown - Clean Cards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earnings Breakdown</Text>
-
           {/* Revenue Model Banner */}
           <View style={styles.revenueModelBanner}>
             <View style={styles.revenueModelRow}>
@@ -306,7 +506,7 @@ export default function GrabEarningsScreen() {
           </View>
         </View>
 
-        {/* Trip List - Grab Style */}
+        {/* Trip List - Grab Style with Pagination */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Trip History</Text>
@@ -314,13 +514,29 @@ export default function GrabEarningsScreen() {
           </View>
 
           {filteredBookings.length > 0 ? (
-            filteredBookings.map((booking) => (
-              <TripCard 
-                key={booking.id} 
-                booking={booking} 
-                onPress={() => setShowTripDetails(booking.id)}
-              />
-            ))
+            <>
+              {displayedTrips.map((booking) => (
+                <TripCard 
+                  key={booking.id} 
+                  booking={booking} 
+                  onPress={() => handleViewJobDetails(booking.id)}
+                />
+              ))}
+              
+              {/* Load More Button */}
+              {hasMoreTrips && (
+                <TouchableOpacity 
+                  style={styles.loadMoreButton}
+                  onPress={loadMoreTrips}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.loadMoreText}>
+                    Load More ({filteredBookings.length - visibleTrips} remaining)
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#00B14F" />
+                </TouchableOpacity>
+              )}
+            </>
           ) : (
             <View style={styles.emptyTrips}>
               <Ionicons name="calendar-outline" size={48} color="#BDBDBD" />
@@ -330,302 +546,148 @@ export default function GrabEarningsScreen() {
           )}
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <View style={styles.quickActions}>
-            <TouchableOpacity 
-              style={styles.quickActionBtn}
-              onPress={() => Alert.alert('Payout', 'Payout feature coming soon')}
-            >
-              <View style={styles.quickActionIcon}>
-                <Ionicons name="wallet-outline" size={20} color="#00B14F" />
-              </View>
-              <Text style={styles.quickActionText}>Request Payout</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.quickActionBtn}
-              onPress={() => Alert.alert('Export', 'Export feature coming soon')}
-            >
-              <View style={styles.quickActionIcon}>
-                <Ionicons name="download-outline" size={20} color="#00B14F" />
-              </View>
-              <Text style={styles.quickActionText}>Download Report</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Info Modal */}
+      {/* Payout Request Modal */}
       <Modal
-        visible={showInfo}
+        visible={showPayoutModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowInfo(false)}
+        onRequestClose={() => !isSubmittingPayout && setShowPayoutModal(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1}
-          onPress={() => setShowInfo(false)}
-        >
-          <View style={styles.infoModal}>
-            <View style={styles.infoHeader}>
-              <Text style={styles.infoTitle}>How Your Earnings Work</Text>
-              <TouchableOpacity onPress={() => setShowInfo(false)}>
-                <Ionicons name="close" size={24} color="#212121" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.infoContent} showsVerticalScrollIndicator={false}>
-              {/* Key Facts Banner */}
-              <View style={styles.keyFactsBanner}>
-                <View style={styles.titleWithIcon}>
-                  <Ionicons name="flag" size={18} color={COLORS.text.primary} />
-                  <Text style={styles.keyFactsTitle}>Key Facts</Text>
-                </View>
-                <View style={styles.keyFactsGrid}>
-                  <View style={styles.keyFactItem}>
-                    <Text style={styles.keyFactValue}>85%</Text>
-                    <Text style={styles.keyFactLabel}>You Keep</Text>
-                  </View>
-                  <View style={styles.keyFactDivider} />
-                  <View style={styles.keyFactItem}>
-                    <Text style={styles.keyFactValue}>15%</Text>
-                    <Text style={styles.keyFactLabel}>Commission</Text>
-                  </View>
-                  <View style={styles.keyFactDivider} />
-                  <View style={styles.keyFactItem}>
-                    <Text style={styles.keyFactValue}>100%</Text>
-                    <Text style={styles.keyFactLabel}>Travel</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Detailed Breakdown */}
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconCircle}>
-                  <Ionicons name="cut-outline" size={20} color="#00B14F" />
-                </View>
-                <View style={styles.infoText}>
-                  <Text style={styles.infoItemTitle}>Service Earnings (85%)</Text>
-                  <Text style={styles.infoItemDesc}>
-                    You keep <Text style={{ fontWeight: '700', color: '#00B14F' }}>85% of service fees</Text>. Platform takes 15% commission to cover operational costs.
-                  </Text>
-                  <View style={styles.infoHighlight}>
-                    <Text style={styles.infoHighlightText}>✓ Much better than salon splits (50-70%)</Text>
-                  </View>
-                </View>
-              </View>
-              
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconCircle}>
-                  <Ionicons name="car-outline" size={20} color="#FF9800" />
-                </View>
-                <View style={styles.infoText}>
-                  <Text style={styles.infoItemTitle}>Travel (100%)</Text>
-                  <Text style={styles.infoItemDesc}>
-                    <Text style={{ fontWeight: '700', color: '#FF9800' }}>100% of travel</Text> goes directly to you. No commission deducted from travel!
-                  </Text>
-                  <View style={styles.infoHighlight}>
-                    <Text style={styles.infoHighlightText}>✓ Full reimbursement for your time & fuel</Text>
-                  </View>
-                </View>
-              </View>
-              
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconCircle}>
-                  <Ionicons name="business-outline" size={20} color="#F44336" />
-                </View>
-                <View style={styles.infoText}>
-                  <Text style={styles.infoItemTitle}>Commission (15%)</Text>
-                  <Text style={styles.infoItemDesc}>
-                    The 15% commission (deducted from your service earnings) covers:
-                  </Text>
-                  <View style={styles.featureList}>
-                    <Text style={styles.featureItem}>• Payment processing (2.5% fees)</Text>
-                    <Text style={styles.featureItem}>• Customer support 24/7</Text>
-                    <Text style={styles.featureItem}>• Insurance coverage</Text>
-                    <Text style={styles.featureItem}>• Platform maintenance</Text>
-                    <Text style={styles.featureItem}>• Marketing & customer acquisition</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Booking Fee Details */}
-              <View style={styles.platformFeeCard}>
-                <View style={styles.platformFeeHeader}>
-                  <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
-                  <Text style={styles.platformFeeTitle}>RM 2 Booking Fee (Customer Pays)</Text>
-                </View>
-                <Text style={styles.platformFeeDesc}>
-                  Customers pay an additional <Text style={{ fontWeight: '700' }}>RM 2.00 booking fee</Text> per booking. This fee is <Text style={{ fontWeight: '700', color: '#00B14F' }}>NOT deducted from your earnings</Text> - it goes directly to the company for operational costs. This helps keep your commission low at just 15%.
-                </Text>
-              </View>
-              
-              {/* Example Calculations */}
-              <View style={styles.infoBox}>
-                <View style={styles.titleWithIcon}>
-                  <Ionicons name="bulb" size={18} color="#F59E0B" />
-                  <Text style={styles.infoBoxTitle}>Example Calculation</Text>
-                </View>
-                <View style={styles.exampleCalc}>
-                  <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>Service:</Text>
-                    <Text style={styles.calcValue}>RM 50.00</Text>
-                  </View>
-                  <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>Travel:</Text>
-                    <Text style={styles.calcValue}>RM 10.00</Text>
-                  </View>
-                  <View style={styles.calcDivider} />
-                  <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>Your Service (85%):</Text>
-                    <Text style={[styles.calcValue, { color: '#00B14F' }]}>RM 42.50</Text>
-                  </View>
-                  <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>Commission (15%):</Text>
-                    <Text style={[styles.calcValue, { color: '#F44336' }]}>- RM 7.50</Text>
-                  </View>
-                  <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>RM 2 Booking Fee:</Text>
-                    <Text style={[styles.calcValue, { color: '#3B82F6' }]}>RM 0.00 (customer pays)</Text>
-                  </View>
-                  <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>Your Travel (100%):</Text>
-                    <Text style={[styles.calcValue, { color: '#00B14F' }]}>RM 10.00</Text>
-                  </View>
-                  <View style={styles.calcDivider} />
-                  <View style={styles.calcRow}>
-                    <Text style={styles.calcTotalLabel}>You Earn:</Text>
-                    <Text style={styles.calcTotalValue}>RM 52.50</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Comparison */}
-              <View style={styles.comparisonBox}>
-                <View style={styles.titleWithIcon}>
-                  <Ionicons name="trophy" size={18} color="#F59E0B" />
-                  <Text style={styles.comparisonTitle}>Better Than Competitors</Text>
-                </View>
-                <View style={styles.comparisonRow}>
-                  <Text style={styles.comparisonPlatform}>Grab / Foodpanda:</Text>
-                  <Text style={styles.comparisonRate}>25-30% commission</Text>
-                </View>
-                <View style={styles.comparisonRow}>
-                  <Text style={[styles.comparisonPlatform, { color: '#00B14F', fontWeight: '700' }]}>Mari-Gunting:</Text>
-                  <Text style={[styles.comparisonRate, { color: '#00B14F', fontWeight: '700' }]}>15% commission ✓</Text>
-                </View>
-              </View>
-
-              <View style={{ height: 20 }} />
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Trip Details Modal */}
-      {showTripDetails && (
-        <Modal
-          visible={!!showTripDetails}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowTripDetails(null)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.tripDetailModal}>
-              <View style={styles.tripDetailHeader}>
-                <Text style={styles.tripDetailTitle}>Trip Details</Text>
-                <TouchableOpacity onPress={() => setShowTripDetails(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.payoutModal}>
+              <View style={styles.payoutHeader}>
+                <Text style={styles.payoutTitle}>Request Payout</Text>
+                <TouchableOpacity 
+                  onPress={() => !isSubmittingPayout && setShowPayoutModal(false)}
+                  disabled={isSubmittingPayout}
+                >
                   <Ionicons name="close" size={24} color="#212121" />
                 </TouchableOpacity>
               </View>
-              
-              {(() => {
-                const booking = filteredBookings.find(b => b.id === showTripDetails);
-                if (!booking) return null;
-                
-                const serviceTotal = (booking.services || []).reduce((sum, s) => sum + s.price, 0);
-                const commission = serviceTotal * 0.15;
-                const netService = serviceTotal - commission;
-                const totalEarned = netService + (booking.travelCost || 0);
-                
-                return (
-                  <ScrollView style={styles.tripDetailContent}>
-                    <View style={styles.tripDetailSection}>
-                      <Text style={styles.tripDetailLabel}>Customer</Text>
-                      <Text style={styles.tripDetailValue}>{booking.customer?.name || booking.customerName}</Text>
-                    </View>
-                    
-                    <View style={styles.tripDetailSection}>
-                      <Text style={styles.tripDetailLabel}>Date & Time</Text>
-                      <Text style={styles.tripDetailValue}>
-                        {format(parseISO(booking.completedAt || booking.createdAt), 'MMM dd, yyyy • hh:mm a')}
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.tripDetailSection}>
-                      <Text style={styles.tripDetailLabel}>Location</Text>
-                      <Text style={styles.tripDetailValue}>{booking.address?.fullAddress || 'N/A'}</Text>
-                    </View>
-                    
-                    <View style={styles.tripDetailDivider} />
-                    
-                    <Text style={styles.tripDetailSectionTitle}>Services</Text>
-                    {(booking.services || []).map((service, idx) => (
-                      <View key={idx} style={styles.tripDetailService}>
-                        <Text style={styles.tripDetailServiceName}>{service.name}</Text>
-                        <Text style={styles.tripDetailServicePrice}>RM {service.price.toFixed(2)}</Text>
-                      </View>
-                    ))}
-                    
-                    <View style={styles.tripDetailDivider} />
-                    
-                    <View style={styles.tripDetailBreakdown}>
-                      <View style={styles.tripDetailRow}>
-                        <Text style={styles.tripDetailRowLabel}>Service Total</Text>
-                        <Text style={styles.tripDetailRowValue}>RM {serviceTotal.toFixed(2)}</Text>
-                      </View>
-                      <View style={styles.tripDetailRow}>
-                        <Text style={styles.tripDetailRowLabel}>Commission (15%)</Text>
-                        <Text style={[styles.tripDetailRowValue, { color: '#F44336' }]}>- RM {commission.toFixed(2)}</Text>
-                      </View>
-                      <View style={styles.tripDetailRow}>
-                        <Text style={styles.tripDetailRowLabel}>Net Service</Text>
-                        <Text style={styles.tripDetailRowValue}>RM {netService.toFixed(2)}</Text>
-                      </View>
-                      <View style={styles.tripDetailRow}>
-                        <Text style={styles.tripDetailRowLabel}>Travel</Text>
-                        <Text style={styles.tripDetailRowValue}>RM {(booking.travelCost || 0).toFixed(2)}</Text>
-                      </View>
-                      <View style={[styles.tripDetailRow, styles.tripDetailTotal]}>
-                        <Text style={styles.tripDetailTotalLabel}>Total Earned</Text>
-                        <Text style={styles.tripDetailTotalValue}>RM {totalEarned.toFixed(2)}</Text>
-                      </View>
-                    </View>
-                  </ScrollView>
-                );
-              })()}
+
+              <ScrollView style={styles.payoutContent}>
+                {/* Available Balance */}
+                <View style={styles.balanceCard}>
+                  <Text style={styles.balanceLabel}>Available Balance</Text>
+                  <Text style={styles.balanceAmount}>RM {availableBalance.toFixed(2)}</Text>
+                </View>
+
+                {/* Amount Input */}
+                <View style={styles.inputSection}>
+                  <Text style={styles.inputLabel}>Withdrawal Amount</Text>
+                  <View style={styles.amountInputWrapper}>
+                    <Text style={styles.currencyLabel}>RM</Text>
+                    <TextInput
+                      style={styles.amountInput}
+                      value={payoutAmount}
+                      onChangeText={setPayoutAmount}
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                      placeholderTextColor="#BDBDBD"
+                      editable={!isSubmittingPayout}
+                    />
+                  </View>
+                  <Text style={styles.inputHint}>Minimum: RM 50.00 • Maximum: RM {availableBalance.toFixed(2)}</Text>
+                </View>
+
+                {/* Quick Amount Buttons */}
+                <View style={styles.quickAmounts}>
+                  <TouchableOpacity 
+                    style={styles.quickAmountBtn}
+                    onPress={() => setPayoutAmount('50')}
+                    disabled={availableBalance < 50 || isSubmittingPayout}
+                  >
+                    <Text style={[styles.quickAmountText, availableBalance < 50 && { color: '#BDBDBD' }]}>RM 50</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.quickAmountBtn}
+                    onPress={() => setPayoutAmount('100')}
+                    disabled={availableBalance < 100 || isSubmittingPayout}
+                  >
+                    <Text style={[styles.quickAmountText, availableBalance < 100 && { color: '#BDBDBD' }]}>RM 100</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.quickAmountBtn}
+                    onPress={() => setPayoutAmount(availableBalance.toFixed(2))}
+                    disabled={isSubmittingPayout}
+                  >
+                    <Text style={styles.quickAmountText}>All</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Info */}
+                <View style={styles.payoutInfo}>
+                  <Ionicons name="information-circle-outline" size={20} color="#757575" />
+                  <Text style={styles.payoutInfoText}>
+                    Payouts are processed within 3-5 business days. You'll receive the money via bank transfer.
+                  </Text>
+                </View>
+              </ScrollView>
+
+              {/* Buttons */}
+              <View style={styles.payoutActions}>
+                <TouchableOpacity 
+                  style={[styles.payoutBtn, styles.payoutBtnSecondary]}
+                  onPress={() => setShowPayoutModal(false)}
+                  disabled={isSubmittingPayout}
+                >
+                  <Text style={styles.payoutBtnSecondaryText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.payoutBtn, styles.payoutBtnPrimary, isSubmittingPayout && { opacity: 0.6 }]}
+                  onPress={handleSubmitPayout}
+                  disabled={isSubmittingPayout}
+                >
+                  {isSubmittingPayout ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.payoutBtnPrimaryText}>Confirm</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </Modal>
-      )}
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
 
-// Trip Card Component
+// Trip Card Component - Grab Standard (Service-Focused)
 function TripCard({ booking, onPress }: { booking: Booking; onPress?: () => void }) {
   const serviceTotal = (booking.services || []).reduce((sum, s) => sum + s.price, 0);
   const commission = serviceTotal * 0.15;
   const netService = serviceTotal - commission;
   const totalEarned = netService + (booking.travelCost || 0);
 
-  const date = booking.completedAt || booking.createdAt;
-  const formattedDate = format(parseISO(date), 'MMM dd');
-  const formattedTime = booking.scheduledTime || format(parseISO(date), 'hh:mm a');
+  // Use scheduled_datetime (when job actually happened)
+  const datetime = booking.scheduled_datetime || `${booking.scheduledDate}T${booking.scheduledTime || '00:00'}:00Z`;
+  const jobDate = new Date(datetime);
+  
+  // Format date: "Today", "Yesterday", or "Nov 05"
+  let formattedDate: string;
+  if (isToday(jobDate)) {
+    formattedDate = 'Today';
+  } else if (isYesterday(jobDate)) {
+    formattedDate = 'Yesterday';
+  } else {
+    formattedDate = format(jobDate, 'MMM dd');
+  }
+  
+  const formattedTime = format(jobDate, 'hh:mm a');
+  
+  // Format payment method
+  const paymentMethod = booking.payment_method || booking.paymentMethod || 'cash';
+  const paymentLabel = paymentMethod === 'curlec_card' ? 'Card' 
+    : paymentMethod === 'curlec_fpx' ? 'FPX'
+    : paymentMethod === 'credits' ? 'Credits'
+    : 'Cash';
+
+  const serviceCount = (booking.services || []).length;
+  const serviceText = serviceCount === 1 ? '1 Service' : `${serviceCount} Services`;
 
   return (
     <TouchableOpacity 
@@ -635,37 +697,29 @@ function TripCard({ booking, onPress }: { booking: Booking; onPress?: () => void
     >
       <View style={styles.tripHeader}>
         <View style={styles.tripLeft}>
-          <View style={styles.tripAvatar}>
-            <Text style={styles.tripAvatarText}>
-              {(booking.customer?.name || booking.customerName || 'C').charAt(0).toUpperCase()}
-            </Text>
+          {/* Service Icon - Grab Standard */}
+          <View style={styles.tripServiceIcon}>
+            <Ionicons name="cut" size={20} color="#00B14F" />
           </View>
           <View style={styles.tripInfo}>
-            <Text style={styles.tripCustomer}>{booking.customer?.name || booking.customerName}</Text>
+            <Text style={styles.tripServiceCount}>{serviceText}</Text>
             <Text style={styles.tripTime}>
               {formattedDate} • {formattedTime}
             </Text>
           </View>
         </View>
-        <View style={styles.tripEarnings}>
+        <View style={styles.tripRight}>
           <Text style={styles.tripAmount}>+RM {totalEarned.toFixed(2)}</Text>
           <View style={styles.tripCash}>
-            <Ionicons name="cash-outline" size={12} color="#757575" />
-            <Text style={styles.tripCashText}>Cash</Text>
+            <Ionicons 
+              name={paymentMethod.includes('card') ? 'card-outline' : paymentMethod === 'credits' ? 'wallet-outline' : 'cash-outline'} 
+              size={12} 
+              color="#757575" 
+            />
+            <Text style={styles.tripCashText}>{paymentLabel}</Text>
           </View>
         </View>
-      </View>
-
-      <View style={styles.tripServices}>
-        {(booking.services || []).slice(0, 2).map((service, idx) => (
-          <View key={idx} style={styles.tripService}>
-            <View style={styles.tripServiceDot} />
-            <Text style={styles.tripServiceText}>{service.name}</Text>
-          </View>
-        ))}
-        {(booking.services || []).length > 2 && (
-          <Text style={styles.tripServiceMore}>+{(booking.services || []).length - 2} more</Text>
-        )}
+        <Ionicons name="chevron-forward" size={20} color="#BDBDBD" style={styles.tripChevron} />
       </View>
     </TouchableOpacity>
   );
@@ -796,8 +850,46 @@ const styles = StyleSheet.create({
 
   // Section
   section: {
-    marginTop: 24,
+    marginTop: 16,
     paddingHorizontal: 16,
+  },
+
+  // Payout Card - Combined Container (Grab Standard)
+  payoutCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  availableBalanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  payoutDivider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+  },
+  availableBalanceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  availableBalanceText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#757575',
+  },
+  availableBalanceValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#00B14F',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -887,7 +979,7 @@ const styles = StyleSheet.create({
     color: '#00B14F',
   },
 
-  // Trip Card - Grab Style
+  // Trip Card - Grab Standard (Service-Focused)
   tripCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
@@ -903,14 +995,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
   tripLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  tripAvatar: {
+  // Service Icon (replaces avatar)
+  tripServiceIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -919,15 +1011,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  tripAvatarText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#00B14F',
-  },
   tripInfo: {
     flex: 1,
   },
-  tripCustomer: {
+  tripServiceCount: {
     fontSize: 15,
     fontWeight: '600',
     color: '#212121',
@@ -938,14 +1025,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#757575',
   },
-  tripEarnings: {
+  tripRight: {
     alignItems: 'flex-end',
   },
   tripAmount: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: '#00B14F',
     marginBottom: 4,
+  },
+  tripChevron: {
+    marginLeft: 8,
   },
   tripCash: {
     flexDirection: 'row',
@@ -957,33 +1047,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#757575',
   },
-  tripServices: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F5F5F5',
-  },
-  tripService: {
+
+  // Load More Button
+  loadMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  tripServiceDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#BDBDBD',
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#00B14F',
     marginRight: 8,
-  },
-  tripServiceText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#616161',
-  },
-  tripServiceMore: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9E9E9E',
-    marginTop: 4,
   },
 
   // Empty State
@@ -1004,365 +1090,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Quick Actions
-  quickActions: {
+  // Payout History Row - Secondary Action
+  payoutHistoryRow: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  quickActionBtn: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 18,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E8F5E9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  quickActionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#212121',
-  },
-
-  // Info Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  infoModal: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  infoHeader: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  infoTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  infoContent: {
-    padding: 20,
-  },
-  infoItem: {
+  payoutHistoryContent: {
     flexDirection: 'row',
-    marginBottom: 20,
-  },
-  infoIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
   },
-  infoText: {
-    flex: 1,
-  },
-  infoItemTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#212121',
-    marginBottom: 4,
-  },
-  infoItemDesc: {
-    fontSize: 13,
+  payoutHistoryText: {
+    fontSize: 14,
     fontWeight: '500',
     color: '#757575',
-    lineHeight: 18,
-  },
-  infoBox: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-  },
-  infoBoxTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#00B14F',
-    marginBottom: 8,
-  },
-  infoBoxText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#212121',
-    lineHeight: 20,
-  },
-
-  // Trip Detail Modal
-  tripDetailModal: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    width: '100%',
-    maxHeight: '80%',
-    marginTop: 'auto',
-  },
-  tripDetailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
-  },
-  tripDetailTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  tripDetailContent: {
-    padding: 20,
-  },
-  tripDetailSection: {
-    marginBottom: 16,
-  },
-  tripDetailLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9E9E9E',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-  tripDetailValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#212121',
-  },
-  tripDetailDivider: {
-    height: 1,
-    backgroundColor: '#F5F5F5',
-    marginVertical: 16,
-  },
-  tripDetailSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 12,
-  },
-  tripDetailService: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  tripDetailServiceName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#212121',
-  },
-  tripDetailServicePrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#212121',
-  },
-  tripDetailBreakdown: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-  },
-  tripDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  tripDetailRowLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#616161',
-  },
-  tripDetailRowValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#212121',
-  },
-  tripDetailTotal: {
-    borderTopWidth: 2,
-    borderTopColor: '#E0E0E0',
-    marginTop: 8,
-    paddingTop: 12,
-  },
-  tripDetailTotalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  tripDetailTotalValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#00B14F',
-  },
-
-  // New Info Modal Styles
-  keyFactsBanner: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  keyFactsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#00B14F',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  keyFactsGrid: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  keyFactItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  keyFactValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#00B14F',
-    marginBottom: 4,
-  },
-  keyFactLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#616161',
-    textAlign: 'center',
-  },
-  keyFactDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#BDBDBD',
-  },
-  infoHighlight: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 8,
-  },
-  infoHighlightText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#00B14F',
-  },
-  featureList: {
-    marginTop: 8,
-  },
-  featureItem: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#616161',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  platformFeeCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-  },
-  platformFeeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  platformFeeTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  platformFeeDesc: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#616161',
-    lineHeight: 18,
-  },
-  exampleCalc: {
-    marginTop: 8,
-  },
-  calcRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  calcLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#616161',
-  },
-  calcValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#212121',
-  },
-  calcDivider: {
-    height: 1,
-    backgroundColor: '#BDBDBD',
-    marginVertical: 8,
-  },
-  calcTotalLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#212121',
-  },
-  calcTotalValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#00B14F',
-  },
-  comparisonBox: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-  },
-  comparisonTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 12,
-  },
-  comparisonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  comparisonPlatform: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#616161',
-  },
-  comparisonRate: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#616161',
   },
 
   // Revenue Model Banner
@@ -1422,5 +1165,155 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 12,
+  },
+
+  // Payout Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  payoutModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  payoutHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  payoutTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#212121',
+  },
+  payoutContent: {
+    padding: 24,
+  },
+  balanceCard: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  balanceLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#616161',
+    marginBottom: 8,
+  },
+  balanceAmount: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#00B14F',
+  },
+  inputSection: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#212121',
+    marginBottom: 8,
+  },
+  amountInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  currencyLabel: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#757575',
+    marginRight: 8,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#212121',
+    paddingVertical: 16,
+  },
+  inputHint: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#757575',
+    marginTop: 8,
+  },
+  quickAmounts: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  quickAmountBtn: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  quickAmountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#00B14F',
+  },
+  payoutInfo: {
+    flexDirection: 'row',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
+    gap: 8,
+  },
+  payoutInfoText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#757575',
+    lineHeight: 18,
+  },
+  payoutActions: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F5F5F5',
+  },
+  payoutBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  payoutBtnSecondary: {
+    backgroundColor: '#F5F5F5',
+  },
+  payoutBtnSecondaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#757575',
+  },
+  payoutBtnPrimary: {
+    backgroundColor: '#00B14F',
+  },
+  payoutBtnPrimaryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
