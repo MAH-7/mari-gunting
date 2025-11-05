@@ -1,0 +1,67 @@
+-- ⚠️ IMPORTANT: Storage policies must be created via Supabase Dashboard or SQL Editor
+-- This migration file serves as documentation only.
+--
+-- TO APPLY THESE POLICIES:
+-- 1. Go to Supabase Dashboard → Storage → barber-portfolios bucket
+-- 2. Click "Policies" tab
+-- 3. Add the following policies using the UI or SQL Editor:
+
+-- POLICY 1: Allow authenticated users (barbers) to upload evidence photos
+-- 
+-- Policy Name: barbers_can_upload_evidence_photos
+-- Policy Type: INSERT
+-- Target Roles: authenticated
+-- WITH CHECK expression:
+--
+-- bucket_id = 'barber-portfolios' 
+-- AND (storage.foldername(name))[1] = 'evidence'
+-- AND auth.uid() IN (
+--   SELECT user_id 
+--   FROM barbers 
+--   WHERE id::text = (
+--     SELECT barber_id::text
+--     FROM bookings 
+--     WHERE id::text = (storage.foldername(name))[2]
+--   )
+-- )
+
+-- POLICY 2: Allow authenticated users to view evidence photos for their bookings
+--
+-- Policy Name: users_can_view_evidence_photos  
+-- Policy Type: SELECT
+-- Target Roles: authenticated
+-- USING expression:
+--
+-- bucket_id = 'barber-portfolios' 
+-- AND (storage.foldername(name))[1] = 'evidence'
+-- AND (
+--   auth.uid() IN (
+--     SELECT user_id 
+--     FROM barbers 
+--     WHERE id::text = (
+--       SELECT barber_id::text
+--       FROM bookings 
+--       WHERE id::text = (storage.foldername(name))[2]
+--     )
+--   )
+--   OR
+--   auth.uid()::text = (
+--     SELECT customer_id::text
+--     FROM bookings 
+--     WHERE id::text = (storage.foldername(name))[2]
+--   )
+-- )
+
+-- ============================================
+-- TEMPORARY WORKAROUND (Delete after policies are set)
+-- ============================================
+-- If you need immediate testing, you can temporarily disable RLS on the bucket:
+-- This makes the evidence folder publicly accessible (NOT RECOMMENDED for production)
+--
+-- UPDATE storage.buckets 
+-- SET public = true 
+-- WHERE id = 'barber-portfolios';
+--
+-- Remember to re-enable RLS and add proper policies before going to production!
+
+SELECT 'Storage policies for evidence photos must be added via Supabase Dashboard' as notice;

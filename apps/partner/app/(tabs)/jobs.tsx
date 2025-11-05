@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
@@ -12,8 +12,10 @@ import * as Device from 'expo-device';
 import { locationTrackingService } from '@mari-gunting/shared/services/locationTrackingService';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
-import { useLocalSearchParams } from 'expo-router';
+import { uploadEvidencePhoto } from '@mari-gunting/shared/services/storage';
+import { useLocalSearchParams, router } from 'expo-router';
 import { formatTime, formatLocalDate, formatLocalTime } from '@/utils/format';
+import { useFocusEffect } from '@react-navigation/native';
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'completed';
 
@@ -36,14 +38,10 @@ export default function PartnerJobsScreen() {
   
   // Completion flow state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [completionChecklist, setCompletionChecklist] = useState<ChecklistItem[]>([
-    { id: '1', label: 'Service completed to satisfaction', checked: false },
-    { id: '2', label: 'Area cleaned up', checked: false },
-    { id: '3', label: 'Customer happy with result', checked: false },
-    { id: '4', label: 'Payment confirmed (Cash collected)', checked: false },
-  ]);
+  const [completionChecklist, setCompletionChecklist] = useState<ChecklistItem[]>([]);
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const processedJobId = useRef<string | null>(null);
 
   // Fetch barber ID from barbers table using user_id
@@ -82,29 +80,47 @@ export default function PartnerJobsScreen() {
 
   const partnerJobs = bookingsResponse?.data || [];
 
-  // Auto-open job detail when navigating from Dashboard with jobId param
-  useEffect(() => {
-    // Only process if jobId exists, jobs loaded, and we haven't processed this jobId yet
-    if (params.jobId && partnerJobs.length > 0 && processedJobId.current !== params.jobId) {
-      const jobToOpen = partnerJobs.find(j => j.id === params.jobId);
-      if (jobToOpen) {
-        console.log('📂 Auto-opening job from Dashboard:', params.jobId);
-        setSelectedJob(jobToOpen);
-        // Mark this jobId as processed
-        processedJobId.current = params.jobId;
-        // Set filter to show this job's category
-        if (jobToOpen.status === 'pending') {
-          setFilterStatus('pending');
-        } else if (['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(jobToOpen.status)) {
-          setFilterStatus('active');
+  // GRAB STANDARD: Set filter AND open modal on EVERY screen focus when navigating with jobId
+  useFocusEffect(
+    useCallback(() => {
+      if (params.jobId && partnerJobs.length > 0 && processedJobId.current !== params.jobId) {
+        console.log('🔄 Screen focused with jobId:', params.jobId);
+        
+        // Find the job first
+        const jobToOpen = partnerJobs.find(j => j.id === params.jobId);
+        if (jobToOpen) {
+          console.log('📂 Auto-opening job from Dashboard:', params.jobId);
+          
+          // Mark this jobId as processed to prevent re-opening
+          processedJobId.current = params.jobId;
+          
+          // Set filter based on actual job status
+          console.log('📊 Job status:', jobToOpen.status);
+          if (jobToOpen.status === 'pending') {
+            console.log('✅ Setting filter to: pending');
+            setFilterStatus('pending');
+          } else if (['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(jobToOpen.status)) {
+            console.log('✅ Setting filter to: active');
+            setFilterStatus('active');
+          } else if (['completed', 'cancelled', 'rejected', 'expired'].includes(jobToOpen.status)) {
+            console.log('✅ Setting filter to: completed');
+            setFilterStatus('completed');
+          } else {
+            console.log('⚠️ Unknown status, setting filter to: all');
+            setFilterStatus('all');
+          }
+          
+          // Open the modal
+          setSelectedJob(jobToOpen);
+          
+          // Clear params to prevent re-opening on next focus
+          setTimeout(() => {
+            router.setParams({ jobId: undefined });
+          }, 100);
         }
       }
-    }
-    // Reset processed jobId when params.jobId is cleared
-    if (!params.jobId && processedJobId.current) {
-      processedJobId.current = null;
-    }
-  }, [params.jobId, partnerJobs]);
+    }, [params.jobId, partnerJobs])
+  );
 
   // CRITICAL: Auto-update selectedJob when data refreshes from backend
   useEffect(() => {
@@ -168,6 +184,36 @@ export default function PartnerJobsScreen() {
       supabase.removeChannel(channel);
     };
   }, [barberId, queryClient]);
+
+  // Real-time subscription for booking status updates (Grab pattern: instant timeline updates)
+  useEffect(() => {
+    if (!selectedJob?.id) return;
+
+    console.log('🔊 Setting up real-time status updates for job:', selectedJob.id);
+
+    const channel = supabase
+      .channel(`booking-status-${selectedJob.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bookings',
+          filter: `id=eq.${selectedJob.id}`,
+        },
+        (payload) => {
+          console.log('🔄 Job status updated in real-time:', payload.new);
+          setSelectedJob(payload.new as Booking);
+          // Also refresh full list
+          queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedJob?.id, queryClient]);
 
   // Mutation for updating booking status
   const updateStatusMutation = useMutation({
@@ -404,37 +450,142 @@ export default function PartnerJobsScreen() {
   };
 
   const handleStartJob = (job: Booking) => {
+    // EVIDENCE PHOTO: Mandatory before photo (Grab standard)
     Alert.alert(
-      'Start Service',
-      'Begin providing the service?',
+      '📸 Before Photo Required',
+      'Take a photo of the customer before starting service',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Start Service',
-          onPress: async () => {
-            try {
-              // Optimistic update
-              const updatedJob = { ...job, status: 'in_progress' as BookingStatus };
-              setSelectedJob(updatedJob);
-              
-              await updateStatusMutation.mutateAsync({ 
-                bookingId: job.id, 
-                newStatus: 'in_progress' 
-              });
-              
-              Alert.alert(
-                '✂️ Service Started', 
-                'Timer started. Take your time and do great work!',
-                [{ text: 'OK' }]
-              );
-            } catch (error: any) {
-              setSelectedJob(job); // Rollback
-              Alert.alert('Error', error.message || 'Failed to start service');
-            }
-          },
+          text: '📷 Take Photo',
+          onPress: () => captureBeforePhoto(job, 'camera'),
         },
       ]
     );
+  };
+
+  // Capture and upload before photo
+  const captureBeforePhoto = async (job: Booking, source: 'camera' | 'library') => {
+    try {
+      let result: ImagePicker.ImagePickerResult;
+      
+      if (source === 'camera') {
+        // Request camera permission
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Camera permission is needed to take photos.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.7,
+        });
+      } else {
+        // Request library permission
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Photo library permission is needed.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.7,
+        });
+      }
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        // User cancelled - must take photo (mandatory)
+        Alert.alert(
+          'Photo Required',
+          'Before photo is required to start service',
+          [
+            { text: 'OK', onPress: () => captureBeforePhoto(job, 'camera') },
+          ]
+        );
+        return;
+      }
+
+      const photoUri = result.assets[0].uri;
+      
+      // Upload to Supabase (no alert, just upload silently)
+      const uploadResult = await uploadEvidencePhoto(job.id, photoUri, 'before');
+      
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+
+      // Proceed with starting service and passing the photo URL
+      proceedWithStartService(job, uploadResult.url);
+      
+    } catch (error: any) {
+      console.error('❌ Error capturing before photo:', error);
+      Alert.alert(
+        'Photo Upload Failed',
+        'Unable to upload photo. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => captureBeforePhoto(job, 'camera') },
+        ]
+      );
+    }
+  };
+
+  // Proceed with starting service (with or without before photo)
+  const proceedWithStartService = async (job: Booking, beforePhotoUrl: string | null) => {
+    try {
+      // First, update status to in_progress
+      await updateStatusMutation.mutateAsync({ 
+        bookingId: job.id, 
+        newStatus: 'in_progress' 
+      });
+
+      // If we have a before photo, update evidence_photos field
+      if (beforePhotoUrl) {
+        const { error } = await supabase
+          .from('bookings')
+          .update({ 
+            evidence_photos: { 
+              before: [beforePhotoUrl], 
+              after: [] 
+            } 
+          })
+          .eq('id', job.id);
+
+        if (error) {
+          console.error('❌ Error saving before photo URL:', error);
+          // Don't fail the whole operation, just log it
+        }
+      }
+
+      // Optimistic update with before photo
+      const updatedJob = { 
+        ...job, 
+        status: 'in_progress' as BookingStatus,
+        evidence_photos: beforePhotoUrl ? { before: [beforePhotoUrl], after: [] } : undefined
+      };
+      setSelectedJob(updatedJob);
+
+      // Update local state for completion modal
+      if (beforePhotoUrl) {
+        setBeforePhotos([beforePhotoUrl]);
+      }
+      
+      Alert.alert(
+        '✂️ Service Started', 
+        beforePhotoUrl 
+          ? '📸 Before photo saved! Timer started. Take your time and do great work!' 
+          : 'Timer started. Take your time and do great work!',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('❌ Error starting service:', error);
+      setSelectedJob(job); // Rollback
+      Alert.alert('Error', error.message || 'Failed to start service');
+    }
   };
 
   const handleCompleteJob = (job: Booking) => {
@@ -443,6 +594,30 @@ export default function PartnerJobsScreen() {
       Alert.alert('Error', 'Unable to load job details');
       return;
     }
+    
+    // Load existing evidence photos if available
+    if (job.evidence_photos) {
+      if (job.evidence_photos.before && job.evidence_photos.before.length > 0) {
+        setBeforePhotos(job.evidence_photos.before);
+        console.log('📸 Loaded before photos:', job.evidence_photos.before);
+      }
+      // Don't load after photos as user needs to take fresh ones
+    }
+    
+    // SMART CHECKLIST: Different items based on payment method (Grab standard)
+    const isCashPayment = job.payment_method === 'cash';
+    const checklistItems: ChecklistItem[] = [
+      { id: '1', label: 'Service completed to customer satisfaction', checked: false },
+      { id: '2', label: 'Customer location was accurate', checked: false },
+      { id: '3', label: 'Area cleaned up and tidy', checked: false },
+      { id: '4', label: 'Photos taken (before/after)', checked: false },
+      ...(isCashPayment 
+        ? [{ id: '5', label: `Cash collected: RM ${job.totalPrice || job.total_price}`, checked: false }]
+        : [{ id: '5', label: 'Payment authorized successfully', checked: false }]
+      ),
+    ];
+    
+    setCompletionChecklist(checklistItems);
     // Open completion modal
     setShowCompletionModal(true);
   };
@@ -461,17 +636,10 @@ export default function PartnerJobsScreen() {
     
     if (afterPhotos.length === 0) {
       Alert.alert(
-        'No Photos',
-        'Would you like to add at least one "after" photo of your work?',
+        '📸 After Photo Required',
+        'Please take at least one photo of your completed work',
         [
-          { 
-            text: 'Add Photo', 
-            onPress: () => {} // User can still add photo
-          },
-          {
-            text: 'Complete Anyway',
-            onPress: () => finalizeJobCompletion()
-          }
+          { text: 'OK', onPress: () => takePhoto('after') }
         ]
       );
       return;
@@ -484,6 +652,74 @@ export default function PartnerJobsScreen() {
     if (!selectedJob) return;
 
     try {
+      setIsSubmitting(true);
+      
+      // EVIDENCE PHOTO: Upload after photos first (if any)
+      let afterPhotoUrls: string[] = [];
+      
+      if (afterPhotos.length > 0) {
+        // Upload all after photos in parallel (no alert, just loading state)
+        const uploadPromises = afterPhotos.map(photoUri => 
+          uploadEvidencePhoto(selectedJob.id, photoUri, 'after')
+        );
+        
+        const uploadResults = await Promise.all(uploadPromises);
+        
+        // Collect successful uploads
+        afterPhotoUrls = uploadResults
+          .filter(result => result.success && result.url)
+          .map(result => result.url!);
+        
+        // Check if all uploads succeeded
+        if (afterPhotoUrls.length !== afterPhotos.length) {
+          setIsSubmitting(false);
+          const failedCount = afterPhotos.length - afterPhotoUrls.length;
+          Alert.alert(
+            'Upload Warning',
+            `${failedCount} photo(s) failed to upload. Continue anyway?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Continue', onPress: async () => await completeJobWithPhotos(afterPhotoUrls) },
+            ]
+          );
+          return;
+        }
+      }
+      
+      await completeJobWithPhotos(afterPhotoUrls);
+      
+    } catch (error: any) {
+      console.error('❌ Error completing job:', error);
+      setIsSubmitting(false);
+      Alert.alert('Error', error.message || 'Failed to complete job. Please try again.');
+    }
+  };
+  
+  // Complete job with uploaded photo URLs
+  const completeJobWithPhotos = async (afterPhotoUrls: string[]) => {
+    if (!selectedJob) return;
+    
+    try {
+      // Update evidence_photos with after photos
+      if (afterPhotoUrls.length > 0) {
+        const currentBeforePhotos = selectedJob.evidence_photos?.before || beforePhotos;
+        
+        const { error } = await supabase
+          .from('bookings')
+          .update({ 
+            evidence_photos: { 
+              before: currentBeforePhotos, 
+              after: afterPhotoUrls 
+            } 
+          })
+          .eq('id', selectedJob.id);
+
+        if (error) {
+          console.error('❌ Error saving after photo URLs:', error);
+          // Don't fail the whole operation, just log it
+        }
+      }
+      
       // Update job status to completed
       await updateStatusMutation.mutateAsync({ 
         bookingId: selectedJob.id, 
@@ -498,13 +734,20 @@ export default function PartnerJobsScreen() {
         });
       }
 
+      // Calculate actual earnings (services 85% + full travel cost)
+      const servicesTotal = selectedJob.services?.reduce((sum, s) => sum + s.price, 0) || 0;
+      const travelCost = selectedJob.travelCost || 0;
+      const actualEarnings = (servicesTotal * 0.85) + travelCost;
+      
       const paymentMessage = selectedJob.payment_method === 'cash' 
-        ? 'Cash payment has been recorded' 
+        ? 'Cash collected from customer' 
         : 'will be credited to your account';
 
+      setIsSubmitting(false);
+      
       Alert.alert(
         'Job Completed! 🎉',
-        `Great work! RM ${selectedJob.total_price || selectedJob.totalPrice} ${paymentMessage}.`,
+        `Great work! You earned RM ${actualEarnings.toFixed(2)} ${paymentMessage}.`,
         [
           {
             text: 'Done',
@@ -512,12 +755,7 @@ export default function PartnerJobsScreen() {
               setShowCompletionModal(false);
               setSelectedJob(null);
               // Reset completion state
-              setCompletionChecklist([
-                { id: '1', label: 'Service completed to satisfaction', checked: false },
-                { id: '2', label: 'Area cleaned up', checked: false },
-                { id: '3', label: 'Customer happy with result', checked: false },
-                { id: '4', label: 'Payment confirmed (Cash collected)', checked: false },
-              ]);
+              setCompletionChecklist([]);
               setBeforePhotos([]);
               setAfterPhotos([]);
             }
@@ -526,6 +764,7 @@ export default function PartnerJobsScreen() {
       );
     } catch (error: any) {
       console.error('❌ Error completing job:', error);
+      setIsSubmitting(false);
       Alert.alert('Error', error.message || 'Failed to complete job. Please try again.');
     }
   };
@@ -645,15 +884,8 @@ export default function PartnerJobsScreen() {
   };
   
   const showPhotoOptions = (type: 'before' | 'after') => {
-    Alert.alert(
-      'Add Photo',
-      'Choose photo source',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Take Photo', onPress: () => takePhoto(type) },
-        { text: 'Choose from Library', onPress: () => pickImage(type) },
-      ]
-    );
+    // After photos must be camera only for authenticity
+    takePhoto(type);
   };
 
   // Week 4: Navigation & Contact handlers
@@ -910,7 +1142,7 @@ export default function PartnerJobsScreen() {
                 </View>
                 <View style={[styles.jobStatusBadge, { backgroundColor: getStatusBackground(job.status) }]}>
                   <Text style={[styles.jobStatusText, { color: getStatusColor(job.status) }]}>
-                    {job.status.charAt(0).toUpperCase() + job.status.slice(1).replace('-', ' ')}
+                    {job.status.charAt(0).toUpperCase() + job.status.slice(1).replace(/[-_]/g, ' ')}
                   </Text>
                 </View>
               </View>
@@ -979,13 +1211,20 @@ export default function PartnerJobsScreen() {
         visible={selectedJob !== null && !showCompletionModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setSelectedJob(null)}
+        onRequestClose={() => {
+          setSelectedJob(null);
+          processedJobId.current = null;
+        }}
       >
         {selectedJob && !showCompletionModal && (
           <SafeAreaView style={styles.modalContainer} edges={['top']}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setSelectedJob(null)}>
+              <TouchableOpacity onPress={() => {
+                setSelectedJob(null);
+                // Reset processedJobId to allow re-navigation from Dashboard
+                processedJobId.current = null;
+              }}>
                 <Ionicons name="close" size={28} color={COLORS.text.primary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Job Details</Text>
@@ -1034,7 +1273,7 @@ export default function PartnerJobsScreen() {
               </View>
 
               {/* Progress Timeline - Only show for active jobs */}
-              {!['completed', 'cancelled', 'rejected', 'expired', 'pending'].includes(selectedJob.status) && selectedJob.status !== 'arrived' && (
+              {!['completed', 'cancelled', 'rejected', 'expired', 'pending'].includes(selectedJob.status) && (
                 <View style={styles.timelineSection}>
                   <Text style={styles.timelineSectionTitle}>Job Progress</Text>
                   <View style={styles.timeline}>
@@ -1048,7 +1287,9 @@ export default function PartnerJobsScreen() {
                       </View>
                       <View style={styles.timelineContent}>
                         <Text style={styles.timelineLabel}>Accepted</Text>
-                        <Text style={styles.timelineTime}>Job accepted</Text>
+                        <Text style={styles.timelineTime}>
+                          {selectedJob.accepted_at ? formatLocalTime(selectedJob.accepted_at) : 'Job accepted'}
+                        </Text>
                       </View>
                     </View>
 
@@ -1064,12 +1305,40 @@ export default function PartnerJobsScreen() {
                             <Ionicons name="checkmark" size={12} color={COLORS.background.primary} />
                           )}
                         </View>
-                        {selectedJob.status !== 'on_the_way' && <View style={styles.timelineLine} />}
+                        <View style={styles.timelineLine} />
                       </View>
                       <View style={styles.timelineContent}>
                         <Text style={styles.timelineLabel}>On the way</Text>
                         <Text style={styles.timelineTime}>
-                          {['on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) ? 'Heading to location' : 'Pending'}
+                          {selectedJob.on_the_way_at 
+                            ? formatLocalTime(selectedJob.on_the_way_at)
+                            : ['on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) ? 'Heading to location' : 'Pending'
+                          }
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Arrived */}
+                    <View style={styles.timelineItem}>
+                      <View style={styles.timelineIndicator}>
+                        <View style={[
+                          styles.timelineDot,
+                          ['arrived', 'in_progress'].includes(selectedJob.status) && styles.timelineDotCompleted,
+                          ['accepted', 'on_the_way'].includes(selectedJob.status) && styles.timelineDotPending
+                        ]}>
+                          {['arrived', 'in_progress'].includes(selectedJob.status) && (
+                            <Ionicons name="checkmark" size={12} color={COLORS.background.primary} />
+                          )}
+                        </View>
+                        <View style={styles.timelineLine} />
+                      </View>
+                      <View style={styles.timelineContent}>
+                        <Text style={styles.timelineLabel}>Arrived</Text>
+                        <Text style={styles.timelineTime}>
+                          {selectedJob.arrived_at
+                            ? formatLocalTime(selectedJob.arrived_at)
+                            : ['arrived', 'in_progress'].includes(selectedJob.status) ? 'At customer location' : 'Pending'
+                          }
                         </Text>
                       </View>
                     </View>
@@ -1080,9 +1349,9 @@ export default function PartnerJobsScreen() {
                         <View style={[
                           styles.timelineDot,
                           selectedJob.status === 'in_progress' && styles.timelineDotActive,
-                          !['accepted', 'on_the_way', 'arrived'].includes(selectedJob.status) && styles.timelineDotPending
+                          !['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && styles.timelineDotPending
                         ]}>
-                          {selectedJob.status === 'in-progress' && (
+                          {selectedJob.status === 'in_progress' && (
                             <View style={styles.timelineDotPulse} />
                           )}
                         </View>
@@ -1090,7 +1359,10 @@ export default function PartnerJobsScreen() {
                       <View style={styles.timelineContent}>
                         <Text style={styles.timelineLabel}>Service in Progress</Text>
                         <Text style={styles.timelineTime}>
-                          {selectedJob.status === 'in-progress' ? 'Currently servicing' : 'Not started'}
+                          {selectedJob.started_at
+                            ? `${formatLocalTime(selectedJob.started_at)} - Now`
+                            : selectedJob.status === 'in_progress' ? 'Currently servicing' : 'Not started'
+                          }
                         </Text>
                       </View>
                     </View>
@@ -1400,32 +1672,41 @@ export default function PartnerJobsScreen() {
               ))}
             </View>
 
-            {/* Before Photos */}
+            {/* Before Photos - Read-only if evidence exists */}
             <View style={styles.detailSection}>
-              <Text style={styles.detailSectionTitle}>Before Photos (Optional)</Text>
-              <Text style={styles.sectionSubtitle}>Show the initial state</Text>
-              <View style={styles.photosGrid}>
-                {beforePhotos.map((uri, index) => (
-                  <View key={`before-${index}-${uri.substring(0, 10)}`} style={styles.photoContainer}>
-                    <Image source={{ uri }} style={styles.photo} />
-                    <TouchableOpacity
-                      style={styles.photoRemoveButton}
-                      onPress={() => removePhoto('before', index)}
-                    >
-                      <Ionicons name="close-circle" size={24} color={COLORS.error} />
-                    </TouchableOpacity>
+              <View style={styles.photoHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.detailSectionTitle}>Before Photos</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    {beforePhotos.length > 0 
+                      ? '📸 Taken at service start' 
+                      : 'Required - taken when starting service'}
+                  </Text>
+                </View>
+                {beforePhotos.length > 0 && (
+                  <View style={styles.evidenceBadge}>
+                    <Ionicons name="shield-checkmark" size={14} color={COLORS.success} />
+                    <Text style={styles.evidenceBadgeText}>Evidence</Text>
                   </View>
-                ))}
-                {beforePhotos.length < 3 && (
-                  <TouchableOpacity
-                    style={styles.addPhotoButton}
-                    onPress={() => showPhotoOptions('before')}
-                  >
-                    <Ionicons name="camera" size={32} color={COLORS.text.tertiary} />
-                    <Text style={styles.addPhotoText}>Add Photo</Text>
-                  </TouchableOpacity>
                 )}
               </View>
+              {beforePhotos.length > 0 ? (
+                <View style={styles.photosGrid}>
+                  {beforePhotos.map((uri, index) => (
+                    <View key={`before-${index}-${uri.substring(0, 10)}`} style={styles.photoContainer}>
+                      <Image source={{ uri }} style={styles.photo} />
+                      <View style={styles.photoLockBadge}>
+                        <Ionicons name="lock-closed" size={16} color={COLORS.background.primary} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.noPhotoContainer}>
+                  <Ionicons name="alert-circle-outline" size={32} color={COLORS.error} />
+                  <Text style={styles.noPhotoText}>Before photo is required and must be taken when starting service</Text>
+                </View>
+              )}
             </View>
 
             {/* After Photos */}
@@ -1433,11 +1714,11 @@ export default function PartnerJobsScreen() {
               <View style={styles.photoHeaderRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.detailSectionTitle}>After Photos</Text>
-                  <Text style={styles.sectionSubtitle}>Show your great work! ✨</Text>
+                  <Text style={styles.sectionSubtitle}>Take at least 1 photo 📸</Text>
                 </View>
                 {afterPhotos.length === 0 && (
                   <View style={styles.requiredBadge}>
-                    <Text style={styles.requiredBadgeText}>Recommended</Text>
+                    <Text style={styles.requiredBadgeText}>Required</Text>
                   </View>
                 )}
               </View>
@@ -1459,13 +1740,13 @@ export default function PartnerJobsScreen() {
                     onPress={() => showPhotoOptions('after')}
                   >
                     <Ionicons name="camera" size={32} color={COLORS.text.tertiary} />
-                    <Text style={styles.addPhotoText}>Add Photo</Text>
+                    <Text style={styles.addPhotoText}>{afterPhotos.length === 0 ? 'Take Photo' : 'Add More'}</Text>
                   </TouchableOpacity>
                 )}
               </View>
             </View>
 
-            {/* Job Summary */}
+            {/* Job Summary - Customer Info */}
             <View style={styles.detailSection}>
               <Text style={styles.detailSectionTitle}>Job Summary</Text>
               <View style={styles.summaryRow}>
@@ -1480,13 +1761,56 @@ export default function PartnerJobsScreen() {
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Duration</Text>
-                <Text style={styles.summaryValue}>{selectedJob?.duration} min</Text>
+                <Text style={styles.summaryValue}>
+                  {selectedJob?.services?.reduce((sum, s) => sum + (s.duration || 0), 0) || selectedJob?.duration} min
+                </Text>
               </View>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryTotalLabel}>Total Payment</Text>
-                <Text style={styles.summaryTotalValue}>RM {selectedJob?.totalPrice}</Text>
+            </View>
+
+            {/* Your Earnings - Grab Standard */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionTitle}>Your Earnings</Text>
+              <View style={styles.earningsBreakdown}>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Services Total</Text>
+                  <Text style={styles.priceValue}>
+                    RM {(selectedJob?.services?.reduce((sum, s) => sum + s.price, 0) || 0).toFixed(2)}
+                  </Text>
+                </View>
+                {selectedJob?.travelCost > 0 && (
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>
+                      Travel Cost ({selectedJob?.distance ? `${Number(selectedJob.distance).toFixed(1)} km` : 'N/A'})
+                    </Text>
+                    <Text style={styles.priceValue}>RM {selectedJob.travelCost.toFixed(2)}</Text>
+                  </View>
+                )}
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Total</Text>
+                  <Text style={styles.priceValue}>
+                    RM {((selectedJob?.services?.reduce((sum, s) => sum + s.price, 0) || 0) + (selectedJob?.travelCost || 0)).toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.priceRow}>
+                  <Text style={[styles.priceLabel, { color: '#FF6B6B' }]}>Platform Commission (15% on services)</Text>
+                  <Text style={[styles.priceValue, { color: '#FF6B6B' }]}>- RM {((selectedJob?.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.15).toFixed(2)}</Text>
+                </View>
+                <View style={styles.priceDivider} />
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceTotalLabel}>You'll Earn</Text>
+                  <Text style={[styles.priceTotalValue, { color: '#10B981' }]}>
+                    RM {(((selectedJob?.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.85) + (selectedJob?.travelCost || 0)).toFixed(2)}
+                  </Text>
+                </View>
               </View>
+              {selectedJob?.payment_method === 'cash' && (
+                <View style={styles.cashNotice}>
+                  <Ionicons name="cash-outline" size={20} color="#F59E0B" />
+                  <Text style={styles.cashNoticeText}>
+                    💵 Collect RM {selectedJob?.totalPrice} cash from customer
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View style={{ height: 100 }} />
@@ -1497,12 +1821,25 @@ export default function PartnerJobsScreen() {
             <TouchableOpacity
               style={[
                 styles.completeJobButton,
-                !completionChecklist.every(item => item.checked) && styles.completeJobButtonDisabled
+                (!completionChecklist.every(item => item.checked) || isSubmitting) && styles.completeJobButtonDisabled
               ]}
               onPress={handleFinalizeCompletion}
+              disabled={isSubmitting || !completionChecklist.every(item => item.checked)}
+              activeOpacity={0.8}
             >
-              <Ionicons name="checkmark-circle" size={24} color={COLORS.background.primary} />
-              <Text style={styles.completeJobButtonText}>Complete & Submit</Text>
+              {isSubmitting ? (
+                <>
+                  <ActivityIndicator size="small" color={COLORS.background.primary} />
+                  <Text style={styles.completeJobButtonText}>
+                    {afterPhotos.length > 0 ? 'Uploading Photos...' : 'Submitting...'}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={24} color={COLORS.background.primary} />
+                  <Text style={styles.completeJobButtonText}>Complete & Submit</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -1965,6 +2302,26 @@ const styles = StyleSheet.create({
   priceBreakdown: {
     gap: 12,
   },
+  earningsBreakdown: {
+    gap: 12,
+  },
+  cashNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  cashNoticeText: {
+    ...TYPOGRAPHY.body.regular,
+    color: '#F59E0B',
+    fontWeight: '600',
+    flex: 1,
+  },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2212,6 +2569,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
+  evidenceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  evidenceBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.success,
+  },
   photosGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2239,6 +2610,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
+  },
+  photoLockBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  noPhotoContainer: {
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+  },
+  noPhotoText: {
+    ...TYPOGRAPHY.body.small,
+    color: COLORS.text.tertiary,
+    textAlign: 'center',
   },
   addPhotoButton: {
     width: 100,

@@ -159,6 +159,24 @@ export default function BookingDetailScreen() {
 
   // Helper to display payment status based on booking + payment status combination
   const getPaymentStatusDisplay = (bookingStatus: string, paymentStatus: string) => {
+    // Payment completed or authorized (card payment done)
+    if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
+      return 'PAID';
+    }
+    
+    // For reversed/refunded payments (cancelled bookings)
+    if (paymentStatus === 'reversed') {
+      return 'REVERSED';
+    }
+    
+    if (paymentStatus === 'refunded') {
+      return 'REFUNDED';
+    }
+    
+    if (paymentStatus === 'refund_pending' || paymentStatus === 'refund_initiated') {
+      return 'REFUNDING';
+    }
+    
     // For rejected/cancelled bookings that never had payment
     if ((bookingStatus === 'rejected' || bookingStatus === 'cancelled') && paymentStatus === 'pending') {
       return 'NOT PAID';
@@ -169,13 +187,8 @@ export default function BookingDetailScreen() {
       return 'AWAITING PAYMENT';
     }
     
-    // Payment completed
-    if (paymentStatus === 'completed') {
-      return 'PAID';
-    }
-    
     // Fallback to raw status
-    return paymentStatus.toUpperCase();
+    return paymentStatus.toUpperCase().replace(/_/g, ' ');
   };
 
   const getStatusConfig = (status: BookingStatus) => {
@@ -920,17 +933,6 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
-        {/* Cancellation Info */}
-        {booking.status === 'cancelled' && booking.cancellationReason && (
-          <View style={[styles.card, styles.cancelCard]}>
-            <Text style={styles.sectionTitle}>Cancellation Reason</Text>
-            <Text style={styles.cancelReason}>{booking.cancellationReason}</Text>
-            <Text style={styles.cancelDate}>
-              Cancelled on {formatLocalDate(booking.cancelledAt || '')}
-            </Text>
-          </View>
-        )}
-
         {/* Rejection Info */}
         {booking.status === 'rejected' && (
           <View style={[styles.card, styles.cancelCard]}>
@@ -979,6 +981,17 @@ export default function BookingDetailScreen() {
             </View>
           </View>
           
+          {/* Card Payment Authorization Note */}
+          {booking.payment_method !== 'cash' && booking.payment_status === 'authorized' && 
+           !['completed', 'cancelled', 'rejected'].includes(booking.status) && (
+            <View style={styles.paymentReminder}>
+              <Ionicons name="information-circle" size={20} color="#00B14F" />
+              <Text style={styles.paymentReminderText}>
+                Payment secured. Final charge will be processed after service completion.
+              </Text>
+            </View>
+          )}
+          
           {/* Cash Payment Reminder */}
           {booking.payment_method === 'cash' && booking.payment_status === 'pending' && (
             <View style={styles.paymentReminder}>
@@ -988,7 +1001,30 @@ export default function BookingDetailScreen() {
               </Text>
             </View>
           )}
+          
+          {/* Authorization Reversal Notice - For cancelled bookings */}
+          {booking.status === 'cancelled' && booking.payment_status === 'reversed' && booking.payment_method !== 'cash' && (
+            <View style={[styles.paymentReminder, { backgroundColor: '#FFF7ED', marginTop: 12 }]}>
+              <Ionicons name="information-circle" size={20} color="#F97316" />
+              <Text style={[styles.paymentReminderText, { color: '#9A3412' }]}>
+                The payment authorization has been released. The hold on your card will be removed by your bank within 5-7 business days.
+              </Text>
+            </View>
+          )}
+          
+          {/* Refund Notice - For cancelled bookings with completed payment */}
+          {booking.status === 'cancelled' && ['refund_pending', 'refund_initiated', 'refunded'].includes(booking.payment_status || '') && (
+            <View style={[styles.paymentReminder, { backgroundColor: '#DBEAFE', marginTop: 12 }]}>
+              <Ionicons name="cash" size={20} color="#1D4ED8" />
+              <Text style={[styles.paymentReminderText, { color: '#1E40AF' }]}>
+                {booking.payment_status === 'refunded' 
+                  ? 'Refund completed. The amount has been returned to your payment method.'
+                  : 'Refund is being processed. You will receive the amount within 5-10 business days.'}
+              </Text>
+            </View>
+          )}
         </View>
+
       </ScrollView>
 
       {/* Bottom Action Buttons */}

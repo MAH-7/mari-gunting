@@ -207,6 +207,19 @@ export interface Booking {
   completedAt?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+  
+  // Status timestamps (Grab standard)
+  accepted_at?: string;
+  on_the_way_at?: string;
+  arrived_at?: string;
+  started_at?: string;
+  
+  // Evidence photos for service verification (Grab standard)
+  evidence_photos?: {
+    before: string[];  // URLs of before photos
+    after: string[];   // URLs of after photos
+  };
+  
   payment?: Payment;
   review?: Review;
 }

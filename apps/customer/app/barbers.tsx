@@ -50,6 +50,9 @@ export default function BarbersScreen() {
   const queryClient = useQueryClient();
   const { location, getCurrentLocation, hasPermission, requestPermission } = useLocation();
   const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRefetchTimestampRef = useRef<number>(0);
+  const processedEventsRef = useRef<Set<string>>(new Set());
+  const isScreenActiveRef = useRef<boolean>(true);
 
   // Get user location on mount
   useEffect(() => {
@@ -104,6 +107,23 @@ export default function BarbersScreen() {
     }
   }, [barbersResponse]);
 
+  // Track screen visibility (Grab pattern: pause subscriptions when not visible)
+  useFocusEffect(
+    useCallback(() => {
+      isScreenActiveRef.current = true;
+      console.log('👁️  Screen is now active - real-time enabled');
+      return () => {
+        isScreenActiveRef.current = false;
+        console.log('👁️  Screen is now inactive - real-time paused');
+        // Clear any pending refetches
+        if (refetchTimeoutRef.current) {
+          clearTimeout(refetchTimeoutRef.current);
+          refetchTimeoutRef.current = null;
+        }
+      };
+    }, [])
+  );
+
   // Real-time subscription for barber availability changes (Grab's pattern)
   useEffect(() => {
     if (!location) return; // Don't subscribe until we have location
@@ -121,11 +141,34 @@ export default function BarbersScreen() {
           table: "profiles",
         },
         (payload) => {
+          // GRAB OPTIMIZATION: Ignore if screen not active
+          if (!isScreenActiveRef.current) {
+            console.log('⏸️  Ignoring real-time event - screen not active');
+            return;
+          }
+
           const affectedUserId = payload.new?.id; // This is profiles.id (user_id)
           const newOnline = payload.new?.is_online;
+          const oldOnline = (payload.old as any)?.is_online;
+
+          // GRAB OPTIMIZATION: Ignore initial sync and non-changes
+          // oldOnline = undefined → initial subscription event, not a real change
+          // oldOnline = newOnline → heartbeat update, not a real change
+          if (oldOnline === undefined || oldOnline === newOnline) {
+            return; // Skip: no meaningful change
+          }
+
+          // GRAB OPTIMIZATION: Deduplicate events (extra safety)
+          const eventKey = `${affectedUserId}-${newOnline}`;
+          if (processedEventsRef.current.has(eventKey)) {
+            return;
+          }
+          processedEventsRef.current.add(eventKey);
+          // Clear old events after 5 seconds (longer window for stability)
+          setTimeout(() => processedEventsRef.current.delete(eventKey), 5000);
 
           console.log(
-            `⚡ Real-time: User ${affectedUserId} online: ${newOnline}`
+            `⚡ Real-time: User ${affectedUserId} online: ${oldOnline} → ${newOnline}`
           );
 
           // Update state directly (instant UI update!)
@@ -133,15 +176,25 @@ export default function BarbersScreen() {
             if (!newOnline) {
               // Barber went offline - remove immediately by matching user_id
               const filtered = prev.filter((b) => b.userId !== affectedUserId);
-              console.log(
-                `👋 Removed offline barber (${prev.length} → ${filtered.length})`
-              );
+              if (filtered.length !== prev.length) {
+                console.log(
+                  `👋 Removed offline barber (${prev.length} → ${filtered.length})`
+                );
+              }
               return filtered;
             } else {
               // Barber came online - only refetch if NOT already in list
               const alreadyInList = prev.some((b) => b.userId === affectedUserId);
               
               if (!alreadyInList) {
+                // GRAB OPTIMIZATION: Rate limit refetches (max 1 per 2 seconds)
+                const now = Date.now();
+                const timeSinceLastRefetch = now - lastRefetchTimestampRef.current;
+                if (timeSinceLastRefetch < 2000) {
+                  console.log(`⏳ Skipping refetch - too soon (${timeSinceLastRefetch}ms ago)`);
+                  return prev;
+                }
+
                 console.log("✅ Barber came online - scheduling refetch...");
 
                 // Clear any pending refetch
@@ -152,6 +205,7 @@ export default function BarbersScreen() {
                 // Wait 500ms before refetching (debounce)
                 refetchTimeoutRef.current = setTimeout(() => {
                   console.log("🔄 Executing debounced refetch...");
+                  lastRefetchTimestampRef.current = Date.now();
                   refetch();
                 }, 500);
               }

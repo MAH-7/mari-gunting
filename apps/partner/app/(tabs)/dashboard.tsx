@@ -8,7 +8,7 @@ import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
-import { formatTime } from '@/utils/format';
+import { formatTime, formatLocalTime } from '@/utils/format';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { Booking } from '@/types';
@@ -673,7 +673,9 @@ export default function PartnerDashboardScreen() {
             console.log('✅ Location tracking started (continuous + background)');
           } catch (locationError) {
             console.error('❌ Failed to start location tracking:', locationError);
+            console.log('⚠️ Continuing with online toggle - location will retry automatically');
             // Don't block the online toggle if location fails
+            // The retry logic in locationTrackingService will handle it
           }
         }
       } else {
@@ -900,7 +902,47 @@ export default function PartnerDashboardScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* New Orders - Show immediately after toggle for visibility */}
+        {/* Active Order - Most urgent: customer waiting */}
+        {nextJob && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Active Order</Text>
+              <Text style={styles.sectionSubtitle}>
+                {nextJob.status === 'accepted' && 'Accepted - Preparing'}
+                {nextJob.status === 'on_the_way' && 'On the way'}
+                {nextJob.status === 'arrived' && 'Arrived at location'}
+                {nextJob.status === 'in_progress' && 'Service in progress'}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.activeCard} activeOpacity={0.9}>
+              <View style={styles.activeLeft}>
+                <View style={styles.activePulse}>
+                  <View style={styles.activeIcon}>
+                    <Ionicons name="navigate" size={20} color="#FFF" />
+                  </View>
+                </View>
+                <View>
+                  <Text style={styles.activeName}>{nextJob.customer?.name}</Text>
+                  <View style={styles.activeMeta}>
+                    <Ionicons name="location" size={12} color="#999" />
+                    <Text style={styles.activeMetaText}>
+                      {nextJob.distance ? `${Number(nextJob.distance).toFixed(1)} km` : 'N/A'} • {nextJob.scheduled_datetime ? formatLocalTime(nextJob.scheduled_datetime) : formatTime(nextJob.scheduledTime)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.navigateBtn}
+                onPress={() => router.push({ pathname: '/(tabs)/jobs', params: { jobId: nextJob.id } })}
+              >
+                <Text style={styles.navigateBtnText}>Navigate</Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* New Orders - Show immediately after active order */}
         {pendingRequests.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -949,7 +991,9 @@ export default function PartnerDashboardScreen() {
                             {job.distance ? `${Number(job.distance).toFixed(1)} km away` : 'Distance N/A'}
                           </Text>
                           <Text style={styles.orderDot}>•</Text>
-                          <Text style={styles.orderMetaText}>{formatTime(job.scheduledTime)}</Text>
+                          <Text style={styles.orderMetaText}>
+                            {job.scheduled_datetime ? formatLocalTime(job.scheduled_datetime) : formatTime(job.scheduledTime)}
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -1042,43 +1086,6 @@ export default function PartnerDashboardScreen() {
             />
           </View>
         </View>
-
-        {/* Active Order - Show after stats */}
-        {nextJob && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Active Order</Text>
-              <Text style={styles.sectionSubtitle}>
-                {nextJob.status === 'accepted' && 'Accepted - Preparing'}
-                {nextJob.status === 'on_the_way' && 'On the way'}
-                {nextJob.status === 'arrived' && 'Arrived at location'}
-                {nextJob.status === 'in_progress' && 'Service in progress'}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.activeCard} activeOpacity={0.9}>
-              <View style={styles.activeLeft}>
-                <View style={styles.activePulse}>
-                  <View style={styles.activeIcon}>
-                    <Ionicons name="navigate" size={20} color="#FFF" />
-                  </View>
-                </View>
-                <View>
-                  <Text style={styles.activeName}>{nextJob.customer?.name}</Text>
-                  <View style={styles.activeMeta}>
-                    <Ionicons name="location" size={12} color="#999" />
-                    <Text style={styles.activeMetaText}>
-                      {nextJob.distance ? `${Number(nextJob.distance).toFixed(1)} km` : 'N/A'} • {formatTime(nextJob.scheduledTime)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <TouchableOpacity style={styles.navigateBtn}>
-                <Text style={styles.navigateBtnText}>Navigate</Text>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          </View>
-        )}
 
       </ScrollView>
     </View>

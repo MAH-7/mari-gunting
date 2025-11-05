@@ -537,6 +537,19 @@ export default function PaymentMethodScreen() {
       // Open payment popup (barber already accepted!)
       RazorpayCheckout.open(checkoutOptions)
         .then(async (data: any) => {
+          console.log('[Payment] Payment successful! Razorpay data:', {
+            order_id: data.razorpay_order_id,
+            payment_id: data.razorpay_payment_id,
+          });
+          
+          // Check current booking status before linking
+          const { data: currentBooking } = await supabase
+            .from('bookings')
+            .select('payment_status, status')
+            .eq('id', bookingId)
+            .single();
+          console.log('[Payment] Current booking status before linking:', currentBooking);
+          
           // Payment successful - link to booking
           const verified = await curlecService.verifyPayment({
             razorpay_order_id: data.razorpay_order_id,
@@ -549,12 +562,20 @@ export default function PaymentMethodScreen() {
           }
 
           // Link payment
-          await bookingService.linkPaymentToBooking(
+          console.log('[Payment] Linking payment to booking...');
+          const linkResult = await bookingService.linkPaymentToBooking(
             bookingId,
             currentUserId,
             data.razorpay_payment_id,
             data.razorpay_order_id
           );
+          
+          if (!linkResult.success) {
+            console.error('[Payment] Failed to link payment:', linkResult.error);
+            throw new Error(linkResult.error || 'Failed to link payment');
+          }
+          
+          console.log('[Payment] ✅ Payment linked successfully:', linkResult.data);
 
           // Apply voucher if selected
           if (selectedVoucher && discount > 0) {

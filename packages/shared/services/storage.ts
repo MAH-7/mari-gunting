@@ -17,7 +17,8 @@ export type BucketName =
   | 'barbershops'
   | 'services'
   | 'reviews'
-  | 'documents';
+  | 'documents'
+  | 'barber-portfolios';
 
 export interface UploadResult {
   success: boolean;
@@ -179,6 +180,27 @@ export const uploadReviewImage = async (
   return uploadFile({
     bucket: 'reviews',
     folder: reviewId,
+    fileName,
+    fileUri,
+    contentType: 'image/jpeg',
+  });
+};
+
+/**
+ * Upload evidence photo for job completion (before/after)
+ * Used for service verification and dispute resolution
+ */
+export const uploadEvidencePhoto = async (
+  bookingId: string,
+  fileUri: string,
+  type: 'before' | 'after'
+): Promise<UploadResult> => {
+  const timestamp = Date.now();
+  const fileName = `${type}-${timestamp}.jpg`;
+
+  return uploadFile({
+    bucket: 'barber-portfolios',
+    folder: `evidence/${bookingId}`,
     fileName,
     fileUri,
     contentType: 'image/jpeg',

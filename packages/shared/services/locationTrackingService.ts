@@ -168,8 +168,11 @@ class LocationTrackingService {
   private async updateLocationFromCoords(
     userId: string,
     coords: { latitude: number; longitude: number; accuracy?: number | null },
-    mode: TrackingMode
+    mode: TrackingMode,
+    retryCount = 0
   ): Promise<void> {
+    const MAX_RETRIES = 2;
+    
     try {
       const locationData: LocationUpdate = {
         latitude: coords.latitude,
@@ -178,8 +181,8 @@ class LocationTrackingService {
         timestamp: Date.now(),
       };
 
-      // Update in Supabase - PostGIS format + heartbeat
-      const { error } = await supabase
+      // Update in Supabase - PostGIS format + heartbeat with timeout
+      const updatePromise = supabase
         .from('profiles')
         .update({
           location: `POINT(${locationData.longitude} ${locationData.latitude})`,
@@ -187,9 +190,28 @@ class LocationTrackingService {
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId);
+      
+      // Add 5 second timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database update timeout')), 5000)
+      );
+      
+      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
 
       if (error) {
-        console.error('❌ Error updating location in Supabase:', error);
+        // Check if error is empty object (network issue)
+        const isEmptyError = error && Object.keys(error).length === 0;
+        const errorMsg = isEmptyError ? 'Network or connection issue' : error;
+        
+        console.error('❌ Error updating location in Supabase:', errorMsg);
+        
+        // Retry if we haven't exceeded max retries
+        if (retryCount < MAX_RETRIES) {
+          console.log(`🔄 Retrying location update from coords (${retryCount + 1}/${MAX_RETRIES})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          return this.updateLocationFromCoords(userId, coords, mode, retryCount + 1);
+        }
+        
         throw error;
       }
 
@@ -208,7 +230,9 @@ class LocationTrackingService {
   /**
    * Update location once (legacy method, now uses updateLocationFromCoords)
    */
-  async updateLocation(userId: string): Promise<LocationUpdate | null> {
+  async updateLocation(userId: string, retryCount = 0): Promise<LocationUpdate | null> {
+    const MAX_RETRIES = 2;
+    
     try {
       console.log('📍 Getting current location...');
 
@@ -237,17 +261,36 @@ class LocationTrackingService {
         accuracy: locationData.accuracy?.toFixed(2),
       });
 
-      // Update in Supabase - PostGIS format
-      const { error } = await supabase
+      // Update in Supabase - PostGIS format with timeout
+      const updatePromise = supabase
         .from('profiles')
         .update({
           location: `POINT(${locationData.longitude} ${locationData.latitude})`,
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId);
+      
+      // Add 5 second timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database update timeout')), 5000)
+      );
+      
+      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
 
       if (error) {
-        console.error('❌ Error updating location in Supabase:', error);
+        // Check if error is empty object (network issue)
+        const isEmptyError = error && Object.keys(error).length === 0;
+        const errorMsg = isEmptyError ? 'Network or connection issue' : error;
+        
+        console.error('❌ Error updating location in Supabase:', errorMsg);
+        
+        // Retry if we haven't exceeded max retries
+        if (retryCount < MAX_RETRIES) {
+          console.log(`🔄 Retrying location update (${retryCount + 1}/${MAX_RETRIES})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          return this.updateLocation(userId, retryCount + 1);
+        }
+        
         throw error;
       }
 
