@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
@@ -123,23 +123,37 @@ export default function PartnerJobsScreen() {
   );
 
   // CRITICAL: Auto-update selectedJob when data refreshes from backend
+  // Optimized to only update when status or timestamps change (prevent unnecessary re-renders)
+  // Preserves customer data to prevent avatar flickering
   useEffect(() => {
     if (selectedJob && partnerJobs.length > 0) {
       const updatedJob = partnerJobs.find(j => j.id === selectedJob.id);
       if (updatedJob) {
-        // Check if status changed
-        if (updatedJob.status !== selectedJob.status) {
-          console.log('🔄 Auto-updating selectedJob status:', selectedJob.status, '→', updatedJob.status);
-          setSelectedJob(updatedJob);
-        }
-        // Also update if other fields changed (e.g., timestamps)
-        else if (JSON.stringify(updatedJob) !== JSON.stringify(selectedJob)) {
-          console.log('🔄 Refreshing selectedJob data');
-          setSelectedJob(updatedJob);
+        // Only update if status or timestamp fields changed
+        const statusChanged = updatedJob.status !== selectedJob.status;
+        const timestampsChanged = 
+          updatedJob.accepted_at !== selectedJob.accepted_at ||
+          updatedJob.on_the_way_at !== selectedJob.on_the_way_at ||
+          updatedJob.arrived_at !== selectedJob.arrived_at ||
+          updatedJob.started_at !== selectedJob.started_at;
+        
+        if (statusChanged || timestampsChanged) {
+          console.log('🔄 Auto-updating selectedJob (status or timestamps changed)');
+          
+          // PRODUCTION FIX: Preserve customer data if it's missing in update
+          // Prevents avatar from disappearing during real-time updates
+          const mergedJob = {
+            ...updatedJob,
+            customer: updatedJob.customer?.avatar 
+              ? updatedJob.customer 
+              : selectedJob.customer // Keep existing customer data if avatar missing
+          };
+          
+          setSelectedJob(mergedJob);
         }
       }
     }
-  }, [partnerJobs, selectedJob?.id]); // Watch partnerJobs changes for this specific job
+  }, [partnerJobs, selectedJob?.id, selectedJob?.status, selectedJob?.accepted_at, selectedJob?.on_the_way_at, selectedJob?.arrived_at, selectedJob?.started_at]);
 
   // Real-time subscription for new bookings
   useEffect(() => {
@@ -203,7 +217,21 @@ export default function PartnerJobsScreen() {
         },
         (payload) => {
           console.log('🔄 Job status updated in real-time:', payload.new);
-          setSelectedJob(payload.new as Booking);
+          
+          // PRODUCTION FIX: Preserve customer data if missing in real-time update
+          if (selectedJob) {
+            const newJob = payload.new as Booking;
+            const mergedJob = {
+              ...newJob,
+              customer: newJob.customer?.avatar 
+                ? newJob.customer 
+                : selectedJob.customer // Keep existing customer data
+            };
+            setSelectedJob(mergedJob);
+          } else {
+            setSelectedJob(payload.new as Booking);
+          }
+          
           // Also refresh full list
           queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
         }
@@ -1044,63 +1072,6 @@ export default function PartnerJobsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
         }
       >
-        {/* Analytics Section - Show when viewing completed jobs */}
-        {filterStatus === 'completed' && completedJobsAnalytics.totalJobs > 0 && (
-          <View style={styles.analyticsSection}>
-            <View style={styles.analyticsTitleRow}>
-              <Ionicons name="bar-chart" size={20} color={COLORS.text.primary} />
-              <Text style={styles.analyticsSectionTitle}>Performance Overview</Text>
-            </View>
-            
-            {/* Stats Cards */}
-            <View style={styles.analyticsGrid}>
-              {/* Total Earnings */}
-              <View style={styles.analyticsCard}>
-                <View style={styles.analyticsIcon}>
-                  <Ionicons name="wallet" size={24} color={COLORS.success} />
-                </View>
-                <Text style={styles.analyticsLabel}>Total Earnings</Text>
-                <Text style={styles.analyticsValue}>RM {completedJobsAnalytics.totalEarnings.toFixed(2)}</Text>
-                <Text style={styles.analyticsSubtext}>{completedJobsAnalytics.totalJobs} jobs completed</Text>
-              </View>
-
-              {/* This Month */}
-              <View style={styles.analyticsCard}>
-                <View style={styles.analyticsIcon}>
-                  <Ionicons name="calendar" size={24} color={COLORS.info} />
-                </View>
-                <Text style={styles.analyticsLabel}>This Month</Text>
-                <Text style={styles.analyticsValue}>RM {completedJobsAnalytics.monthlyEarnings.toFixed(2)}</Text>
-                <Text style={styles.analyticsSubtext}>{completedJobsAnalytics.monthlyJobs} jobs</Text>
-              </View>
-            </View>
-
-            <View style={styles.analyticsGrid}>
-              {/* Average per Job */}
-              <View style={styles.analyticsCard}>
-                <View style={styles.analyticsIcon}>
-                  <Ionicons name="trending-up" size={24} color={COLORS.primary} />
-                </View>
-                <Text style={styles.analyticsLabel}>Avg per Job</Text>
-                <Text style={styles.analyticsValue}>RM {completedJobsAnalytics.averageEarning.toFixed(2)}</Text>
-                <Text style={styles.analyticsSubtext}>Average earnings</Text>
-              </View>
-
-              {/* Completion Rate */}
-              <View style={styles.analyticsCard}>
-                <View style={styles.analyticsIcon}>
-                  <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
-                </View>
-                <Text style={styles.analyticsLabel}>Completed</Text>
-                <Text style={styles.analyticsValue}>{completedJobsAnalytics.totalJobs}</Text>
-                <Text style={styles.analyticsSubtext}>Successful jobs</Text>
-              </View>
-            </View>
-
-            <Text style={styles.jobHistoryTitle}>Job History</Text>
-          </View>
-        )}
-
         {filteredJobs.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons 
@@ -1377,8 +1348,12 @@ export default function PartnerJobsScreen() {
                   <View style={styles.customerAvatar}>
                     {selectedJob.customer?.avatar ? (
                       <Image 
-                        source={{ uri: selectedJob.customer.avatar }} 
+                        source={{ 
+                          uri: selectedJob.customer.avatar,
+                          cache: 'force-cache'
+                        }} 
                         style={styles.customerAvatarImage}
+                        resizeMode="cover"
                       />
                     ) : (
                       <Ionicons name="person" size={32} color={COLORS.primary} />

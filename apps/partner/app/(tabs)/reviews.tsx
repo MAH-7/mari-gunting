@@ -16,8 +16,9 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/shared/constants';
@@ -59,6 +60,15 @@ export default function ReviewsScreen() {
     }
   }, [currentUser?.id, accountType]);
 
+  // Auto-refresh reviews when tab is focused (silent refresh)
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUser?.id && accountType) {
+        loadReviews(false); // false = no loading screen
+      }
+    }, [currentUser?.id, accountType])
+  );
+
   const loadAccountType = async () => {
     try {
       const type = await AsyncStorage.getItem('partnerAccountType');
@@ -68,21 +78,21 @@ export default function ReviewsScreen() {
     }
   };
 
-  const loadReviews = async () => {
+  const loadReviews = async (showLoading = true) => {
     if (!currentUser?.id) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await getPartnerReviews(currentUser.id, accountType);
       setReviews(data);
     } catch (error: any) {
       console.error('[Reviews] Error loading reviews:', error.message);
       Alert.alert('Error', error.message || 'Failed to load reviews');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 

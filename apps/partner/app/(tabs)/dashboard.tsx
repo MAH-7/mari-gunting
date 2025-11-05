@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '@mari-gunting/shared/store/useStore';
@@ -20,6 +20,7 @@ import { locationTrackingService } from '@/services/locationTrackingService';
 import { heartbeatService } from '@/services/heartbeatService';
 import { connectionMonitor } from '@mari-gunting/shared/services/connectionMonitor';
 import * as Location from 'expo-location';
+import { getPartnerReviews, getReviewStats } from '@mari-gunting/shared/services/reviewsService';
 
 // Responsive helper
 const { width } = Dimensions.get('window');
@@ -120,6 +121,7 @@ export default function PartnerDashboardScreen() {
   const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
   const [loadingVerification, setLoadingVerification] = useState(true);
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
+  const [realRating, setRealRating] = useState<number>(0);
   const [backgroundTime, setBackgroundTime] = useState<number | null>(null);
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
@@ -167,6 +169,41 @@ export default function PartnerDashboardScreen() {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Fetch real rating from reviews (on mount and account type change)
+  useEffect(() => {
+    const loadRating = async () => {
+      if (!currentUser?.id) return;
+      try {
+        console.log('📊 [Dashboard] Loading rating for:', { userId: currentUser.id, accountType });
+        const reviews = await getPartnerReviews(currentUser.id, accountType);
+        console.log('📊 [Dashboard] Reviews fetched:', reviews.length);
+        const stats = getReviewStats(reviews);
+        console.log('📊 [Dashboard] Rating calculated:', stats.avgRating);
+        setRealRating(stats.avgRating);
+      } catch (error) {
+        console.error('❌ [Dashboard] Failed to load rating:', error);
+      }
+    };
+    loadRating();
+  }, [currentUser?.id, accountType]);
+
+  // Refresh rating when tab is focused (when navigating back from Reviews)
+  useFocusEffect(
+    useCallback(() => {
+      const refreshRating = async () => {
+        if (!currentUser?.id) return;
+        try {
+          const reviews = await getPartnerReviews(currentUser.id, accountType);
+          const stats = getReviewStats(reviews);
+          setRealRating(stats.avgRating);
+        } catch (error) {
+          console.error('Failed to refresh rating:', error);
+        }
+      };
+      refreshRating();
+    }, [currentUser?.id, accountType])
+  );
 
   // REAL SUPABASE QUERY - Fetch barber bookings
   const { data: bookingsResponse, isLoading: loadingBookings, error: bookingsError } = useQuery({
@@ -526,8 +563,10 @@ export default function PartnerDashboardScreen() {
     if (!currentUser || !barberId)
       return {
         todayEarnings: 0,
-        weekEarnings: 0,
+        monthlyEarnings: 0,
+        monthlyJobs: 0,
         completedToday: 0,
+        totalCompleted: 0,
         pendingCount: 0,
         activeCount: 0,
         goalProgress: 0,
@@ -535,27 +574,69 @@ export default function PartnerDashboardScreen() {
         acceptance: 95,
       };
 
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    // Get local date without UTC conversion
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`; // YYYY-MM-DD in local time
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
+    // Today's stats
     const todayBookings = partnerBookings.filter((b) => b.scheduledDate === today);
     const completed = todayBookings.filter((b) => b.status === 'completed');
-    const todayEarnings = completed.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    const weekEarnings = todayEarnings * 3.5; // Estimate week earnings
+    const todayEarnings = completed.reduce((sum, b) => {
+      const servicesTotal = b.services?.reduce((s, svc) => s + svc.price, 0) || 0;
+      const earnings = (servicesTotal * 0.85) + (b.travelCost || 0);
+      return sum + earnings;
+    }, 0);
+
+    // This month's stats (actual earnings after commission)
+    const monthlyCompleted = partnerBookings.filter((b) => {
+      if (b.status !== 'completed') return false;
+      const bookingDate = new Date(b.scheduledDate || b.scheduled_datetime);
+      return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+    });
+    
+    const monthlyEarnings = monthlyCompleted.reduce((sum, b) => {
+      const servicesTotal = b.services?.reduce((s, svc) => s + svc.price, 0) || 0;
+      const earnings = (servicesTotal * 0.85) + (b.travelCost || 0);
+      return sum + earnings;
+    }, 0);
+
+    // Total completed jobs (all time)
+    const totalCompleted = partnerBookings.filter((b) => b.status === 'completed').length;
 
     const activeCount = partnerBookings.filter((b) => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(b.status)).length;
     const pendingCount = partnerBookings.filter((b) => b.status === 'pending').length;
 
+    // Calculate real acceptance rate (Grab standard)
+    const acceptedCount = partnerBookings.filter((b) => 
+      ['accepted', 'on_the_way', 'arrived', 'in_progress', 'completed'].includes(b.status)
+    ).length;
+    
+    const rejectedCount = partnerBookings.filter((b) => b.status === 'rejected').length;
+    const expiredCount = partnerBookings.filter((b) => b.status === 'expired').length;
+    
+    const totalRequests = acceptedCount + rejectedCount + expiredCount;
+    const acceptanceRate = totalRequests > 0 
+      ? Math.round((acceptedCount / totalRequests) * 100) 
+      : 100; // Default 100% if no requests yet
+
     return {
       todayEarnings,
-      weekEarnings,
+      monthlyEarnings,
+      monthlyJobs: monthlyCompleted.length,
       completedToday: completed.length,
+      totalCompleted,
       pendingCount,
       activeCount,
       goalProgress: Math.min((todayEarnings / dailyGoal) * 100, 100),
-      avgRating: ('rating' in currentUser ? currentUser.rating : 4.8),
-      acceptance: 95,
+      avgRating: realRating || 0,
+      acceptance: acceptanceRate,
     };
-  }, [currentUser, barberId, partnerBookings, dailyGoal]);
+  }, [currentUser, barberId, partnerBookings, dailyGoal, realRating]);
 
   const nextJob = useMemo(() => {
     if (!currentUser || !barberId) return null;
@@ -1052,13 +1133,14 @@ export default function PartnerDashboardScreen() {
           </View>
         )}
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Production Quality */}
         <View style={styles.statsGrid}>
           <View style={styles.statsRow}>
             <StatCard
-              icon="trending-up"
-              label="Week Earnings"
-              value={`RM ${formatCurrency(stats.weekEarnings)}`}
+              icon="calendar"
+              label="This Month"
+              value={`RM ${formatCurrency(stats.monthlyEarnings)}`}
+              subtitle={`${stats.monthlyJobs} jobs`}
               color={COLORS.primary}
               onPress={() => router.push('/(tabs)/earnings')}
             />
@@ -1067,22 +1149,23 @@ export default function PartnerDashboardScreen() {
               label="Rating"
               value={stats.avgRating.toFixed(1)}
               color="#FFB800"
-              onPress={() => router.push('/(tabs)/profile')}
+              onPress={() => router.push('/(tabs)/reviews')}
             />
           </View>
           <View style={styles.statsRow}>
             <StatCard
+              icon="checkmark-circle"
+              label="Total Completed"
+              value={String(stats.totalCompleted)}
+              subtitle="All time"
+              color="#00C48C"
+              onPress={() => router.push('/(tabs)/jobs')}
+            />
+            <StatCard
               icon="checkmark-done"
               label="Acceptance"
               value={`${stats.acceptance}%`}
-              color="#00C48C"
-            />
-            <StatCard
-              icon="car"
-              label="Active Orders"
-              value={String(stats.activeCount)}
-              color="#FF6B6B"
-              onPress={() => router.push('/(tabs)/jobs')}
+              color="#10B981"
             />
           </View>
         </View>
@@ -1093,7 +1176,7 @@ export default function PartnerDashboardScreen() {
 }
 
 // Stat Card Component
-function StatCard({ icon, label, value, color, onPress }: { icon: string; label: string; value: string; color: string; onPress?: () => void }) {
+function StatCard({ icon, label, value, subtitle, color, onPress }: { icon: string; label: string; value: string; subtitle?: string; color: string; onPress?: () => void }) {
   return (
     <TouchableOpacity
       style={styles.statCard}
@@ -1106,6 +1189,7 @@ function StatCard({ icon, label, value, color, onPress }: { icon: string; label:
       </View>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={styles.statValue}>{value}</Text>
+      {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
     </TouchableOpacity>
   );
 }
@@ -1436,8 +1520,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#000',
   },
-
-
+  statSubtitle: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
+  },
 
   // Section
   section: {

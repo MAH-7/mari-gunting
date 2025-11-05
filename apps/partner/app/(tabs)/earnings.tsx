@@ -1,13 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Modal, Alert, StatusBar } from 'react-native';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Modal, Alert, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { useStore } from '@mari-gunting/shared/store/useStore';
-import { mockBookings } from '@/services/mockData';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { Booking } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { bookingService } from '@mari-gunting/shared/services/bookingService';
+import { supabase } from '@mari-gunting/shared/config/supabase';
+import { useFocusEffect } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -19,31 +22,81 @@ export default function GrabEarningsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showTripDetails, setShowTripDetails] = useState<string | null>(null);
+  const [barberId, setBarberId] = useState<string | null>(null);
+
+  // Fetch barber ID from barbers table using user_id
+  useEffect(() => {
+    const fetchBarberId = async () => {
+      if (!currentUser?.id) return;
+      
+      const { data, error } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .single();
+      
+      if (error) {
+        console.error('❌ Error fetching barber ID:', error);
+        return;
+      }
+      
+      setBarberId(data.id);
+    };
+    
+    fetchBarberId();
+  }, [currentUser?.id]);
+
+  // REAL SUPABASE QUERY - Fetch barber bookings
+  const { data: bookingsResponse, isLoading: loadingBookings, refetch } = useQuery({
+    queryKey: ['earnings-bookings', barberId],
+    queryFn: async () => {
+      const result = await bookingService.getBarberBookings(barberId || '');
+      return result;
+    },
+    enabled: !!barberId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const allBookings = bookingsResponse?.data || [];
+
+  // Auto-refresh when tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (barberId) {
+        refetch();
+      }
+    }, [barberId, refetch])
+  );
 
   // Get completed bookings
   const completedBookings = useMemo(() => {
-    if (!currentUser) return [];
-    return mockBookings.filter(
-      (b) => b.barberId === currentUser.id && b.status === 'completed'
-    );
-  }, [currentUser]);
+    return allBookings.filter((b) => b.status === 'completed');
+  }, [allBookings]);
 
-  // Filter by period
+  // Filter by period (using scheduledDate like Dashboard)
   const filteredBookings = useMemo(() => {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Get local date without UTC conversion
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`; // YYYY-MM-DD in local time
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
     return completedBookings.filter((booking) => {
-      if (!booking.completedAt && !booking.createdAt) return false;
-      const jobDate = parseISO(booking.completedAt || booking.createdAt);
+      const bookingDate = booking.scheduledDate || booking.scheduled_datetime;
+      if (!bookingDate) return false;
 
       switch (selectedPeriod) {
         case 'today':
-          return jobDate >= today;
+          return bookingDate === today;
         case 'week':
+          const jobDate = new Date(bookingDate);
           return jobDate >= startOfWeek(now) && jobDate <= endOfWeek(now);
         case 'month':
-          return jobDate >= startOfMonth(now) && jobDate <= endOfMonth(now);
+          const monthDate = new Date(bookingDate);
+          return monthDate.getMonth() === currentMonth && monthDate.getFullYear() === currentYear;
         case 'all':
         default:
           return true;
@@ -59,7 +112,7 @@ export default function GrabEarningsScreen() {
     }, 0);
 
     const travelEarnings = filteredBookings.reduce((sum, b) => sum + (b.travelCost || 0), 0);
-    const commission = grossEarnings * 0.12;
+    const commission = grossEarnings * 0.15; // 15% commission (partner keeps 85%)
     const netServiceEarnings = grossEarnings - commission;
     const totalNet = netServiceEarnings + travelEarnings;
 
@@ -76,7 +129,7 @@ export default function GrabEarningsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await refetch();
     setRefreshing(false);
   };
 
@@ -86,6 +139,17 @@ export default function GrabEarningsScreen() {
         <View style={styles.emptyState}>
           <Ionicons name="wallet-outline" size={64} color={COLORS.text.tertiary} />
           <Text style={styles.emptyText}>Please log in to view earnings</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadingBookings) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={[styles.emptyText, { marginTop: 16 }]}>Loading earnings...</Text>
         </View>
       </SafeAreaView>
     );
@@ -172,7 +236,7 @@ export default function GrabEarningsScreen() {
           <View style={styles.revenueModelBanner}>
             <View style={styles.revenueModelRow}>
               <View style={styles.revenueModelItem}>
-                <Text style={styles.revenueModelValue}>88%</Text>
+                <Text style={styles.revenueModelValue}>85%</Text>
                 <Text style={styles.revenueModelLabel}>Service</Text>
               </View>
               <Text style={styles.revenueModelPlus}>+</Text>
@@ -186,7 +250,7 @@ export default function GrabEarningsScreen() {
                 <Text style={styles.revenueModelLabel}>Your Pay</Text>
               </View>
             </View>
-            <Text style={styles.revenueModelSubtext}>You keep 88% of services + 100% of travel fees</Text>
+            <Text style={styles.revenueModelSubtext}>You keep 85% of services + 100% of travel fees</Text>
           </View>
 
           <View style={styles.breakdownCard}>
@@ -227,7 +291,7 @@ export default function GrabEarningsScreen() {
                 </View>
                 <View>
                   <Text style={styles.breakdownLabel}>Commission</Text>
-                  <Text style={styles.breakdownSub}>12% of services</Text>
+                  <Text style={styles.breakdownSub}>15% of services</Text>
                 </View>
               </View>
               <Text style={[styles.breakdownValue, { color: '#F44336' }]}>
@@ -323,12 +387,12 @@ export default function GrabEarningsScreen() {
                 </View>
                 <View style={styles.keyFactsGrid}>
                   <View style={styles.keyFactItem}>
-                    <Text style={styles.keyFactValue}>88%</Text>
+                    <Text style={styles.keyFactValue}>85%</Text>
                     <Text style={styles.keyFactLabel}>You Keep</Text>
                   </View>
                   <View style={styles.keyFactDivider} />
                   <View style={styles.keyFactItem}>
-                    <Text style={styles.keyFactValue}>12%</Text>
+                    <Text style={styles.keyFactValue}>15%</Text>
                     <Text style={styles.keyFactLabel}>Commission</Text>
                   </View>
                   <View style={styles.keyFactDivider} />
@@ -345,9 +409,9 @@ export default function GrabEarningsScreen() {
                   <Ionicons name="cut-outline" size={20} color="#00B14F" />
                 </View>
                 <View style={styles.infoText}>
-                  <Text style={styles.infoItemTitle}>Service Earnings (88%)</Text>
+                  <Text style={styles.infoItemTitle}>Service Earnings (85%)</Text>
                   <Text style={styles.infoItemDesc}>
-                    You keep <Text style={{ fontWeight: '700', color: '#00B14F' }}>88% of service fees</Text>. Platform takes 12% commission to cover operational costs.
+                    You keep <Text style={{ fontWeight: '700', color: '#00B14F' }}>85% of service fees</Text>. Platform takes 15% commission to cover operational costs.
                   </Text>
                   <View style={styles.infoHighlight}>
                     <Text style={styles.infoHighlightText}>✓ Much better than salon splits (50-70%)</Text>
@@ -375,9 +439,9 @@ export default function GrabEarningsScreen() {
                   <Ionicons name="business-outline" size={20} color="#F44336" />
                 </View>
                 <View style={styles.infoText}>
-                  <Text style={styles.infoItemTitle}>Commission (12%)</Text>
+                  <Text style={styles.infoItemTitle}>Commission (15%)</Text>
                   <Text style={styles.infoItemDesc}>
-                    The 12% commission (deducted from your service earnings) covers:
+                    The 15% commission (deducted from your service earnings) covers:
                   </Text>
                   <View style={styles.featureList}>
                     <Text style={styles.featureItem}>• Payment processing (2.5% fees)</Text>
@@ -396,7 +460,7 @@ export default function GrabEarningsScreen() {
                   <Text style={styles.platformFeeTitle}>RM 2 Booking Fee (Customer Pays)</Text>
                 </View>
                 <Text style={styles.platformFeeDesc}>
-                  Customers pay an additional <Text style={{ fontWeight: '700' }}>RM 2.00 booking fee</Text> per booking. This fee is <Text style={{ fontWeight: '700', color: '#00B14F' }}>NOT deducted from your earnings</Text> - it goes directly to the company for operational costs. This helps keep your commission low at just 12%.
+                  Customers pay an additional <Text style={{ fontWeight: '700' }}>RM 2.00 booking fee</Text> per booking. This fee is <Text style={{ fontWeight: '700', color: '#00B14F' }}>NOT deducted from your earnings</Text> - it goes directly to the company for operational costs. This helps keep your commission low at just 15%.
                 </Text>
               </View>
               
@@ -417,12 +481,12 @@ export default function GrabEarningsScreen() {
                   </View>
                   <View style={styles.calcDivider} />
                   <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>Your Service (88%):</Text>
-                    <Text style={[styles.calcValue, { color: '#00B14F' }]}>RM 44.00</Text>
+                    <Text style={styles.calcLabel}>Your Service (85%):</Text>
+                    <Text style={[styles.calcValue, { color: '#00B14F' }]}>RM 42.50</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text style={styles.calcLabel}>Commission (12%):</Text>
-                    <Text style={[styles.calcValue, { color: '#F44336' }]}>- RM 6.00</Text>
+                    <Text style={styles.calcLabel}>Commission (15%):</Text>
+                    <Text style={[styles.calcValue, { color: '#F44336' }]}>- RM 7.50</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcLabel}>RM 2 Booking Fee:</Text>
@@ -435,7 +499,7 @@ export default function GrabEarningsScreen() {
                   <View style={styles.calcDivider} />
                   <View style={styles.calcRow}>
                     <Text style={styles.calcTotalLabel}>You Earn:</Text>
-                    <Text style={styles.calcTotalValue}>RM 54.00</Text>
+                    <Text style={styles.calcTotalValue}>RM 52.50</Text>
                   </View>
                 </View>
               </View>
@@ -452,7 +516,7 @@ export default function GrabEarningsScreen() {
                 </View>
                 <View style={styles.comparisonRow}>
                   <Text style={[styles.comparisonPlatform, { color: '#00B14F', fontWeight: '700' }]}>Mari-Gunting:</Text>
-                  <Text style={[styles.comparisonRate, { color: '#00B14F', fontWeight: '700' }]}>12% commission ✓</Text>
+                  <Text style={[styles.comparisonRate, { color: '#00B14F', fontWeight: '700' }]}>15% commission ✓</Text>
                 </View>
               </View>
 
@@ -484,7 +548,7 @@ export default function GrabEarningsScreen() {
                 if (!booking) return null;
                 
                 const serviceTotal = (booking.services || []).reduce((sum, s) => sum + s.price, 0);
-                const commission = serviceTotal * 0.12;
+                const commission = serviceTotal * 0.15;
                 const netService = serviceTotal - commission;
                 const totalEarned = netService + (booking.travelCost || 0);
                 
@@ -498,7 +562,7 @@ export default function GrabEarningsScreen() {
                     <View style={styles.tripDetailSection}>
                       <Text style={styles.tripDetailLabel}>Date & Time</Text>
                       <Text style={styles.tripDetailValue}>
-                        {format(parseISO(booking.completedAt || booking.createdAt), 'MMM dd, yyyy • HH:mm')}
+                        {format(parseISO(booking.completedAt || booking.createdAt), 'MMM dd, yyyy • hh:mm a')}
                       </Text>
                     </View>
                     
@@ -525,7 +589,7 @@ export default function GrabEarningsScreen() {
                         <Text style={styles.tripDetailRowValue}>RM {serviceTotal.toFixed(2)}</Text>
                       </View>
                       <View style={styles.tripDetailRow}>
-                        <Text style={styles.tripDetailRowLabel}>Commission (12%)</Text>
+                        <Text style={styles.tripDetailRowLabel}>Commission (15%)</Text>
                         <Text style={[styles.tripDetailRowValue, { color: '#F44336' }]}>- RM {commission.toFixed(2)}</Text>
                       </View>
                       <View style={styles.tripDetailRow}>
@@ -555,13 +619,13 @@ export default function GrabEarningsScreen() {
 // Trip Card Component
 function TripCard({ booking, onPress }: { booking: Booking; onPress?: () => void }) {
   const serviceTotal = (booking.services || []).reduce((sum, s) => sum + s.price, 0);
-  const commission = serviceTotal * 0.12;
+  const commission = serviceTotal * 0.15;
   const netService = serviceTotal - commission;
   const totalEarned = netService + (booking.travelCost || 0);
 
   const date = booking.completedAt || booking.createdAt;
   const formattedDate = format(parseISO(date), 'MMM dd');
-  const formattedTime = booking.scheduledTime || format(parseISO(date), 'HH:mm');
+  const formattedTime = booking.scheduledTime || format(parseISO(date), 'hh:mm a');
 
   return (
     <TouchableOpacity 
