@@ -279,6 +279,7 @@ export default function PaymentMethodScreen() {
       }
 
       const services = JSON.parse(params.services || '[]');
+      const serviceIds = params.serviceIds ? params.serviceIds.split(',') : services.map((s: any) => s.id);
       const address = JSON.parse(params.address || '{}');
       const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
       const isBarbershop = bookingType === 'scheduled-shop';
@@ -298,13 +299,15 @@ export default function PaymentMethodScreen() {
         city: address.city || '',
         state: address.state || '',
         postalCode: address.postal_code || address.postalCode || '',
+        lat: address.latitude || address.lat || address.location?.lat,
+        lng: address.longitude || address.lng || address.location?.lng,
       } : null;
 
-      // Create booking with credits payment
-      const createBookingResponse = await bookingService.createBooking({
+      // SECURE: Create booking with credits payment using v2
+      const createBookingResponse = await bookingService.createBookingV2({
         customerId: currentUserId,
         barberId: params.barberId,
-        services: services,
+        serviceIds: serviceIds,  // SECURITY: Only IDs, server validates prices
         scheduledDate: scheduledDate,
         scheduledTime: scheduledTime,
         serviceType: isBarbershop ? 'walk_in' : 'home_service',
@@ -312,9 +315,8 @@ export default function PaymentMethodScreen() {
         customerAddress: customerAddress,
         customerNotes: params.serviceNotes || null,
         paymentMethod: 'credits',
-        travelFee: parseFloat(params.travelCost || '0'),
-        distanceKm: parseFloat(params.distance || '0'),
-        discountAmount: discount,
+        userVoucherId: selectedVoucher?.id || null,  // SECURITY: Server validates discount
+        distanceKm: params.distance ? parseFloat(params.distance) : null,  // Pre-calculated Mapbox distance
       });
 
       if (!createBookingResponse.success || !createBookingResponse.data) {
@@ -323,16 +325,7 @@ export default function PaymentMethodScreen() {
 
       const createdBookingId = createBookingResponse.data.booking_id;
 
-      // Apply voucher if selected
-      if (selectedVoucher && discount > 0) {
-        await rewardsService.applyVoucherToBooking(
-          createdBookingId,
-          selectedVoucher.id,
-          subtotal + travelCost + bookingFee,
-          discount,
-          totalAmount + creditsToApply // Original total before credits
-        );
-      }
+      // Voucher already applied in createBookingV2 - no separate call needed
 
       // Deduct credits
       const result = await rewardsService.deductCredit(
@@ -394,6 +387,7 @@ export default function PaymentMethodScreen() {
       console.log('[Booking-First] Creating booking before payment...');
       
       const services = JSON.parse(params.services || '[]');
+      const serviceIds = params.serviceIds ? params.serviceIds.split(',') : services.map((s: any) => s.id);
       const address = JSON.parse(params.address || '{}');
       const bookingType = params.type || (params.shopId ? 'scheduled-shop' : 'on-demand');
       const isBarbershop = bookingType === 'scheduled-shop';
@@ -413,12 +407,15 @@ export default function PaymentMethodScreen() {
         city: address.city || '',
         state: address.state || '',
         postalCode: address.postal_code || address.postalCode || '',
+        lat: address.latitude || address.lat || address.location?.lat,
+        lng: address.longitude || address.lng || address.location?.lng,
       } : null;
       
-      const createBookingResponse = await bookingService.createBooking({
+      // SECURE: Create booking using v2 (booking-first flow)
+      const createBookingResponse = await bookingService.createBookingV2({
         customerId: currentUserId,
         barberId: params.barberId,
-        services: services,
+        serviceIds: serviceIds,  // SECURITY: Only IDs
         scheduledDate: scheduledDate,
         scheduledTime: scheduledTime,
         serviceType: isBarbershop ? 'walk_in' : 'home_service',
@@ -426,9 +423,8 @@ export default function PaymentMethodScreen() {
         customerAddress: customerAddress,
         customerNotes: params.serviceNotes || null,
         paymentMethod: selectedMethod === 'fpx' ? 'curlec_fpx' : 'curlec_card',
-        travelFee: parseFloat(params.travelCost || '0'),
-        distanceKm: parseFloat(params.distance || '0'),
-        discountAmount: discount,
+        userVoucherId: selectedVoucher?.id || null,  // SECURITY: Server validates
+        distanceKm: params.distance ? parseFloat(params.distance) : null,  // Pre-calculated Mapbox distance
         // NO payment IDs - booking created without payment
       });
       
@@ -560,6 +556,33 @@ export default function PaymentMethodScreen() {
           if (!verified) {
             throw new Error('Payment verification failed');
           }
+
+          // Verify payment amount matches booking total (GRAB STANDARD)
+          console.log('[Payment] Verifying payment amount...');
+          const verification = await bookingService.verifyPaymentAmount(
+            bookingId,
+            order.amount / 100 // Convert sen to MYR
+          );
+
+          if (!verification.success || !verification.data?.valid) {
+            console.error('❌ Payment amount mismatch:', {
+              paid: order.amount / 100,
+              expected: booking.total_price,
+              verification
+            });
+            
+            // Cancel booking due to amount mismatch
+            await supabase
+              .from('bookings')
+              .update({ 
+                status: 'cancelled',
+                cancellation_reason: 'Payment amount mismatch'
+              })
+              .eq('id', bookingId);
+            
+            throw new Error('Payment amount does not match booking total');
+          }
+          console.log('✅ Payment amount verified');
 
           // Link payment
           console.log('[Payment] Linking payment to booking...');
@@ -841,9 +864,10 @@ export default function PaymentMethodScreen() {
         try {
           // Parse booking data
           const services = JSON.parse(params.services || '[]');
+          const serviceIds = params.serviceIds ? params.serviceIds.split(',') : services.map((s: any) => s.id);
           const address = JSON.parse(params.address || '{}');
           
-          console.log('🔄 Creating booking...');
+          console.log('🔄 Creating secure booking...');
           
           if (!currentUserId) {
             throw new Error('User not authenticated');
@@ -869,13 +893,15 @@ export default function PaymentMethodScreen() {
             city: address.city || '',
             state: address.state || '',
             postalCode: address.postal_code || address.postalCode || '',
+            lat: address.latitude || address.lat || address.location?.lat,
+            lng: address.longitude || address.lng || address.location?.lng,
           } : null;
           
-          // Create booking using Supabase RPC function
-          const createBookingResponse = await bookingService.createBooking({
+          // SECURE: Create booking using v2 with server validation
+          const createBookingResponse = await bookingService.createBookingV2({
             customerId: currentUserId,
             barberId: params.barberId,
-            services: services,
+            serviceIds: serviceIds,  // SECURITY: Only IDs, server validates prices
             scheduledDate: scheduledDate,
             scheduledTime: scheduledTime,
             serviceType: isBarbershop ? 'walk_in' : 'home_service',
@@ -883,8 +909,8 @@ export default function PaymentMethodScreen() {
             customerAddress: customerAddress,
             customerNotes: params.serviceNotes || null,
             paymentMethod: 'cash',
-            travelFee: parseFloat(params.travelCost || '0'),
-            discountAmount: discount, // Pass voucher discount to apply to booking
+            userVoucherId: selectedVoucher?.id || null,  // SECURITY: Server validates discount
+            distanceKm: params.distance ? parseFloat(params.distance) : null,  // Pre-calculated Mapbox distance
           });
           
           if (!createBookingResponse.success || !createBookingResponse.data) {
@@ -900,29 +926,7 @@ export default function PaymentMethodScreen() {
             console.log('✅ Booking created with ID:', createdBookingId);
             console.log('📋 Booking number:', createBookingResponse.data.booking_number);
             
-            // Apply voucher to booking if one was selected
-            if (selectedVoucher && currentUserId && discount > 0) {
-              try {
-                // Since we already passed discount to create_booking,
-                // we just need to mark the voucher as used and create booking_vouchers record
-                const result = await rewardsService.applyVoucherToBooking(
-                  createdBookingId,
-                  selectedVoucher.id,
-                  subtotal + travelCost + bookingFee, // original total
-                  discount, // discount applied
-                  totalAmount // final total (already has discount applied)
-                );
-                
-                if (!result.success) {
-                  console.error('Failed to apply voucher:', result.error);
-                  // Important: The discount was already applied in create_booking,
-                  // this just tracks voucher usage for audit purposes
-                }
-              } catch (voucherError) {
-                console.error('Error applying voucher:', voucherError);
-                // The discount is already applied, this is just for tracking
-              }
-            }
+            // Voucher already applied in createBookingV2 - no separate call needed
             
             // Deduct credits if used
             if (useCredits && creditsToApply > 0 && currentUserId) {

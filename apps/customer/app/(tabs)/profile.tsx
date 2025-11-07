@@ -284,11 +284,6 @@ export default function ProfileScreen() {
                   <SkeletonText width={60} height={28} />
                   <SkeletonText width={80} height={13} style={{ marginTop: 4 }} />
                 </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statCard}>
-                  <SkeletonText width={60} height={28} />
-                  <SkeletonText width={80} height={13} style={{ marginTop: 4 }} />
-                </View>
               </>
             ) : (
               <>
@@ -300,11 +295,6 @@ export default function ProfileScreen() {
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{stats.completed}</Text>
                   <Text style={styles.statLabel}>Completed</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statCard}>
-                  <Text style={styles.statValue}>{stats.avgRating}</Text>
-                  <Text style={styles.statLabel}>Avg Rating</Text>
                 </View>
               </>
             )}

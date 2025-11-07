@@ -746,7 +746,7 @@ export default function BookingDetailScreen() {
               />
               <View style={styles.barberDetails}>
                 <View style={styles.barberNameRow}>
-                  <Text style={styles.barberName}>{booking.barber.name}</Text>
+                  <Text style={styles.barberName} numberOfLines={2}>{booking.barber.name}</Text>
                   {booking.barber.isVerified && (
                     <Ionicons name="checkmark-circle" size={18} color="#007AFF" />
                   )}
@@ -859,7 +859,20 @@ export default function BookingDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Schedule & Location</Text>
           
-          {booking.scheduledDate && booking.scheduledTime ? (
+          {/* FIX: Use scheduled_datetime first (matches bookings list) */}
+          {booking.scheduled_datetime ? (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <Ionicons name="calendar" size={20} color="#00B14F" />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Date & Time</Text>
+                <Text style={styles.infoValue}>
+                  {formatLocalDate(booking.scheduled_datetime)} at {formatLocalTime(booking.scheduled_datetime)}
+                </Text>
+              </View>
+            </View>
+          ) : booking.scheduledDate && booking.scheduledTime ? (
             <View style={styles.infoRow}>
               <View style={styles.infoIconContainer}>
                 <Ionicons name="calendar" size={20} color="#00B14F" />
@@ -1403,6 +1416,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
+    flexShrink: 1,
   },
   ratingRow: {
     flexDirection: 'row',

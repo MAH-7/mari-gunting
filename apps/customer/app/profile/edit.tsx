@@ -46,7 +46,6 @@ export default function EditProfileScreen() {
   const { profile, updateProfile, updateAvatar, isLoading } = useProfile();
   
   const [name, setName] = useState(profile?.name || profile?.full_name || '');
-  const [email, setEmail] = useState(profile?.email || '');
   const [avatarUri, setAvatarUri] = useState(getAvatarUrl(profile));
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -86,13 +85,6 @@ export default function EditProfileScreen() {
         return;
       }
 
-      // Validate email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (email && !emailRegex.test(email)) {
-        Alert.alert('Invalid Email', 'Please enter a valid email address');
-        return;
-      }
-
       // Upload avatar if changed and not a placeholder
       const profileAvatar = profile.avatar || profile.avatar_url || '';
       if (avatarUri !== profileAvatar && !avatarUri.includes('placeholder')) {
@@ -127,10 +119,9 @@ export default function EditProfileScreen() {
       }
 
       // Update profile fields
-      if (name !== (profile.name || profile.full_name) || email !== profile.email) {
+      if (name !== (profile.name || profile.full_name)) {
         await updateProfile({
           full_name: name,
-          email: email,
         });
       }
 
@@ -216,27 +207,21 @@ export default function EditProfileScreen() {
               />
             </View>
 
-            {/* Email */}
+            {/* Email (Read-only) */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setHasChanges(true);
-                }}
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!isLoading}
-              />
-              {email !== profile?.email && (
-                <Text style={styles.hint}>
-                  Changing email requires verification
+              <View style={styles.inputDisabled}>
+                <Text style={styles.inputDisabledText}>
+                  {profile?.email || 'Not set'}
                 </Text>
-              )}
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
+                  <Text style={styles.verifiedText}>Verified</Text>
+                </View>
+              </View>
+              <Text style={styles.hint}>
+                Contact support to change email
+              </Text>
             </View>
 
             {/* Phone (Read-only) */}

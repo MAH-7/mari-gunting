@@ -137,8 +137,20 @@ export default function PartnerJobsScreen() {
           updatedJob.arrived_at !== selectedJob.arrived_at ||
           updatedJob.started_at !== selectedJob.started_at;
         
-        if (statusChanged || timestampsChanged) {
-          console.log('🔄 Auto-updating selectedJob (status or timestamps changed)');
+        // FIX: Also update when payment completes (payment_status, distance, address populated)
+        const paymentChanged = updatedJob.payment_status !== selectedJob.payment_status;
+        const distanceChanged = updatedJob.distance !== selectedJob.distance;
+        const addressChanged = JSON.stringify(updatedJob.customer_address || updatedJob.address) !== 
+          JSON.stringify(selectedJob.customer_address || selectedJob.address);
+        
+        if (statusChanged || timestampsChanged || paymentChanged || distanceChanged || addressChanged) {
+          console.log('🔄 Auto-updating selectedJob:', {
+            statusChanged,
+            timestampsChanged,
+            paymentChanged,
+            distanceChanged,
+            addressChanged
+          });
           
           // PRODUCTION FIX: Preserve customer data if it's missing in update
           // Prevents avatar from disappearing during real-time updates
@@ -153,7 +165,7 @@ export default function PartnerJobsScreen() {
         }
       }
     }
-  }, [partnerJobs, selectedJob?.id, selectedJob?.status, selectedJob?.accepted_at, selectedJob?.on_the_way_at, selectedJob?.arrived_at, selectedJob?.started_at]);
+  }, [partnerJobs, selectedJob?.id, selectedJob?.status, selectedJob?.payment_status, selectedJob?.distance, selectedJob?.customer_address, selectedJob?.address, selectedJob?.accepted_at, selectedJob?.on_the_way_at, selectedJob?.arrived_at, selectedJob?.started_at]);
 
   // Real-time subscription for new bookings
   useEffect(() => {

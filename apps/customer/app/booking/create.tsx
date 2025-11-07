@@ -455,7 +455,7 @@ export default function CreateBookingScreen() {
             </View>
             <View style={styles.barberInfo}>
               <View style={styles.barberNameRow}>
-                <Text style={styles.barberName}>{barber.name}</Text>
+                <Text style={styles.barberName} numberOfLines={1}>{barber.name}</Text>
                 {barber.isVerified && (
                   <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
                 )}
@@ -823,6 +823,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1C1C1E',
+    flexShrink: 1,
   },
   ratingRow: {
     flexDirection: 'row',

@@ -35,9 +35,47 @@ export interface CreateBookingParams {
   curlecOrderId?: string | null; // Curlec order ID
 }
 
+// SECURE V2: Service IDs only, server calculates everything
+export interface CreateBookingV2Params {
+  customerId: string;
+  barberId: string;
+  serviceIds: string[]; // SECURITY: Only IDs, not prices
+  scheduledDate: string;
+  scheduledTime: string;
+  serviceType: 'home_service' | 'walk_in';
+  barbershopId?: string | null;
+  customerAddress?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postalCode?: string;
+    lat?: number;  // For travel fee calculation
+    lng?: number;
+  } | null;
+  customerNotes?: string | null;
+  paymentMethod?: string;
+  userVoucherId?: string | null; // Voucher applied (server validates)
+  curlecPaymentId?: string | null;
+  curlecOrderId?: string | null;
+  distanceKm?: number | null; // NEW: Pre-calculated Mapbox distance from client
+}
+
 export interface BookingResult {
   booking_id: string;
   booking_number: string;
+  total_price: number;
+  message: string;
+}
+
+// V2 Result with breakdown
+export interface BookingResultV2 {
+  booking_id: string;
+  booking_number: string;
+  subtotal: number;
+  service_fee: number;
+  travel_fee: number;
+  discount_amount: number;
   total_price: number;
   message: string;
 }
@@ -84,7 +122,120 @@ export const bookingService = {
     }
   },
   /**
-   * Create a new booking
+   * SECURE: Verify payment amount matches booking total
+   * Call this BEFORE linking Curlec payment to booking
+   */
+  async verifyPaymentAmount(
+    bookingId: string,
+    paymentAmount: number
+  ): Promise<ApiResponse<{valid: boolean; message: string; difference?: number}>> {
+    try {
+      const { data, error } = await supabase.rpc('verify_payment_amount', {
+        p_booking_id: bookingId,
+        p_payment_amount: paymentAmount,
+      });
+
+      if (error) {
+        console.error('❌ Payment verification error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      
+      if (!result.valid) {
+        console.error('❌ Payment amount mismatch:', result);
+      } else {
+        console.log('✅ Payment amount verified:', result);
+      }
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error: any) {
+      console.error('❌ Payment verification exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to verify payment amount',
+      };
+    }
+  },
+
+  /**
+   * SECURE V2: Create booking with service IDs only
+   * Server validates prices, calculates travel fees, applies vouchers
+   */
+  async createBookingV2(params: CreateBookingV2Params): Promise<ApiResponse<BookingResultV2>> {
+    try {
+      // Convert date + time to ISO timestamp
+      const scheduledDatetime = createScheduledDateTime(
+        params.scheduledDate,
+        params.scheduledTime
+      );
+
+      console.log('📅 Creating secure booking:', {
+        serviceIds: params.serviceIds,
+        datetime: scheduledDatetime,
+        voucher: params.userVoucherId,
+      });
+
+      // Prepare customer address with lat/lng for travel fee calculation
+      const customerAddress = params.customerAddress ? {
+        line1: params.customerAddress.line1,
+        line2: params.customerAddress.line2,
+        city: params.customerAddress.city,
+        state: params.customerAddress.state,
+        postalCode: params.customerAddress.postalCode,
+        lat: params.customerAddress.lat?.toString(),
+        lng: params.customerAddress.lng?.toString(),
+      } : null;
+
+      const { data, error } = await supabase.rpc('create_booking_v2', {
+        p_customer_id: params.customerId,
+        p_barber_id: params.barberId,
+        p_service_ids: params.serviceIds, // Array of UUIDs
+        p_scheduled_datetime: scheduledDatetime,
+        p_service_type: params.serviceType,
+        p_barbershop_id: params.barbershopId || null,
+        p_customer_address: customerAddress,
+        p_customer_notes: params.customerNotes || null,
+        p_payment_method: params.paymentMethod || 'cash',
+        p_user_voucher_id: params.userVoucherId || null,
+        p_curlec_payment_id: params.curlecPaymentId || null,
+        p_curlec_order_id: params.curlecOrderId || null,
+        p_distance_km: params.distanceKm || null, // NEW: Pre-calculated Mapbox distance
+      });
+
+      if (error) {
+        console.error('❌ Create booking v2 error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      console.log('✅ Secure booking created:', result);
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error: any) {
+      console.error('❌ Create booking v2 exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to create booking',
+      };
+    }
+  },
+
+  /**
+   * Create a new booking (OLD VERSION - Use createBookingV2 for new code)
+   * @deprecated Use createBookingV2 for secure price validation
    */
   async createBooking(params: CreateBookingParams): Promise<ApiResponse<BookingResult>> {
     try {
@@ -178,10 +329,18 @@ export const bookingService = {
       });
 
       if (error) {
-        console.error('❌ Get bookings error:', error);
+        // Only log if error has actual content (avoid race condition noise)
+        if (error.message || error.details || error.hint || error.code) {
+          console.error('❌ Get bookings error:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          });
+        }
         return {
           success: false,
-          error: error.message,
+          error: error.message || error.details || 'Failed to fetch bookings',
         };
       }
 

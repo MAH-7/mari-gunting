@@ -331,7 +331,7 @@ export default function BarberProfileScreen() {
           
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.name}>{barber.name}</Text>
+              <Text style={styles.name} numberOfLines={2}>{barber.name}</Text>
               {barber.isVerified && (
                 <Ionicons name="checkmark-circle" size={22} color="#007AFF" />
               )}
@@ -761,6 +761,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1C1C1E',
     letterSpacing: -0.5,
+    flexShrink: 1,
   },
   ratingRow: {
     flexDirection: 'row',

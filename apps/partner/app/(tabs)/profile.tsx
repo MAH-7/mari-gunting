@@ -359,7 +359,7 @@ export default function PartnerProfileScreen() {
           {/* Profile Info */}
           <View style={styles.profileDetails}>
             <View style={styles.nameRow}>
-              <Text style={styles.profileName}>{profile.name}</Text>
+              <Text style={styles.profileName} numberOfLines={2}>{profile.name}</Text>
               {profile.isVerified && (
                 <View style={styles.verifiedBadge}>
                   <Ionicons name="checkmark-circle" size={20} color="#00BFA6" />
@@ -565,6 +565,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: '#1A1A1A',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   verifiedBadge: {
     marginLeft: 4,

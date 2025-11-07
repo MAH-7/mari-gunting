@@ -3,26 +3,20 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   StyleSheet,
   Dimensions,
   FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useRef, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/services/api';
 import { useStore } from "@/store/useStore";
-import { formatCurrency, formatDistance } from '@mari-gunting/shared/utils/format';
-import { Barber } from "@/types";
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 import { rewardsService } from '@/services/rewardsService';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
-import { supabase } from '@mari-gunting/shared/config/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BANNER_PADDING = 20;
@@ -41,11 +35,7 @@ const getAvatarUrl = (url: string | null | undefined, fallback: string) => {
 
 export default function HomeScreen() {
   const currentUser = useStore((state) => state.currentUser);
-  const queryClient = useQueryClient();
   const [userPoints, setUserPoints] = useState(0);
-  const [isLoadingPoints, setIsLoadingPoints] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<"all" | "online">("all");
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const bannerRef = useRef<FlatList>(null);
@@ -84,108 +74,6 @@ export default function HomeScreen() {
       }
     }, [currentUser?.id, refetchPoints])
   );
-
-  const { data: barbersResponse, isLoading, refetch } = useQuery({
-    queryKey: ["barbers", selectedFilter],
-    queryFn: () =>
-      api.getBarbers({
-        isOnline: selectedFilter === "online" ? true : undefined,
-        isAvailable: selectedFilter === "online" ? true : undefined,
-      }),
-    refetchOnMount: 'always', // Always refetch on mount
-    refetchOnWindowFocus: true,
-    staleTime: 0, // Don't cache - always fetch fresh data
-    cacheTime: 0, // Don't keep in cache
-  });
-
-  // Refetch barbers when screen comes into focus (after completing a booking)
-  useFocusEffect(
-    useCallback(() => {
-      console.log('🔄 Home screen focused - refreshing barbers list');
-      // AGGRESSIVE: Remove all cached barber data
-      queryClient.removeQueries({ queryKey: ['barbers'] });
-      queryClient.invalidateQueries({ queryKey: ['barbers'] });
-      // Force immediate refetch
-      refetch();
-    }, [refetch, queryClient])
-  );
-
-  // Real-time subscription for barber availability changes AND booking completions
-  useEffect(() => {
-    // Subscribe to profiles table changes (is_online)
-    const profilesChannel = supabase
-      .channel('home-profiles-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: 'is_online=neq.null',
-        },
-        (payload) => {
-          console.log('🔔 Barber online status changed:', payload);
-          // Force immediate refetch
-          refetch();
-        }
-      )
-      .subscribe();
-
-    // Subscribe to barbers table changes (is_available, total_bookings)
-    const barbersChannel = supabase
-      .channel('home-barbers-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'barbers',
-        },
-        (payload) => {
-          // Force immediate refetch to get updated stats
-          refetch();
-        }
-      )
-      .subscribe();
-
-    // Subscribe to bookings completion to refresh barber stats
-    const bookingsChannel = supabase
-      .channel('home-bookings-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bookings',
-          filter: 'status=eq.completed',
-        },
-        (payload) => {
-          console.log('🔔 Booking completed, refreshing barber stats:', payload);
-          // Refetch barbers to get updated completedJobs count
-          refetch();
-        }
-      )
-      .subscribe();
-
-    // Cleanup
-    return () => {
-      supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(barbersChannel);
-      supabase.removeChannel(bookingsChannel);
-    };
-  }, [queryClient, refetch]);
-
-  const barbers = barbersResponse?.data?.data || [];
-
-  const filteredBarbers = searchQuery
-    ? barbers.filter(
-        (barber) =>
-          barber.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          barber.specializations.some((s) =>
-            s.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-      )
-    : barbers;
 
   // Promotional banners
   const banners = [
@@ -399,72 +287,6 @@ export default function HomeScreen() {
         onDismiss={handleDismissLocationModal}
       />
     </SafeAreaView>
-  );
-}
-
-function BarberCard({ barber }: { barber: Barber }) {
-  return (
-    <TouchableOpacity
-      style={styles.barberCard}
-      onPress={() => router.push(`/barber/${barber.id}` as any)}
-      activeOpacity={0.95}
-    >
-      {/* Image with Badge Overlay */}
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: getAvatarUrl(barber.avatar, 'https://via.placeholder.com/150') }} style={styles.barberImage} />
-        {barber.isOnline && (
-          <View style={styles.liveBadge}>
-            <View style={styles.livePulse} />
-            <Text style={styles.liveText}>AVAILABLE</Text>
-          </View>
-        )}
-        {barber.isVerified && (
-          <View style={styles.verifiedBadge}>
-            <Text style={styles.verifiedIcon}>✓</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Content */}
-      <View style={styles.cardContent}>
-        {/* Name & Rating */}
-        <View style={styles.titleRow}>
-          <Text style={styles.barberName} numberOfLines={1}>
-            {barber.name}
-          </Text>
-          <View style={styles.ratingPill}>
-            <Text style={styles.starEmoji}>⭐</Text>
-            <Text style={styles.ratingValue}>{barber.rating.toFixed(1)}</Text>
-          </View>
-        </View>
-
-        {/* Tags */}
-        <View style={styles.tagsRow}>
-          {barber.specializations.slice(0, 3).map((spec) => (
-            <View key={spec} style={styles.tag}>
-              <Text style={styles.tagText}>{spec}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footerRow}>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsText}>{barber.completedJobs} jobs</Text>
-            <View style={styles.dot} />
-            <Text style={styles.statsText}>{barber.totalReviews} reviews</Text>
-          </View>
-        </View>
-
-        {/* Price Badge - Grab Style */}
-        <View style={styles.priceBadge}>
-          <Text style={styles.priceLabel}>From</Text>
-          <Text style={styles.priceValue}>
-            {formatCurrency(barber.services[0]?.price || 0)}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
   );
 }
 

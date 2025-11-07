@@ -52,6 +52,9 @@ export default function BookingsScreen() {
 
     console.log('🔌 Setting up real-time subscription for customer bookings');
 
+    // Debounce refetch to prevent race conditions
+    let refetchTimeout: NodeJS.Timeout;
+
     // Subscribe to bookings table for this customer
     const channel = supabase
       .channel(`customer-bookings-${currentUser.id}`)
@@ -66,8 +69,11 @@ export default function BookingsScreen() {
         (payload) => {
           console.log('🔔 Customer booking change:', payload);
           
-          // Refetch bookings list
-          refetch();
+          // Debounce refetch to avoid multiple simultaneous calls
+          clearTimeout(refetchTimeout);
+          refetchTimeout = setTimeout(() => {
+            refetch();
+          }, 500); // Wait 500ms before refetching
           
           // Log events for debugging
           if (payload.eventType === 'INSERT') {
@@ -91,6 +97,7 @@ export default function BookingsScreen() {
 
     return () => {
       console.log('🔌 Cleaning up customer bookings subscription');
+      clearTimeout(refetchTimeout);
       supabase.removeChannel(channel);
     };
   }, [currentUser?.id, refetch]);
@@ -100,12 +107,15 @@ export default function BookingsScreen() {
     setRefreshing(true);
     try {
       await refetch();
+    } catch (error) {
+      console.error('❌ Refresh failed:', error);
     } finally {
       setRefreshing(false);
     }
   };
 
-  const bookings = bookingsResponse?.data || [];
+  // FIX: Only use data if response was successful
+  const bookings = (bookingsResponse?.success !== false) ? (bookingsResponse?.data || []) : [];
 
   const activeBookings = bookings.filter(
     (b: any) => ['pending', 'accepted', 'confirmed', 'ready', 'on_the_way', 'on-the-way', 'arrived', 'in_progress', 'in-progress'].includes(b.status)
@@ -535,7 +545,7 @@ function BookingCard({ booking }: { booking: any }) {
             </View>
             <View style={styles.barberInfo}>
               <View style={styles.barberNameRow}>
-                <Text style={styles.barberName}>{mappedBooking.barber.name}</Text>
+                <Text style={styles.barberName} numberOfLines={1}>{mappedBooking.barber.name}</Text>
                 {mappedBooking.barber.isVerified && (
                   <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
                 )}
@@ -920,6 +930,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     color: '#111827',
+    flexShrink: 1,
   },
   ratingRow: {
     flexDirection: 'row',
