@@ -126,7 +126,7 @@ export default function AddressesScreen() {
         ) : addresses.length === 0 ? (
           <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
             <View style={styles.emptyIconContainer}>
-              <Ionicons name="location" size={56} color="#00B14F" />
+              <Ionicons name="location" size={56} color="#7E3AF2" />
             </View>
             <Text style={styles.emptyTitle}>No Saved Addresses</Text>
             <Text style={styles.emptySubtext}>
@@ -161,7 +161,7 @@ export default function AddressesScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.addNewIconContainer}>
-                <Ionicons name="add" size={24} color="#00B14F" />
+                <Ionicons name="add" size={24} color="#7E3AF2" />
               </View>
               <Text style={styles.addNewText}>Add New Address</Text>
               <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
@@ -207,7 +207,7 @@ function AddressCard({
             <Ionicons 
               name={iconName as any} 
               size={18} 
-              color={address.is_default ? '#FFFFFF' : '#00B14F'} 
+              color={address.is_default ? '#FFFFFF' : '#7E3AF2'} 
             />
           </View>
           <View style={styles.labelContainer}>
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -367,9 +367,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 28,
     paddingVertical: 15,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 14,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -417,15 +417,15 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#BBF7D0',
+    borderColor: '#DDD6FE',
   },
   iconCircleDefault: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   labelContainer: {
     flex: 1,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
   },

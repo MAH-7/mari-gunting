@@ -143,7 +143,7 @@ export default function SelectBarberScreen() {
       {/* Shop Pricing Info */}
       <View style={styles.pricingBanner}>
         <View style={styles.pricingContent}>
-          <Ionicons name="pricetag-outline" size={20} color="#00B14F" />
+          <Ionicons name="pricetag-outline" size={20} color="#7E3AF2" />
           <View style={styles.pricingInfo}>
             <Text style={styles.pricingLabel}>Services starting from</Text>
             <Text style={styles.pricingValue}>
@@ -346,10 +346,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   pricingBanner: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#BBF7D0',
+    borderBottomColor: '#DDD6FE',
   },
   pricingContent: {
     flexDirection: 'row',
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   pricingValue: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   pricingNote: {
     fontSize: 11,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#EDE9FE',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
@@ -510,12 +510,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   statusTextOffline: {
     fontSize: 12,
@@ -529,17 +529,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   specPill: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#DDD6FE',
   },
   specPillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   morePill: {
     backgroundColor: '#F9FAFB',
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,

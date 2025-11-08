@@ -204,12 +204,12 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
 
           {/* Coordinates banner */}
           <View style={styles.coordsBanner}>
-            <Ionicons name="location" size={18} color="#00B14F" />
+            <Ionicons name="location" size={18} color="#7E3AF2" />
             <Text style={styles.coordsText}>
               {latitude.toFixed(6)}, {longitude.toFixed(6)}
             </Text>
             <View style={styles.coordsSpacer} />
-            <Ionicons name="checkmark-circle" size={18} color="#00B14F" />
+            <Ionicons name="checkmark-circle" size={18} color="#7E3AF2" />
             <Text style={styles.coordsOk}>Locked from map</Text>
           </View>
 
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderWidth: 1,
     borderColor: '#86EFAC',
     padding: 10,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',

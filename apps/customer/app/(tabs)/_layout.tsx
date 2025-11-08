@@ -14,7 +14,7 @@ function TabBarIcon({ name, focused }: { name: IconName; focused: boolean }) {
     <Ionicons
       name={name}
       size={24}
-      color={focused ? '#00B14F' : '#9CA3AF'}
+      color={focused ? '#7E3AF2' : '#9CA3AF'}
       style={{
         marginBottom: -3,
       }}
@@ -57,7 +57,7 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#00B14F',
+        tabBarActiveTintColor: '#7E3AF2',
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarLabelStyle: {
           fontSize: 10,

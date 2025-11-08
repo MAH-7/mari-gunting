@@ -143,7 +143,7 @@ export default function BookingFilterModal({
           {/* Sort By Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="swap-vertical" size={20} color="#00B14F" />
+              <Ionicons name="swap-vertical" size={20} color="#7E3AF2" />
               <Text style={styles.sectionTitle}>Sort By</Text>
             </View>
             <View style={styles.optionsList}>
@@ -154,7 +154,7 @@ export default function BookingFilterModal({
               >
                 <View style={styles.optionLeft}>
                   <View style={styles.optionIcon}>
-                    <Ionicons name="calendar" size={20} color={sortBy === 'date' ? '#00B14F' : '#6B7280'} />
+                    <Ionicons name="calendar" size={20} color={sortBy === 'date' ? '#7E3AF2' : '#6B7280'} />
                   </View>
                   <View style={styles.optionInfo}>
                     <Text style={[styles.optionLabel, sortBy === 'date' && styles.optionLabelActive]}>
@@ -164,7 +164,7 @@ export default function BookingFilterModal({
                   </View>
                 </View>
                 {sortBy === 'date' && (
-                  <Ionicons name="checkmark-circle" size={24} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
                 )}
               </TouchableOpacity>
 
@@ -175,7 +175,7 @@ export default function BookingFilterModal({
               >
                 <View style={styles.optionLeft}>
                   <View style={styles.optionIcon}>
-                    <Ionicons name="cash" size={20} color={sortBy === 'price' ? '#00B14F' : '#6B7280'} />
+                    <Ionicons name="cash" size={20} color={sortBy === 'price' ? '#7E3AF2' : '#6B7280'} />
                   </View>
                   <View style={styles.optionInfo}>
                     <Text style={[styles.optionLabel, sortBy === 'price' && styles.optionLabelActive]}>
@@ -185,7 +185,7 @@ export default function BookingFilterModal({
                   </View>
                 </View>
                 {sortBy === 'price' && (
-                  <Ionicons name="checkmark-circle" size={24} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
                 )}
               </TouchableOpacity>
 
@@ -196,7 +196,7 @@ export default function BookingFilterModal({
               >
                 <View style={styles.optionLeft}>
                   <View style={styles.optionIcon}>
-                    <Ionicons name="list" size={20} color={sortBy === 'status' ? '#00B14F' : '#6B7280'} />
+                    <Ionicons name="list" size={20} color={sortBy === 'status' ? '#7E3AF2' : '#6B7280'} />
                   </View>
                   <View style={styles.optionInfo}>
                     <Text style={[styles.optionLabel, sortBy === 'status' && styles.optionLabelActive]}>
@@ -206,7 +206,7 @@ export default function BookingFilterModal({
                   </View>
                 </View>
                 {sortBy === 'status' && (
-                  <Ionicons name="checkmark-circle" size={24} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
                 )}
               </TouchableOpacity>
             </View>
@@ -216,7 +216,7 @@ export default function BookingFilterModal({
           {showStatusFilter && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="funnel" size={20} color="#00B14F" />
+                <Ionicons name="funnel" size={20} color="#7E3AF2" />
                 <Text style={styles.sectionTitle}>Filter by Status</Text>
               </View>
               <View style={styles.chipGrid}>
@@ -263,7 +263,7 @@ export default function BookingFilterModal({
                   style={[styles.chip, filterStatus === 'in-progress' && styles.chipActive]}
                   onPress={() => setFilterStatus('in-progress')}
                 >
-                  <Ionicons name="cut" size={14} color={filterStatus === 'in-progress' ? '#FFFFFF' : '#00B14F'} />
+                  <Ionicons name="cut" size={14} color={filterStatus === 'in-progress' ? '#FFFFFF' : '#7E3AF2'} />
                   <Text style={[styles.chipText, filterStatus === 'in-progress' && styles.chipTextActive]}>
                     In Progress
                   </Text>
@@ -369,8 +369,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   optionActive: {
-    borderColor: '#00B14F',
-    backgroundColor: '#F0FDF4',
+    borderColor: '#7E3AF2',
+    backgroundColor: '#F5F3FF',
   },
   optionLeft: {
     flexDirection: 'row',
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   optionLabelActive: {
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   optionDescription: {
     fontSize: 13,
@@ -420,8 +420,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chipActive: {
-    borderColor: '#00B14F',
-    backgroundColor: '#00B14F',
+    borderColor: '#7E3AF2',
+    backgroundColor: '#7E3AF2',
   },
   chipText: {
     fontSize: 14,
@@ -462,8 +462,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#00B14F',
-    shadowColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

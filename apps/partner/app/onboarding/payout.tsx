@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,

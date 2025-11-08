@@ -206,7 +206,7 @@ export default function PointsEarnedModal({ visible, points, onClose, onComplete
           ]}
         >
           <LinearGradient
-            colors={['#00B14F', '#00A043']}
+            colors={['#7E3AF2', '#6C2BD9']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.gradient}
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.4,
     shadowRadius: 24,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   // Confetti
   confetti: {

@@ -307,7 +307,7 @@ export default function PendingApprovalScreen() {
 
             <View style={styles.infoRow}>
               <View style={[styles.infoIcon, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="rocket-outline" size={20} color="#00B14F" />
+                <Ionicons name="rocket-outline" size={20} color="#7E3AF2" />
               </View>
               <View style={styles.infoContent}>
                 <Text style={styles.infoTitle}>Start Earning</Text>

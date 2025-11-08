@@ -149,7 +149,7 @@ export default function PartnerProfileScreen() {
           label: 'Services & Pricing', 
           screen: '/services',
           iconBg: '#E8F5E9',
-          iconColor: '#00B87C',
+          iconColor: '#7E3AF2',
         },
         { 
           icon: 'images-outline', 
@@ -362,7 +362,7 @@ export default function PartnerProfileScreen() {
               <Text style={styles.profileName} numberOfLines={2}>{profile.name}</Text>
               {profile.isVerified && (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={20} color="#00BFA6" />
+                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
                 </View>
               )}
             </View>
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#00BFA6',
+    backgroundColor: '#7E3AF2',
     borderWidth: 3,
     borderColor: '#FFF',
   },

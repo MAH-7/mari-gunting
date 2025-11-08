@@ -76,7 +76,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B14F" />
+          <ActivityIndicator size="large" color="#7E3AF2" />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   backButton: {
     paddingHorizontal: 32,
     paddingVertical: 14,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 12,
   },
   backButtonText: {
@@ -413,10 +413,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

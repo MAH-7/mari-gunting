@@ -138,7 +138,7 @@ export default function BarberReviewsScreen() {
                       styles.distributionFill, 
                       { 
                         width: `${percentage}%`,
-                        backgroundColor: ratingFilter === rating ? '#00B14F' : '#FBBF24'
+                        backgroundColor: ratingFilter === rating ? '#7E3AF2' : '#FBBF24'
                       }
                     ]} 
                   />
@@ -187,7 +187,7 @@ export default function BarberReviewsScreen() {
         <View style={styles.reviewsSection}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#00B14F" />
+              <ActivityIndicator size="large" color="#7E3AF2" />
               <Text style={styles.loadingText}>Loading reviews...</Text>
             </View>
           ) : displayedReviews.length === 0 ? (
@@ -221,7 +221,7 @@ export default function BarberReviewsScreen() {
                       <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
                       {review.services && review.services.length > 0 && (
                         <View style={styles.reviewServices}>
-                          <Ionicons name="cut" size={12} color="#00B14F" />
+                          <Ionicons name="cut" size={12} color="#7E3AF2" />
                           <Text style={styles.reviewServicesText}>
                             {review.services.map((s: any) => s.name).join(', ')}
                           </Text>
@@ -282,7 +282,7 @@ export default function BarberReviewsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.loadMoreText}>Load More Reviews</Text>
-                  <Ionicons name="chevron-down" size={18} color="#00B14F" />
+                  <Ionicons name="chevron-down" size={18} color="#7E3AF2" />
                 </TouchableOpacity>
               )}
               
@@ -418,8 +418,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
   },
   filterChipActive: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   filterChipText: {
     fontSize: 14,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   reviewAvatarText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   reviewCustomerDetails: {
     flex: 1,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   reviewServicesText: {
     fontSize: 12,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '500',
   },
   reviewDate: {
@@ -590,16 +590,16 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderRadius: 12,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#00B14F20',
+    borderColor: '#7E3AF220',
   },
   loadMoreText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   endOfReviews: {
     alignItems: 'center',
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

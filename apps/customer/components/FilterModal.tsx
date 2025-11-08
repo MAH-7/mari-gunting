@@ -161,7 +161,7 @@ export default function FilterModal({
           {/* Distance Filter */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="navigate" size={20} color="#00B14F" />
+              <Ionicons name="navigate" size={20} color="#7E3AF2" />
               <Text style={styles.sectionTitle}>Distance</Text>
             </View>
             <View style={styles.distanceContainer}>
@@ -175,9 +175,9 @@ export default function FilterModal({
               step={1}
               value={distance}
               onValueChange={setDistance}
-              minimumTrackTintColor="#00B14F"
+              minimumTrackTintColor="#7E3AF2"
               maximumTrackTintColor="#E5E7EB"
-              thumbTintColor="#00B14F"
+              thumbTintColor="#7E3AF2"
             />
             <View style={styles.sliderLabels}>
               <Text style={styles.sliderLabel}>0 km</Text>
@@ -188,7 +188,7 @@ export default function FilterModal({
           {/* Price Range Filter */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="cash" size={20} color="#00B14F" />
+              <Ionicons name="cash" size={20} color="#7E3AF2" />
               <Text style={styles.sectionTitle}>Price Range</Text>
             </View>
             <Text style={styles.sectionSubtitle}>Based on starting price</Text>
@@ -305,14 +305,14 @@ export default function FilterModal({
           {/* Quick Filters */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="funnel" size={20} color="#00B14F" />
+              <Ionicons name="funnel" size={20} color="#7E3AF2" />
               <Text style={styles.sectionTitle}>Quick Filters</Text>
             </View>
 
             <View style={styles.toggleOption}>
               <View style={styles.toggleLeft}>
                 <View style={styles.toggleIcon}>
-                  <Ionicons name="time" size={20} color="#00B14F" />
+                  <Ionicons name="time" size={20} color="#7E3AF2" />
                 </View>
                 <View style={styles.toggleInfo}>
                   <Text style={styles.toggleLabel}>Open Now</Text>
@@ -322,7 +322,7 @@ export default function FilterModal({
               <Switch
                 value={openNow}
                 onValueChange={setOpenNow}
-                trackColor={{ false: '#E5E7EB', true: '#00B14F' }}
+                trackColor={{ false: '#E5E7EB', true: '#7E3AF2' }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#E5E7EB"
               />
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   distanceValue: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginBottom: 4,
   },
   distanceSubtext: {
@@ -483,8 +483,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   priceChipActive: {
-    borderColor: '#00B14F',
-    backgroundColor: '#00B14F',
+    borderColor: '#7E3AF2',
+    backgroundColor: '#7E3AF2',
   },
   priceChipText: {
     fontSize: 14,
@@ -573,8 +573,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#00B14F',
-    shadowColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

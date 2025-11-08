@@ -40,7 +40,7 @@ export default function SuccessModal({
   title,
   message,
   icon = 'checkmark-circle',
-  iconColor = '#00B14F',
+  iconColor = '#7E3AF2',
   primaryButton,
   secondaryButton,
   details,
@@ -187,7 +187,7 @@ export default function SuccessModal({
                     <Ionicons
                       name={secondaryButton.icon}
                       size={20}
-                      color="#00B14F"
+                      color="#7E3AF2"
                       style={styles.buttonIcon}
                     />
                   )}
@@ -272,11 +272,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -298,12 +298,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
     letterSpacing: 0.3,
   },
   buttonIcon: {

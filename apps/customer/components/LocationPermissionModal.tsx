@@ -90,7 +90,7 @@ export function LocationPermissionModal({
           {/* Icon */}
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
-              <Ionicons name="location" size={48} color="#00B14F" />
+              <Ionicons name="location" size={48} color="#7E3AF2" />
             </View>
             <View style={styles.iconPulse} />
           </View>
@@ -107,21 +107,21 @@ export function LocationPermissionModal({
           <View style={styles.featureList}>
             <View style={styles.featureItem}>
               <View style={styles.featureIconBg}>
-                <Ionicons name="search" size={18} color="#00B14F" />
+                <Ionicons name="search" size={18} color="#7E3AF2" />
               </View>
               <Text style={styles.featureText}>Find nearby barbers</Text>
             </View>
 
             <View style={styles.featureItem}>
               <View style={styles.featureIconBg}>
-                <Ionicons name="navigate" size={18} color="#00B14F" />
+                <Ionicons name="navigate" size={18} color="#7E3AF2" />
               </View>
               <Text style={styles.featureText}>Get directions & ETAs</Text>
             </View>
 
             <View style={styles.featureItem}>
               <View style={styles.featureIconBg}>
-                <Ionicons name="calculator" size={18} color="#00B14F" />
+                <Ionicons name="calculator" size={18} color="#7E3AF2" />
               </View>
               <Text style={styles.featureText}>Accurate pricing</Text>
             </View>
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     opacity: 0.1,
     zIndex: 1,
   },
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -276,14 +276,14 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flexDirection: 'row',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     marginBottom: 12,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

@@ -271,7 +271,7 @@ export default function VerifyOTPScreen() {
             </Text>
           ) : (
             <View style={styles.resendActive}>
-              <Ionicons name="refresh" size={18} color="#00B14F" />
+              <Ionicons name="refresh" size={18} color="#7E3AF2" />
               <Text style={styles.resendTextActive}>Resend Code</Text>
             </View>
           )}
@@ -371,12 +371,12 @@ const styles = StyleSheet.create({
   },
   verifyButton: {
     flexDirection: 'row',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   countdown: {
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   resendActive: {
     flexDirection: 'row',
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   resendTextActive: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   helpContainer: {
     flexDirection: 'row',

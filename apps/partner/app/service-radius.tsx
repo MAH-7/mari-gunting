@@ -141,31 +141,31 @@ export default function ServiceRadiusScreen() {
         {/* Tips Card */}
         <View style={styles.tipsCard}>
           <View style={styles.tipsHeader}>
-            <Ionicons name="checkmark-circle-outline" size={22} color="#00B14F" />
+            <Ionicons name="checkmark-circle-outline" size={22} color="#7E3AF2" />
             <Text style={styles.tipsTitle}>Best Practices</Text>
           </View>
           
           <View style={styles.tipsList}>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#00B14F" />
+              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
               <Text style={styles.tipText}>
                 Consider travel time during peak hours
               </Text>
             </View>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#00B14F" />
+              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
               <Text style={styles.tipText}>
                 Factor in fuel costs for longer distances
               </Text>
             </View>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#00B14F" />
+              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
               <Text style={styles.tipText}>
                 Start conservative, increase if needed
               </Text>
             </View>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#00B14F" />
+              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
               <Text style={styles.tipText}>
                 Plan changes strategically due to 24h cooldown
               </Text>
@@ -278,16 +278,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   guidelineBulletText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   guidelineContent: {
     flex: 1,

@@ -557,7 +557,7 @@ export default function BarbersScreen() {
       {/* Location & Radius */}
       <View style={styles.locationSection}>
         <View style={styles.locationInfo}>
-          <Ionicons name="location" size={16} color="#00B14F" />
+          <Ionicons name="location" size={16} color="#7E3AF2" />
           <Text style={styles.locationText}>Within {radius}km from you</Text>
         </View>
         <TouchableOpacity
@@ -580,7 +580,7 @@ export default function BarbersScreen() {
           onPress={() => setShowSortModal(true)}
           activeOpacity={0.7}
         >
-          <Ionicons name="swap-vertical" size={14} color="#00B14F" />
+          <Ionicons name="swap-vertical" size={14} color="#7E3AF2" />
           <Text style={styles.sortButtonText}>{getSortLabel()}</Text>
         </TouchableOpacity>
       </View>
@@ -593,7 +593,7 @@ export default function BarbersScreen() {
       >
         {calculatingDistances && (
           <View style={styles.calculatingBanner}>
-            <ActivityIndicator size="small" color="#00B14F" />
+            <ActivityIndicator size="small" color="#7E3AF2" />
             <Text style={styles.calculatingText}>
               Calculating driving distances...
             </Text>
@@ -604,7 +604,7 @@ export default function BarbersScreen() {
           // Location Required State (Fallback safety net)
           <View style={styles.emptyState}>
             <View style={styles.locationRequiredIcon}>
-              <Ionicons name="location-outline" size={48} color="#00B14F" />
+              <Ionicons name="location-outline" size={48} color="#7E3AF2" />
             </View>
             <Text style={styles.emptyTitle}>Location Required</Text>
             <Text style={styles.emptyText}>
@@ -707,7 +707,7 @@ export default function BarbersScreen() {
                   {sortBy === "distance" && <View style={styles.radioInner} />}
                 </View>
                 <View style={styles.sortOptionContent}>
-                  <Ionicons name="navigate" size={20} color="#00B14F" />
+                  <Ionicons name="navigate" size={20} color="#7E3AF2" />
                   <Text
                     style={[
                       styles.sortOptionText,
@@ -739,7 +739,7 @@ export default function BarbersScreen() {
                   {sortBy === "price-low" && <View style={styles.radioInner} />}
                 </View>
                 <View style={styles.sortOptionContent}>
-                  <Ionicons name="arrow-down" size={20} color="#00B14F" />
+                  <Ionicons name="arrow-down" size={20} color="#7E3AF2" />
                   <Text
                     style={[
                       styles.sortOptionText,
@@ -773,7 +773,7 @@ export default function BarbersScreen() {
                   )}
                 </View>
                 <View style={styles.sortOptionContent}>
-                  <Ionicons name="arrow-up" size={20} color="#00B14F" />
+                  <Ionicons name="arrow-up" size={20} color="#7E3AF2" />
                   <Text
                     style={[
                       styles.sortOptionText,
@@ -899,7 +899,7 @@ function BarberCard({ barber }: { barber: Barber }) {
 
             {barber.distance && (
               <View style={styles.distanceRow}>
-                <Ionicons name="navigate" size={14} color="#00B14F" />
+                <Ionicons name="navigate" size={14} color="#7E3AF2" />
                 <Text style={styles.distanceText}>
                   {formatDistance(barber.distance)}
                   {barber.durationMinutes &&
@@ -955,9 +955,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#F5F3FF",
     borderBottomWidth: 0.5,
-    borderBottomColor: "#00B14F30",
+    borderBottomColor: "#7E3AF230",
   },
   locationInfo: {
     flexDirection: "row",
@@ -967,12 +967,12 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#00B14F",
+    color: "#7E3AF2",
   },
   radiusButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
     borderRadius: 12,
   },
   radiusButtonText: {
@@ -999,15 +999,15 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#F5F3FF",
     borderRadius: 8,
     borderWidth: 0.5,
-    borderColor: "#00B14F30",
+    borderColor: "#7E3AF230",
   },
   sortButtonText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#00B14F",
+    color: "#7E3AF2",
   },
   scrollView: {
     flex: 1,
@@ -1049,7 +1049,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#F5F3FF",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
@@ -1058,12 +1058,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 12,
-    shadowColor: "#00B14F",
+    shadowColor: "#7E3AF2",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1107,7 +1107,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
     borderWidth: 2.5,
     borderColor: "#FFFFFF",
   },
@@ -1170,7 +1170,7 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#00B14F",
+    color: "#7E3AF2",
   },
   // Section 3: Price
   priceSection: {
@@ -1186,7 +1186,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#00B14F",
+    color: "#7E3AF2",
     letterSpacing: -0.4,
   },
   bottom: {
@@ -1214,9 +1214,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sortOptionActive: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#F5F3FF",
     borderWidth: 1,
-    borderColor: "#00B14F",
+    borderColor: "#7E3AF2",
   },
   sortOptionContent: {
     flexDirection: "row",
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
   },
   sortOptionTextActive: {
     fontWeight: "600",
-    color: "#00B14F",
+    color: "#7E3AF2",
   },
   // Modal styles
   modalOverlay: {
@@ -1278,9 +1278,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   radiusOptionActive: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#F5F3FF",
     borderWidth: 1,
-    borderColor: "#00B14F",
+    borderColor: "#7E3AF2",
   },
   radioCircle: {
     width: 22,
@@ -1292,13 +1292,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   radioCircleActive: {
-    borderColor: "#00B14F",
+    borderColor: "#7E3AF2",
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
   },
   radiusOptionText: {
     fontSize: 16,
@@ -1307,7 +1307,7 @@ const styles = StyleSheet.create({
   },
   radiusOptionTextActive: {
     fontWeight: "600",
-    color: "#00B14F",
+    color: "#7E3AF2",
   },
   modalNote: {
     fontSize: 13,
@@ -1322,15 +1322,15 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#F5F3FF",
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#00B14F30",
+    borderColor: "#7E3AF230",
   },
   calculatingText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#00B14F",
+    color: "#7E3AF2",
   },
 });

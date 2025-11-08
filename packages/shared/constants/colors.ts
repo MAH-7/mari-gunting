@@ -3,9 +3,9 @@
 
 export const COLORS = {
   // Primary Brand Colors
-  primary: '#00B14F',
-  primaryDark: '#00A043',
-  primaryLight: '#F0FDF4',
+  primary: '#7E3AF2',
+  primaryDark: '#6C2BD9',
+  primaryLight: '#F5F3FF',
   
   // Secondary
   secondary: '#1E293B',
@@ -49,7 +49,7 @@ export const COLORS = {
     ready: '#8B5CF6',
     'on-the-way': '#8B5CF6',
     arrived: '#8B5CF6',
-    'in-progress': '#00B14F',
+    'in-progress': '#7E3AF2',
     completed: '#10B981',
     cancelled: '#EF4444',
     rejected: '#EF4444',
@@ -71,7 +71,7 @@ export const getStatusBackground = (status: string): string => {
     ready: '#EDE9FE',
     'on-the-way': '#EDE9FE',
     arrived: '#EDE9FE',
-    'in-progress': '#D1FAE5',
+    'in-progress': '#EDE9FE',
     completed: '#D1FAE5',
     cancelled: '#FEE2E2',
     rejected: '#FEE2E2',

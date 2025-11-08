@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingVertical: 32,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   contactSection: {
     width: '100%',

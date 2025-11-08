@@ -136,7 +136,7 @@ export default function OTPVerificationScreen() {
           {/* Icon */}
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
-              <Ionicons name="mail-outline" size={48} color="#00B14F" />
+              <Ionicons name="mail-outline" size={48} color="#7E3AF2" />
             </View>
           </View>
 
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   phoneHighlight: {
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
   },
   otpContainer: {
@@ -285,16 +285,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   otpInputFilled: {
-    borderColor: '#00B14F',
-    backgroundColor: '#F0FDF4',
+    borderColor: '#7E3AF2',
+    backgroundColor: '#F5F3FF',
   },
   verifyButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -322,12 +322,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   countdown: {
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '700',
   },
   resendLink: {
     fontSize: 14,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '700',
   },
   helpButton: {

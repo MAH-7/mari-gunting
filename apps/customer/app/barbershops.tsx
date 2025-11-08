@@ -141,7 +141,7 @@ export default function BarbershopsScreen() {
           <Ionicons 
             name="options-outline" 
             size={24} 
-            color={hasActiveFilters ? '#00B14F' : '#111827'} 
+            color={hasActiveFilters ? '#7E3AF2' : '#111827'} 
           />
           {hasActiveFilters && <View style={styles.filterBadge} />}
         </TouchableOpacity>
@@ -151,7 +151,7 @@ export default function BarbershopsScreen() {
       {/* Shop Count */}
       <View style={styles.countSection}>
         <View style={styles.countBadge}>
-          <Ionicons name="storefront" size={16} color="#00B14F" />
+          <Ionicons name="storefront" size={16} color="#7E3AF2" />
           <Text style={styles.resultCount}>
             {sortedBarbershops.length} {sortedBarbershops.length === 1 ? 'shop' : 'shops'} available
           </Text>
@@ -328,7 +328,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
               <>
                 <View style={styles.metaDot} />
                 <View style={styles.distanceContainer}>
-                  <Ionicons name="navigate" size={11} color="#00B14F" />
+                  <Ionicons name="navigate" size={11} color="#7E3AF2" />
                   <Text style={styles.distanceText}>{formatDistance(shop.distance)}</Text>
                 </View>
               </>
@@ -397,7 +397,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
         </View>
         <View style={styles.actionButton}>
           <Text style={styles.actionButtonText}>View Shop</Text>
-          <Ionicons name="chevron-forward" size={16} color="#00B14F" />
+          <Ionicons name="chevron-forward" size={16} color="#7E3AF2" />
         </View>
       </View>
     </TouchableOpacity>
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   filterButtonActive: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#EDE9FE',
   },
   filterBadge: {
     position: 'absolute',
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   clearFiltersText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
     textDecorationLine: 'underline',
   },
   scrollView: {
@@ -611,21 +611,21 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   openBadge: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderWidth: 2,
-    borderColor: '#D1FAE5',
+    borderColor: '#EDE9FE',
   },
   openDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   closedBadge: {
     paddingHorizontal: 8,
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   serviceTagPrice: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   moreServicesTag: {
     paddingHorizontal: 10,
@@ -737,16 +737,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderRadius: 10,
     gap: 4,
     borderWidth: 1.5,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   actionButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
     letterSpacing: 0.2,
   },
 });

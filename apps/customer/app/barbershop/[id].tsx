@@ -325,7 +325,7 @@ export default function BarbershopDetailScreen() {
                 {shop.distance && (
                   <>
                     <View style={styles.ratingDot} />
-                    <Ionicons name="navigate" size={14} color="#00B14F" />
+                    <Ionicons name="navigate" size={14} color="#7E3AF2" />
                     <Text style={styles.distanceText}>{formatDistance(shop.distance)}</Text>
                   </>
                 )}
@@ -337,7 +337,7 @@ export default function BarbershopDetailScreen() {
           <View style={styles.quickStats}>
             <View style={styles.statItem}>
               <View style={styles.statIconWrapper}>
-                <Ionicons name="people" size={20} color="#00B14F" />
+                <Ionicons name="people" size={20} color="#7E3AF2" />
               </View>
               <Text style={styles.statValue}>{shop.bookingsCount}+</Text>
               <Text style={styles.statLabel}>Bookings</Text>
@@ -363,7 +363,7 @@ export default function BarbershopDetailScreen() {
           {/* Address */}
           <TouchableOpacity style={styles.addressCard} activeOpacity={0.7}>
             <View style={styles.addressIconWrapper}>
-              <Ionicons name="location" size={20} color="#00B14F" />
+              <Ionicons name="location" size={20} color="#7E3AF2" />
             </View>
             <View style={styles.addressContent}>
               <Text style={styles.addressLabel}>Location</Text>
@@ -451,7 +451,7 @@ export default function BarbershopDetailScreen() {
           
           <View style={styles.servicesNote}>
             <View style={styles.servicesNoteIcon}>
-              <Ionicons name="information-circle" size={16} color="#00B14F" />
+              <Ionicons name="information-circle" size={16} color="#7E3AF2" />
             </View>
             <Text style={styles.servicesNoteText}>
               Choose your preferred service when booking
@@ -468,7 +468,7 @@ export default function BarbershopDetailScreen() {
                 ]}
               >
                 <View style={styles.serviceIconBg}>
-                  <Ionicons name="cut" size={20} color="#00B14F" />
+                  <Ionicons name="cut" size={20} color="#7E3AF2" />
                 </View>
                 <View style={styles.serviceInfo}>
                   <Text style={styles.serviceName}>{service.name}</Text>
@@ -501,7 +501,7 @@ export default function BarbershopDetailScreen() {
                 onPress={() => router.push(`/barbershop/reviews/${id}` as any)}
               >
                 <Text style={styles.seeAllText}>See all</Text>
-                <Ionicons name="chevron-forward" size={16} color="#00B14F" />
+                <Ionicons name="chevron-forward" size={16} color="#7E3AF2" />
               </TouchableOpacity>
             )}
           </View>
@@ -582,7 +582,7 @@ export default function BarbershopDetailScreen() {
                         </Text>
                       </View>
                     </View>
-                    <Ionicons name="checkmark-circle" size={18} color="#00B14F" />
+                    <Ionicons name="checkmark-circle" size={18} color="#7E3AF2" />
                   </View>
                   {review.comment && (
                     <Text style={styles.reviewComment}>{review.comment}</Text>
@@ -599,7 +599,7 @@ export default function BarbershopDetailScreen() {
                   <Text style={styles.viewAllReviewsText}>
                     View all {shop.reviewsCount} reviews
                   </Text>
-                  <Ionicons name="arrow-forward" size={16} color="#00B14F" />
+                  <Ionicons name="arrow-forward" size={16} color="#7E3AF2" />
                 </TouchableOpacity>
               )}
             </View>
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
   currentStatusBadgeOpen: {
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: '#EDE9FE',
   },
   currentStatusBadgeClosed: {
     backgroundColor: '#FEF2F2',
@@ -690,12 +690,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   currentStatusText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   currentStatusTextClosed: {
     color: '#DC2626',
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   quickStats: {
     flexDirection: 'row',
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -958,27 +958,27 @@ const styles = StyleSheet.create({
     height: 32,
     paddingHorizontal: 10,
     borderRadius: 16,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#D1FAE5',
+    borderColor: '#EDE9FE',
   },
   servicesBadgeText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   servicesNote: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderRadius: 12,
     marginBottom: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: '#EDE9FE',
   },
   servicesNoteIcon: {
     width: 20,
@@ -1013,11 +1013,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: '#EDE9FE',
   },
   serviceInfo: {
     flex: 1,
@@ -1039,12 +1039,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   servicePriceText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   serviceDuration: {
     flexDirection: 'row',
@@ -1069,7 +1069,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   hourRowTodayOpen: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     marginHorizontal: -20,
     paddingHorizontal: 20,
     paddingVertical: 14,
@@ -1078,7 +1078,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderBottomWidth: 0,
     borderWidth: 1.5,
-    borderColor: '#D1FAE5',
+    borderColor: '#EDE9FE',
   },
   hourRowTodayClosed: {
     backgroundColor: '#FEF2F2',
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   todayIndicatorClosed: {
     backgroundColor: '#DC2626',
@@ -1156,7 +1156,7 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   ratingOverview: {
     flexDirection: 'row',
@@ -1299,15 +1299,15 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     paddingVertical: 14,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#D1FAE5',
+    borderColor: '#EDE9FE',
   },
   viewAllReviewsText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   noReviews: {
     paddingVertical: 48,
@@ -1373,12 +1373,12 @@ const styles = StyleSheet.create({
   bookButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 40,
     paddingVertical: 16,
     borderRadius: 24,
     gap: 8,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

@@ -128,7 +128,7 @@ export const BarberResponseWaitingModal: React.FC<BarberResponseWaitingModalProp
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* Spinner */}
-          <ActivityIndicator size="large" color="#00B14F" style={styles.spinner} />
+          <ActivityIndicator size="large" color="#7E3AF2" style={styles.spinner} />
 
           {/* Title */}
           <Text style={styles.title}>Finding your barber...</Text>
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   barberName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 2,
   },
   infoText: {

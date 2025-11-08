@@ -74,7 +74,7 @@ export default function QuickBookScreen() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroIcon}>
-            <Ionicons name="flash" size={40} color="#00B14F" />
+            <Ionicons name="flash" size={40} color="#7E3AF2" />
           </View>
           <Text style={styles.heroTitle}>Quick Book</Text>
           <Text style={styles.heroSubtitle}>
@@ -82,15 +82,15 @@ export default function QuickBookScreen() {
           </Text>
           <View style={styles.heroFeatures}>
             <View style={styles.heroFeature}>
-              <Ionicons name="time" size={18} color="#00B14F" />
+              <Ionicons name="time" size={18} color="#7E3AF2" />
               <Text style={styles.heroFeatureText}>Fast Match</Text>
             </View>
             <View style={styles.heroFeature}>
-              <Ionicons name="location" size={18} color="#00B14F" />
+              <Ionicons name="location" size={18} color="#7E3AF2" />
               <Text style={styles.heroFeatureText}>Nearby</Text>
             </View>
             <View style={styles.heroFeature}>
-              <Ionicons name="cash" size={18} color="#00B14F" />
+              <Ionicons name="cash" size={18} color="#7E3AF2" />
               <Text style={styles.heroFeatureText}>Best Price</Text>
             </View>
           </View>
@@ -104,7 +104,7 @@ export default function QuickBookScreen() {
               <Text style={styles.sectionSubtitle}>How far should we look?</Text>
             </View>
             <View style={styles.valueBadge}>
-              <Ionicons name="location" size={16} color="#00B14F" />
+              <Ionicons name="location" size={16} color="#7E3AF2" />
               <Text style={styles.valueText}>{radius} km</Text>
             </View>
           </View>
@@ -115,9 +115,9 @@ export default function QuickBookScreen() {
             step={1}
             value={radius}
             onValueChange={setRadius}
-            minimumTrackTintColor="#00B14F"
+            minimumTrackTintColor="#7E3AF2"
             maximumTrackTintColor="#E5E7EB"
-            thumbTintColor="#00B14F"
+            thumbTintColor="#7E3AF2"
           />
           <View style={styles.sliderLabels}>
             <Text style={styles.sliderLabel}>1 km</Text>
@@ -150,9 +150,9 @@ export default function QuickBookScreen() {
             step={5}
             value={maxPrice}
             onValueChange={setMaxPrice}
-            minimumTrackTintColor="#00B14F"
+            minimumTrackTintColor="#7E3AF2"
             maximumTrackTintColor="#E5E7EB"
-            thumbTintColor="#00B14F"
+            thumbTintColor="#7E3AF2"
           />
           <View style={styles.sliderLabels}>
             <Text style={styles.sliderLabel}>RM 10</Text>
@@ -170,7 +170,7 @@ export default function QuickBookScreen() {
         {/* Summary Card */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryIconContainer}>
-            <Ionicons name="checkmark-circle" size={48} color="#00B14F" />
+            <Ionicons name="checkmark-circle" size={48} color="#7E3AF2" />
           </View>
           <Text style={styles.summaryTitle}>Ready to Find Barber</Text>
           <View style={styles.summaryGrid}>
@@ -196,7 +196,7 @@ export default function QuickBookScreen() {
             </View>
           </View>
           <View style={styles.infoBox}>
-            <Ionicons name="information-circle-outline" size={20} color="#00B14F" />
+            <Ionicons name="information-circle-outline" size={20} color="#7E3AF2" />
             <Text style={styles.infoBoxText}>
               Service selection will be available after barber is matched
             </Text>
@@ -233,16 +233,16 @@ export default function QuickBookScreen() {
       {isSearching && (
         <View style={styles.searchingOverlay}>
           <View style={styles.searchingCard}>
-            <ActivityIndicator size="large" color="#00B14F" style={styles.searchingSpinner} />
+            <ActivityIndicator size="large" color="#7E3AF2" style={styles.searchingSpinner} />
             <Text style={styles.searchingTitle}>Searching...</Text>
             <Text style={styles.searchingText}>Finding available barbers within {radius}km</Text>
             <View style={styles.searchingDetails}>
               <View style={styles.searchingDetail}>
-                <Ionicons name="location" size={16} color="#00B14F" />
+                <Ionicons name="location" size={16} color="#7E3AF2" />
                 <Text style={styles.searchingDetailText}>Radius: {radius}km</Text>
               </View>
               <View style={styles.searchingDetail}>
-                <Ionicons name="cash-outline" size={16} color="#00B14F" />
+                <Ionicons name="cash-outline" size={16} color="#7E3AF2" />
                 <Text style={styles.searchingDetailText}>Max: RM {maxPrice}</Text>
               </View>
             </View>
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
     paddingHorizontal: 20,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
   },
   heroIcon: {
     width: 64,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   heroFeatureText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   section: {
     paddingHorizontal: 20,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   valueBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -416,12 +416,12 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   valueText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   slider: {
     width: '100%',
@@ -543,11 +543,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 16,
     paddingVertical: 18,
     gap: 10,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   searchingDetail: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   searchingDetailText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   errorOverlay: {
     flex: 1,
@@ -668,11 +668,11 @@ const styles = StyleSheet.create({
   },
   errorButton: {
     width: '100%',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

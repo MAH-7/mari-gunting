@@ -211,7 +211,7 @@ export default function RewardsScreen() {
           
           <View style={styles.voucherFooter}>
             <View style={styles.pointsRow}>
-              <Ionicons name="pricetag" size={16} color="#00B14F" />
+              <Ionicons name="pricetag" size={16} color="#7E3AF2" />
               <Text style={styles.pointsText}>{voucherPoints} pts</Text>
             </View>
             <Text style={[styles.expiryText, expiringSoon && styles.expiryTextWarning]}>Exp: {voucherExpiry}</Text>
@@ -261,7 +261,7 @@ export default function RewardsScreen() {
     <SafeAreaView style={styles.container}>
       {/* Rewards Card - Points & Credits */}
       <LinearGradient
-        colors={['#00B14F', '#00A043']}
+        colors={['#7E3AF2', '#6C2BD9']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1}}
         style={styles.pointsCard}
@@ -330,7 +330,7 @@ export default function RewardsScreen() {
       {/* Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B14F" />
+          <ActivityIndicator size="large" color="#7E3AF2" />
           <Text style={styles.loadingText}>Loading rewards...</Text>
         </View>
       ) : (
@@ -346,8 +346,8 @@ export default function RewardsScreen() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor="#00B14F"
-                  colors={['#00B14F']}
+                  tintColor="#7E3AF2"
+                  colors={['#7E3AF2']}
                 />
               }
               ListEmptyComponent={
@@ -371,8 +371,8 @@ export default function RewardsScreen() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor="#00B14F"
-                  colors={['#00B14F']}
+                  tintColor="#7E3AF2"
+                  colors={['#7E3AF2']}
                 />
               }
               ListEmptyComponent={
@@ -408,7 +408,7 @@ export default function RewardsScreen() {
                       <Ionicons
                         name={isAddition ? 'add-circle' : 'remove-circle'}
                         size={22}
-                        color={isAddition ? '#00B14F' : '#EF4444'}
+                        color={isAddition ? '#7E3AF2' : '#EF4444'}
                       />
                     </View>
 
@@ -432,8 +432,8 @@ export default function RewardsScreen() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor="#00B14F"
-                  colors={['#00B14F']}
+                  tintColor="#7E3AF2"
+                  colors={['#7E3AF2']}
                 />
               }
               ListHeaderComponent={
@@ -554,7 +554,7 @@ export default function RewardsScreen() {
             ]}
           >
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={64} color="#00B14F" />
+              <Ionicons name="checkmark-circle" size={64} color="#7E3AF2" />
             </View>
             <Text style={styles.successTitle}>Voucher Redeemed!</Text>
             <Text style={styles.successText}>Check My Vouchers to use it</Text>
@@ -576,7 +576,7 @@ export default function RewardsScreen() {
       {isRedeeming && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContent}>
-            <ActivityIndicator size="large" color="#00B14F" />
+            <ActivityIndicator size="large" color="#7E3AF2" />
             <Text style={styles.loadingText}>Redeeming voucher...</Text>
           </View>
         </View>
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 20,
     padding: 16,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tabActive: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   tabText: {
     fontSize: 14,
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   badgeText: {
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
   pointsText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   expiryText: {
     fontSize: 11,
@@ -816,12 +816,12 @@ const styles = StyleSheet.create({
   },
   voucherRight: {
     width: 80,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   voucherRightActive: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   voucherRightUsed: {
     backgroundColor: '#6B7280',
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     marginTop: 16,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -902,7 +902,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activityIconEarn: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#EDE9FE',
   },
   activityIconRedeem: {
     backgroundColor: '#FEE2E2',
@@ -927,7 +927,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   activityAmountEarn: {
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   activityAmountRedeem: {
     color: '#EF4444',
@@ -1016,7 +1016,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
   },
   modalButtonConfirmText: {
@@ -1055,7 +1055,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -1168,7 +1168,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   toggleButtonActive: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   toggleText: {
     fontSize: 13,

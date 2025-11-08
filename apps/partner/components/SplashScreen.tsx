@@ -79,7 +79,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
   return (
     <LinearGradient
-      colors={["#00B14F", "#00A043", "#008F38"]}
+      colors={["#7E3AF2", "#6C2BD9", "#5B21B6"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}
@@ -102,7 +102,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         <View style={styles.logoContainer}>
           <View style={styles.logoBackground}>
             <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-              <Ionicons name="cut" size={80} color="#00B14F" />
+              <Ionicons name="cut" size={80} color="#7E3AF2" />
             </Animated.View>
             
             {/* Partner Badge */}
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,

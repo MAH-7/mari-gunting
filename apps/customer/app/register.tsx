@@ -276,7 +276,7 @@ export default function RegisterScreen() {
                   value={phoneNumber}
                   editable={false}
                 />
-                <Ionicons name="checkmark-circle" size={20} color="#00B14F" />
+                <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
               </View>
               <Text style={styles.helperText}>Verified via OTP</Text>
             </View>
@@ -288,7 +288,7 @@ export default function RegisterScreen() {
                   <Ionicons 
                     name={role === 'customer' ? 'person' : 'cut'} 
                     size={24} 
-                    color="#00B14F" 
+                    color="#7E3AF2" 
                   />
                 </View>
                 <View style={styles.roleContent}>
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   roleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderWidth: 2,
     borderColor: '#86EFAC',
     borderRadius: 12,
@@ -508,17 +508,17 @@ const styles = StyleSheet.create({
   changeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   registerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     marginHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   termsLink: {
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
   },
 });

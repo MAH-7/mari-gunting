@@ -90,7 +90,7 @@ export default function BarbershopReviewsScreen() {
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B14F" />
+          <ActivityIndicator size="large" color="#7E3AF2" />
           <Text style={styles.loadingText}>Loading reviews...</Text>
         </View>
       </SafeAreaView>
@@ -308,7 +308,7 @@ export default function BarbershopReviewsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.loadMoreText}>Load More Reviews</Text>
-                  <Ionicons name="chevron-down" size={18} color="#00B14F" />
+                  <Ionicons name="chevron-down" size={18} color="#7E3AF2" />
                 </TouchableOpacity>
               )}
               
@@ -534,8 +534,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   filterButtonActive: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   filterButtonText: {
     fontSize: 13,
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
   reviewAvatarText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   reviewCustomerDetails: {
     flex: 1,
@@ -698,16 +698,16 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderRadius: 12,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#00B14F20',
+    borderColor: '#7E3AF220',
   },
   loadMoreText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   endOfReviews: {
     alignItems: 'center',
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

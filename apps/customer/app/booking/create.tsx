@@ -421,9 +421,9 @@ export default function CreateBookingScreen() {
           <View style={styles.etaBannerLeft}>
             <View style={styles.etaBannerIcon}>
               {calculatingRoute ? (
-                <ActivityIndicator size="small" color="#00B14F" />
+                <ActivityIndicator size="small" color="#7E3AF2" />
               ) : (
-                <Ionicons name="time" size={24} color="#00B14F" />
+                <Ionicons name="time" size={24} color="#7E3AF2" />
               )}
             </View>
             <View style={styles.etaBannerContent}>
@@ -439,7 +439,7 @@ export default function CreateBookingScreen() {
           </View>
           {!calculatingRoute && estimatedETA > 0 && (
             <View style={styles.etaBadge}>
-              <Ionicons name="flash" size={14} color="#00B14F" />
+              <Ionicons name="flash" size={14} color="#7E3AF2" />
               <Text style={styles.etaBadgeText}>ASAP</Text>
             </View>
           )}
@@ -467,7 +467,7 @@ export default function CreateBookingScreen() {
                 <Text style={styles.jobsText}>• {barber.completedJobs} jobs</Text>
               </View>
               <View style={styles.distanceRow}>
-                <Ionicons name="location" size={14} color="#00B14F" />
+                <Ionicons name="location" size={14} color="#7E3AF2" />
                 {calculatingRoute ? (
                   <Text style={styles.distanceText}>Calculating...</Text>
                 ) : distance > 0 ? (
@@ -569,7 +569,7 @@ export default function CreateBookingScreen() {
                       <Text style={styles.addressLabel}>{addr.label}</Text>
                       <Text style={styles.addressText}>{fullAddress}</Text>
                     </View>
-                    <Ionicons name="location" size={20} color="#00B14F" />
+                    <Ionicons name="location" size={20} color="#7E3AF2" />
                   </TouchableOpacity>
                 );
               })}
@@ -581,7 +581,7 @@ export default function CreateBookingScreen() {
                 activeOpacity={ACTIVE_OPACITY.SECONDARY}
               >
                 <View style={styles.addIconCircle}>
-                  <Ionicons name="add" size={20} color="#00B14F" />
+                  <Ionicons name="add" size={20} color="#7E3AF2" />
                 </View>
                 <Text style={styles.addNewAddressText}>Add New Address</Text>
                 <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
@@ -633,7 +633,7 @@ export default function CreateBookingScreen() {
                 Travel {distance > 0 ? `(${distance.toFixed(1)} km)` : ''}
               </Text>
               {calculatingRoute ? (
-                <ActivityIndicator size="small" color="#00B14F" />
+                <ActivityIndicator size="small" color="#7E3AF2" />
               ) : (
                 <Text style={styles.priceValue}>{formatPrice(travelCost)}</Text>
               )}
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -769,13 +769,13 @@ const styles = StyleSheet.create({
   etaBannerTime: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   etaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
   etaBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   barberCard: {
     flexDirection: 'row',
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderWidth: 2.5,
     borderColor: '#FFFFFF',
   },
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   },
   distanceText: {
     fontSize: 13,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
   },
   servicesHeader: {
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   serviceCard: {
     marginBottom: 12,
@@ -873,8 +873,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   serviceCardSelected: {
-    borderColor: '#00B14F',
-    backgroundColor: '#F0FDF4',
+    borderColor: '#7E3AF2',
+    backgroundColor: '#F5F3FF',
   },
   serviceCardInner: {
     flexDirection: 'row',
@@ -892,8 +892,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   serviceInfo: {
     flex: 1,
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   addressCard: {
     flexDirection: 'row',
@@ -925,8 +925,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
   },
   addressCardActive: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#00B14F',
+    backgroundColor: '#F5F3FF',
+    borderColor: '#7E3AF2',
   },
   radioCircle: {
     width: 24,
@@ -938,13 +938,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioCircleActive: {
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   addressInfo: {
     flex: 1,
@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
   manageAddressesLink: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   addNewAddressCard: {
     flexDirection: 'row',
@@ -985,14 +985,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
     borderStyle: 'dashed',
   },
   addIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   emptyAddresses: {
     alignItems: 'center',
@@ -1024,9 +1024,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 12,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1083,7 +1083,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   durationRow: {
     flexDirection: 'row',
@@ -1112,11 +1112,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bookButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1191,11 +1191,11 @@ const styles = StyleSheet.create({
   modalTotalSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
   },
   modalTotalValue: {
     fontSize: 24,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '700',
   },
   modalActions: {
@@ -1221,8 +1221,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#00B14F',
-    shadowColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

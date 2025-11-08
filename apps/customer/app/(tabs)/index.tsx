@@ -6,6 +6,9 @@ import {
   StyleSheet,
   Dimensions,
   FlatList,
+  ActivityIndicator,
+  Animated,
+  Easing,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -16,7 +19,9 @@ import { useStore } from "@/store/useStore";
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 import { rewardsService } from '@/services/rewardsService';
+import { bannerService, Banner } from '@/services/bannerService';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BANNER_PADDING = 20;
@@ -39,6 +44,20 @@ export default function HomeScreen() {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const bannerRef = useRef<FlatList>(null);
+  
+  // Shimmer animation
+  const shimmerAnim = useRef(new Animated.Value(-1)).current;
+  
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 1500,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
 
   // Location permission state
   const {
@@ -75,21 +94,16 @@ export default function HomeScreen() {
     }, [currentUser?.id, refetchPoints])
   );
 
-  // Promotional banners
-  const banners = [
-    {
-      id: "1",
-      image: require("@/assets/banner1.png"),
-    },
-    {
-      id: "2",
-      image: require("@/assets/banner2.png"),
-    },
-    {
-      id: "3",
-      image: require("@/assets/banner3.png"),
-    },
-  ];
+  // Fetch promotional banners from Supabase
+  const { data: remoteBanners, isLoading: bannersLoading } = useQuery({
+    queryKey: ['banners'],
+    queryFn: () => bannerService.getActiveBanners(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnMount: false,
+  });
+
+  // Use remote banners (no fallback to avoid showing old promos)
+  const banners = remoteBanners || [];
 
   // Auto-scroll carousel with pause functionality
   useEffect(() => {
@@ -180,6 +194,22 @@ export default function HomeScreen() {
     }
   };
 
+  // Handle banner click
+  const handleBannerPress = (banner: Banner | typeof fallbackBanners[0]) => {
+    // Track click (for analytics)
+    if ('image_url' in banner && typeof banner.image_url === 'string') {
+      bannerService.trackBannerClick(banner.id);
+    }
+
+    // Handle click action if it's a remote banner
+    if ('click_action' in banner && banner.click_action) {
+      const route = bannerService.getBannerRoute(banner as Banner);
+      if (route) {
+        router.push(route as any);
+      }
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.screen}>
@@ -208,52 +238,99 @@ export default function HomeScreen() {
 
         {/* Banner: 3/5 */}
         <View style={styles.carouselSection}>
-          <FlatList
-            ref={bannerRef}
-            data={banners}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={SCREEN_WIDTH}
-            decelerationRate="fast"
-            style={{ flexGrow: 0 }}
-            contentContainerStyle={{ paddingHorizontal: 0 }}
-            onScrollBeginDrag={handleBannerTouchStart}
-            onTouchStart={handleBannerTouchStart}
-            onTouchEnd={handleBannerTouchEnd}
-            onScrollEndDrag={handleBannerTouchEnd}
-            onMomentumScrollEnd={(event) => {
-              const index = Math.round(
-                event.nativeEvent.contentOffset.x / SCREEN_WIDTH
-              );
-              setCurrentBannerIndex(index);
-            }}
-            renderItem={({ item }) => (
-              <View style={{ width: SCREEN_WIDTH, paddingHorizontal: BANNER_PADDING }}>
-                <TouchableOpacity style={styles.bannerCard} activeOpacity={0.95}>
-                  <Image
-                    source={item.image}
-                    style={styles.bannerImage}
-                    resizeMode="cover"
+          {bannersLoading || banners.length === 0 ? (
+            /* Shimmer Skeleton */
+            <View style={styles.bannerSkeletonContainer}>
+              <View style={styles.bannerSkeleton}>
+                <Animated.View style={[
+                  styles.shimmerWrapper,
+                  {
+                    transform: [{
+                      translateX: shimmerAnim.interpolate({
+                        inputRange: [-1, 1],
+                        outputRange: [-BANNER_WIDTH, BANNER_WIDTH],
+                      })
+                    }]
+                  }
+                ]}>
+                  <LinearGradient
+                    colors={['#E5E7EB', '#F3F4F6', '#E5E7EB']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.shimmerGradient}
                   />
-                </TouchableOpacity>
+                </Animated.View>
               </View>
-            )}
-            keyExtractor={(item) => item.id}
-          />
+              {/* Pagination dots skeleton */}
+              <View style={styles.paginationDots}>
+                <View style={[styles.paginationDot, styles.skeletonDot]} />
+                <View style={[styles.paginationDot, styles.skeletonDot]} />
+                <View style={[styles.paginationDot, styles.skeletonDot]} />
+              </View>
+            </View>
+          ) : (
+          <>
+            <FlatList
+              ref={bannerRef}
+              data={banners}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={SCREEN_WIDTH}
+              decelerationRate="fast"
+              style={{ flexGrow: 0 }}
+              contentContainerStyle={{ paddingHorizontal: 0 }}
+              onScrollBeginDrag={handleBannerTouchStart}
+              onTouchStart={handleBannerTouchStart}
+              onTouchEnd={handleBannerTouchEnd}
+              onScrollEndDrag={handleBannerTouchEnd}
+              onMomentumScrollEnd={(event) => {
+                const index = Math.round(
+                  event.nativeEvent.contentOffset.x / SCREEN_WIDTH
+                );
+                setCurrentBannerIndex(index);
+              }}
+              renderItem={({ item }) => {
+                // Handle both remote URLs and local require()
+                const imageSource = typeof item.image_url === 'string'
+                  ? { uri: item.image_url }
+                  : item.image_url;
+                
+                return (
+                  <View style={{ width: SCREEN_WIDTH, paddingHorizontal: BANNER_PADDING }}>
+                    <TouchableOpacity 
+                      style={styles.bannerCard} 
+                      activeOpacity={0.95}
+                      onPress={() => handleBannerPress(item)}
+                    >
+                      <Image
+                        source={imageSource}
+                        style={styles.bannerImage}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                );
+              }}
+              keyExtractor={(item) => item.id}
+            />
 
-          {/* Pagination Dots */}
-          <View style={styles.paginationDots}>
-            {banners.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  currentBannerIndex === index && styles.paginationDotActive,
-                ]}
-              />
+            {/* Pagination Dots */}
+            {!bannersLoading && banners.length > 0 && (
+            <View style={styles.paginationDots}>
+              {banners.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.paginationDot,
+                    currentBannerIndex === index && styles.paginationDotActive,
+                  ]}
+                />
             ))}
-          </View>
+            </View>
+            )}
+          </>
+          )}
         </View>
 
         {/* Buttons: 1/5 */}
@@ -264,7 +341,7 @@ export default function HomeScreen() {
               activeOpacity={0.9}
               onPress={handleNavigateToBarbers}
             >
-              <Ionicons name="person-outline" size={22} color="#00B14F" />
+              <Ionicons name="person-outline" size={22} color="#7E3AF2" />
               <Text style={styles.actionLabel}>Freelance</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -272,7 +349,7 @@ export default function HomeScreen() {
               activeOpacity={0.9}
               onPress={handleNavigateToBarbershops}
             >
-              <Ionicons name="business-outline" size={22} color="#00B14F" />
+              <Ionicons name="business-outline" size={22} color="#7E3AF2" />
               <Text style={styles.actionLabel}>Barbershop</Text>
             </TouchableOpacity>
           </View>
@@ -299,7 +376,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroSection: {
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 20,
@@ -419,7 +496,33 @@ const styles = StyleSheet.create({
   },
   paginationDotActive: {
     width: 20,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
+  },
+  bannerSkeletonContainer: {
+    width: SCREEN_WIDTH,
+    paddingHorizontal: BANNER_PADDING,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  bannerSkeleton: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  shimmerWrapper: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  shimmerGradient: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.5,
+  },
+  skeletonDot: {
+    backgroundColor: '#D1D5DB',
   },
   actionsSection: {
     justifyContent: 'center',
@@ -472,8 +575,8 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   filterPillActive: {
-    backgroundColor: "#00B14F",
-    borderColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
+    borderColor: "#7E3AF2",
   },
   filterText: {
     fontSize: 15,
@@ -487,7 +590,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
     marginRight: 8,
   },
   barbersSection: {
@@ -561,7 +664,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     left: 16,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -673,7 +776,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 16,
     right: 16,
-    backgroundColor: "#00B14F",
+    backgroundColor: "#7E3AF2",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,

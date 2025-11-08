@@ -211,7 +211,7 @@ export default function PartnerLoginScreen() {
 
           {/* Helper Text for New Partners */}
           <View style={styles.newPartnerContainer}>
-            <Ionicons name="information-circle" size={20} color="#00B14F" />
+            <Ionicons name="information-circle" size={20} color="#7E3AF2" />
             <Text style={styles.newPartnerText}>
               First time? We'll set up your partner account automatically
             </Text>
@@ -338,12 +338,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   continueButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   supportLink: {
     fontSize: 14,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
   },
   termsContainer: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   termsLink: {
     fontSize: 13,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
     lineHeight: 20,
   },

@@ -37,7 +37,7 @@ export default function TestMapScreen() {
           coordinate={[101.7115, 3.1569]}
         >
           <View style={styles.marker}>
-            <Ionicons name="location" size={40} color="#00B14F" />
+            <Ionicons name="location" size={40} color="#7E3AF2" />
           </View>
         </Mapbox.PointAnnotation>
 
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   },
   docsButton: {
     flexDirection: 'row',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginBottom: 8,
   },
   infoText: {
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   testButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',

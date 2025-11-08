@@ -129,7 +129,7 @@ export function ServiceRadiusSettings({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Ionicons name="navigate-circle" size={24} color="#00B14F" />
+            <Ionicons name="navigate-circle" size={24} color="#7E3AF2" />
           </View>
           <View style={styles.headerInfo}>
             <Text style={styles.title}>Service Radius</Text>
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   currentRadiusValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   lastChangedText: {
     fontSize: 13,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderRadius: 8,
     paddingVertical: 12,
     gap: 8,
@@ -422,9 +422,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   radiusOptionActive: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderWidth: 2,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   radiusOptionLeft: {
     flexDirection: 'row',
@@ -442,13 +442,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioCircleActive: {
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   radiusOptionLabel: {
     fontSize: 16,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   radiusOptionLabelActive: {
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   radiusOptionDescription: {
     fontSize: 13,
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
   },
   saveButtonDisabled: {

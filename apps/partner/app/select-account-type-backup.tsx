@@ -133,19 +133,19 @@ export default function PartnerRegisterScreen() {
           <View style={styles.benefitsSection}>
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
-                <Ionicons name="people" size={20} color="#00B14F" />
+                <Ionicons name="people" size={20} color="#7E3AF2" />
               </View>
               <Text style={styles.benefitText}>Reach more customers</Text>
             </View>
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
-                <Ionicons name="calendar" size={20} color="#00B14F" />
+                <Ionicons name="calendar" size={20} color="#7E3AF2" />
               </View>
               <Text style={styles.benefitText}>Manage bookings easily</Text>
             </View>
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
-                <Ionicons name="trending-up" size={20} color="#00B14F" />
+                <Ionicons name="trending-up" size={20} color="#7E3AF2" />
               </View>
               <Text style={styles.benefitText}>Grow your revenue</Text>
             </View>
@@ -357,12 +357,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   continueButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: 14,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
   },
   termsContainer: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   termsLink: {
     fontSize: 13,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
     lineHeight: 20,
   },

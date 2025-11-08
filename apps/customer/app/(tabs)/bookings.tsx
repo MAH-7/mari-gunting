@@ -174,7 +174,7 @@ export default function BookingsScreen() {
           <Ionicons 
             name="options-outline" 
             size={24} 
-            color={hasActiveFilters ? '#00B14F' : '#111827'} 
+            color={hasActiveFilters ? '#7E3AF2' : '#111827'} 
           />
           {hasActiveFilters && <View style={styles.filterBadge} />}
         </TouchableOpacity>
@@ -237,8 +237,8 @@ export default function BookingsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#00B14F"
-            colors={['#00B14F']}
+            tintColor="#7E3AF2"
+            colors={['#7E3AF2']}
           />
         }
       >
@@ -462,7 +462,7 @@ function BookingCard({ booking }: { booking: any }) {
       },
       completed: { 
         color: '#10B981', 
-        bg: '#D1FAE5', 
+        bg: '#EDE9FE', 
         label: 'Completed',
         iconName: 'checkmark-circle' as const,
         progress: 100
@@ -611,7 +611,7 @@ function BookingCard({ booking }: { booking: any }) {
                 <Ionicons 
                   name={mappedBooking.paymentMethod === 'cash' ? 'cash-outline' : 'card-outline'} 
                   size={12} 
-                  color={mappedBooking.paymentMethod === 'cash' ? '#F59E0B' : '#00B14F'} 
+                  color={mappedBooking.paymentMethod === 'cash' ? '#F59E0B' : '#7E3AF2'} 
                 />
                 <Text style={styles.paymentMethodTextSmall}>
                   {getPaymentMethodDisplay(mappedBooking.paymentMethod || 'cash')}
@@ -733,7 +733,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   filterButtonActive: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#EDE9FE',
   },
   filterBadge: {
     position: 'absolute',
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabActive: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   tabText: {
     fontSize: 16,
@@ -788,7 +788,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   tabBadgeText: {
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
@@ -984,7 +984,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     marginRight: 10,
   },
   serviceName: {
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   paymentMethodBadgeSmall: {
     flexDirection: 'row',
@@ -1083,8 +1083,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   actionButtonPrimary: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   actionButtonText: {
     fontSize: 14,

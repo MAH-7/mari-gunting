@@ -1157,7 +1157,7 @@ export default function PartnerJobsScreen() {
                     <Ionicons 
                       name={job.payment_method === 'cash' ? 'cash-outline' : 'card-outline'} 
                       size={14} 
-                      color={job.payment_method === 'cash' ? '#F59E0B' : '#00B14F'} 
+                      color={job.payment_method === 'cash' ? '#F59E0B' : '#7E3AF2'} 
                     />
                     <Text style={styles.paymentMethodText}>
                       {job.payment_method === 'cash' ? 'CASH' : 'CARD'}
@@ -1512,7 +1512,7 @@ export default function PartnerJobsScreen() {
                   <View style={styles.priceDivider} />
                   <View style={styles.priceRow}>
                     <Text style={styles.priceTotalLabel}>You'll Earn</Text>
-                    <Text style={[styles.priceTotalValue, { color: '#10B981' }]}>
+                    <Text style={[styles.priceTotalValue, { color: '#7E3AF2' }]}>
                       RM {(((selectedJob.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.85) + (selectedJob.travelCost || 0)).toFixed(2)}
                     </Text>
                   </View>
@@ -1785,7 +1785,7 @@ export default function PartnerJobsScreen() {
                 <View style={styles.priceDivider} />
                 <View style={styles.priceRow}>
                   <Text style={styles.priceTotalLabel}>You'll Earn</Text>
-                  <Text style={[styles.priceTotalValue, { color: '#10B981' }]}>
+                  <Text style={[styles.priceTotalValue, { color: '#7E3AF2' }]}>
                     RM {(((selectedJob?.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.85) + (selectedJob?.travelCost || 0)).toFixed(2)}
                   </Text>
                 </View>
@@ -2773,7 +2773,7 @@ const styles = StyleSheet.create({
   paymentMethodText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
     letterSpacing: 0.5,
   },
   paymentInstructionText: {

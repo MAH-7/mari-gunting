@@ -470,7 +470,7 @@ export default function ProfileEditScreen() {
               
               {profile?.isVerified && (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={24} color="#00BFA6" />
+                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
                 </View>
               )}
             </TouchableOpacity>
@@ -480,7 +480,7 @@ export default function ProfileEditScreen() {
                 <Text style={styles.avatarTitle}>Profile Photo</Text>
                 {profile?.isVerified && (
                   <View style={styles.verifiedTag}>
-                    <Ionicons name="shield-checkmark" size={14} color="#00BFA6" />
+                    <Ionicons name="shield-checkmark" size={14} color="#7E3AF2" />
                     <Text style={styles.verifiedText}>Verified</Text>
                   </View>
                 )}
@@ -510,7 +510,7 @@ export default function ProfileEditScreen() {
                   placeholderTextColor="#999"
                 />
                 {formData.fullName.trim() && (
-                  <Ionicons name="checkmark-circle" size={20} color="#00BFA6" />
+                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
                 )}
               </View>
               {errors.fullName && (
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#00BFA6',
+    color: '#7E3AF2',
   },
   avatarHint: {
     fontSize: 13,

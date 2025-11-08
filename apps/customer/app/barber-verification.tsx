@@ -175,7 +175,7 @@ export default function BarberVerificationScreen() {
           {/* Title Section */}
           <View style={styles.titleSection}>
             <View style={styles.iconBadge}>
-              <Ionicons name="shield-checkmark" size={32} color="#00B14F" />
+              <Ionicons name="shield-checkmark" size={32} color="#7E3AF2" />
             </View>
             <Text style={styles.title}>Barber Verification</Text>
             <Text style={styles.subtitle}>
@@ -351,7 +351,7 @@ export default function BarberVerificationScreen() {
               >
                 {certificationDoc ? (
                   <View style={styles.docInfo}>
-                    <Ionicons name="document-text" size={32} color="#00B14F" />
+                    <Ionicons name="document-text" size={32} color="#7E3AF2" />
                     <Text style={styles.docName} numberOfLines={1}>
                       {certificationDoc.name}
                     </Text>
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   progressText: {
     fontSize: 13,
@@ -592,11 +592,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     marginHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   termsLink: {
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '600',
   },
 });

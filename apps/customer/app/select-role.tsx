@@ -52,7 +52,7 @@ export default function SelectRoleScreen() {
             onPress={() => handleSelectRole('customer')}
           >
             <LinearGradient
-              colors={['#00B14F', '#00D95F']}
+              colors={['#7E3AF2', '#6C2BD9']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.gradientCard}
@@ -87,7 +87,7 @@ export default function SelectRoleScreen() {
               {/* Button */}
               <View style={styles.cardButton}>
                 <Text style={styles.cardButtonText}>Continue as Customer</Text>
-                <Ionicons name="arrow-forward" size={20} color="#00B14F" />
+                <Ionicons name="arrow-forward" size={20} color="#7E3AF2" />
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -118,15 +118,15 @@ export default function SelectRoleScreen() {
               {/* Features */}
               <View style={styles.featuresList}>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
                   <Text style={styles.featureText}>Earn extra income</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
                   <Text style={styles.featureText}>Flexible schedule</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
                   <Text style={styles.featureText}>Build your clientele</Text>
                 </View>
               </View>
@@ -134,7 +134,7 @@ export default function SelectRoleScreen() {
               {/* Button */}
               <View style={styles.cardButton}>
                 <Text style={styles.cardButtonText}>Continue as Barber</Text>
-                <Ionicons name="arrow-forward" size={20} color="#00B14F" />
+                <Ionicons name="arrow-forward" size={20} color="#7E3AF2" />
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -174,10 +174,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,

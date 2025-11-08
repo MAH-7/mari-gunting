@@ -42,7 +42,7 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
   if (isChecking || isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#00B14F" />
+        <ActivityIndicator size="large" color="#7E3AF2" />
         <Text style={styles.loadingText}>Checking location services...</Text>
       </View>
     );
@@ -54,7 +54,7 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
       <View style={styles.container}>
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Ionicons name="location" size={64} color="#00B14F" />
+            <Ionicons name="location" size={64} color="#7E3AF2" />
           </View>
           
           <Text style={styles.title}>Location Access Required</Text>
@@ -65,22 +65,22 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
           
           <View style={styles.featureList}>
             <View style={styles.featureItem}>
-              <Ionicons name="search" size={20} color="#00B14F" />
+              <Ionicons name="search" size={20} color="#7E3AF2" />
               <Text style={styles.featureText}>Find nearby barbers</Text>
             </View>
             
             <View style={styles.featureItem}>
-              <Ionicons name="calculator" size={20} color="#00B14F" />
+              <Ionicons name="calculator" size={20} color="#7E3AF2" />
               <Text style={styles.featureText}>Calculate accurate travel costs</Text>
             </View>
             
             <View style={styles.featureItem}>
-              <Ionicons name="navigate" size={20} color="#00B14F" />
+              <Ionicons name="navigate" size={20} color="#7E3AF2" />
               <Text style={styles.featureText}>Show real-time barber location</Text>
             </View>
             
             <View style={styles.featureItem}>
-              <Ionicons name="time" size={20} color="#00B14F" />
+              <Ionicons name="time" size={20} color="#7E3AF2" />
               <Text style={styles.featureText}>Provide accurate arrival times</Text>
             </View>
           </View>
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -166,13 +166,13 @@ const styles = StyleSheet.create({
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
     alignItems: 'center',
     gap: 8,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

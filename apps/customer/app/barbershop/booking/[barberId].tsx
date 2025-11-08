@@ -244,7 +244,7 @@ export default function BarbershopBookingScreen() {
         {(selectedDate || selectedTime || selectedServiceIds.length > 0) && (
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <Ionicons name="calendar-outline" size={20} color="#00B14F" />
+              <Ionicons name="calendar-outline" size={20} color="#7E3AF2" />
               <Text style={styles.summaryTitle}>Booking Summary</Text>
             </View>
             
@@ -374,7 +374,7 @@ export default function BarbershopBookingScreen() {
               <Ionicons 
                 name={showAllDates ? 'chevron-up' : 'chevron-forward'} 
                 size={16} 
-                color="#00B14F" 
+                color="#7E3AF2" 
               />
             </TouchableOpacity>
           )}
@@ -492,7 +492,7 @@ export default function BarbershopBookingScreen() {
             {/* Shop Info */}
             <View style={styles.shopSection}>
               <View style={styles.shopHeader}>
-                <Ionicons name="storefront" size={18} color="#00B14F" />
+                <Ionicons name="storefront" size={18} color="#7E3AF2" />
                 <Text style={styles.shopNameText}>{shop.name}</Text>
                 {shop.isVerified && (
                   <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   summaryValueTotal: {
     fontSize: 20,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '800',
   },
   // Compact Barber & Shop Info
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   serviceCard: {
     marginBottom: 12,
@@ -828,8 +828,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   serviceCardSelected: {
-    borderColor: '#00B14F',
-    backgroundColor: '#F0FDF4',
+    borderColor: '#7E3AF2',
+    backgroundColor: '#F5F3FF',
   },
   serviceCardInner: {
     flexDirection: 'row',
@@ -847,8 +847,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   serviceInfo: {
     flex: 1,
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   // Grab Style - Date Selection
   dateListGrab: {
@@ -894,8 +894,8 @@ const styles = StyleSheet.create({
     width: '18%', // 5 items per row with gaps
   },
   dateItemGrabSelected: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   dateDayGrab: {
     fontSize: 11,
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
   viewMoreDatesText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   // Grab Style - Time Selection
   timeSectionGrab: {
@@ -955,8 +955,8 @@ const styles = StyleSheet.create({
     width: '23%', // 4 items per row with gaps
   },
   timeButtonGrabSelected: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   timeTextGrab: {
     fontSize: 13,
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   durationRow: {
     flexDirection: 'row',
@@ -1035,11 +1035,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bookButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

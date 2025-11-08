@@ -1109,7 +1109,7 @@ export default function PartnerDashboardScreen() {
                     const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     
                     // Determine urgency color
-                    let timerColor = '#00B14F'; // Green: > 2 min
+                    let timerColor = '#7E3AF2'; // Green: > 2 min
                     let bgColor = '#E8F5E9';
                     if (timeRemaining <= 60) {
                       timerColor = '#FF3B30'; // Red: < 1 min

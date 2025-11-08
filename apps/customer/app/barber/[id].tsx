@@ -346,7 +346,7 @@ export default function BarberProfileScreen() {
 
             {(barber.distance || distance) && (
               <View style={styles.locationRow}>
-                <Ionicons name="navigate" size={16} color="#00B14F" />
+                <Ionicons name="navigate" size={16} color="#7E3AF2" />
                 <Text style={styles.distanceText}>{formatDistance(barber.distance || parseFloat(distance || '0'))} away</Text>
               </View>
             )}
@@ -429,7 +429,7 @@ export default function BarberProfileScreen() {
                   />
                   {imageLoading[index] && (
                     <View style={styles.imageLoadingOverlay}>
-                      <ActivityIndicator size="small" color="#00B14F" />
+                      <ActivityIndicator size="small" color="#7E3AF2" />
                     </View>
                   )}
                   <View style={styles.zoomHint}>
@@ -519,7 +519,7 @@ export default function BarberProfileScreen() {
                       <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
                       {review.services && review.services.length > 0 && (
                         <View style={styles.reviewServices}>
-                          <Ionicons name="cut" size={12} color="#00B14F" />
+                          <Ionicons name="cut" size={12} color="#7E3AF2" />
                           <Text style={styles.reviewServicesText}>
                             {review.services.map((s: any) => s.name).join(', ')}
                           </Text>
@@ -578,7 +578,7 @@ export default function BarberProfileScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.viewAllReviewsText}>View all {reviews.length} reviews</Text>
-                <Ionicons name="chevron-forward" size={16} color="#00B14F" />
+                <Ionicons name="chevron-forward" size={16} color="#7E3AF2" />
               </TouchableOpacity>
             )}
           </View>
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -840,15 +840,15 @@ const styles = StyleSheet.create({
   tag: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#00B14F20',
+    borderColor: '#7E3AF220',
   },
   tagText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   portfolioHeader: {
     flexDirection: 'row',
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1D5DB',
   },
   indicatorActive: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     width: 20,
   },
   photoCounter: {
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   serviceCard: {
     backgroundColor: '#F9FAFB',
@@ -996,8 +996,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
   },
   serviceCardSelected: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#00B14F',
+    backgroundColor: '#F5F3FF',
+    borderColor: '#7E3AF2',
   },
   serviceCardInner: {
     flexDirection: 'row',
@@ -1014,8 +1014,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#00B14F',
-    borderColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
+    borderColor: '#7E3AF2',
   },
   serviceContent: {
     flex: 1,
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   serviceDescription: {
     fontSize: 14,
@@ -1171,7 +1171,7 @@ const styles = StyleSheet.create({
   reviewAvatarText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   reviewCustomerDetails: {
     flex: 1,
@@ -1191,7 +1191,7 @@ const styles = StyleSheet.create({
   },
   reviewServicesText: {
     fontSize: 12,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '500',
   },
   reviewDate: {
@@ -1276,7 +1276,7 @@ const styles = StyleSheet.create({
   viewAllReviewsText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   bottomBar: {
     flexDirection: 'row',
@@ -1307,11 +1307,11 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   bookButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 40,
     paddingVertical: 14,
     borderRadius: 24,
-    shadowColor: '#00B14F',
+    shadowColor: '#7E3AF2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

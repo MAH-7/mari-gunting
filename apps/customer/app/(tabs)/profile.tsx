@@ -151,7 +151,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B14F" />
+          <ActivityIndicator size="large" color="#7E3AF2" />
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       </SafeAreaView>
@@ -193,7 +193,7 @@ export default function ProfileScreen() {
     {
       title: 'Account',
       items: [
-        { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.savedAddresses?.length || 0, color: '#00B14F' },
+        { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.savedAddresses?.length || 0, color: '#7E3AF2' },
         { id: 'favorites', icon: 'heart', label: 'Favorite Barbers', badge: null, color: '#EF4444' },
       ]
     },
@@ -224,8 +224,8 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#00B14F"
-            colors={['#00B14F']}
+            tintColor="#7E3AF2"
+            colors={['#7E3AF2']}
           />
         }
       >
@@ -242,7 +242,7 @@ export default function ProfileScreen() {
                 style={styles.editBadge}
                 onPress={() => router.push('/profile/edit')}
               >
-                <Ionicons name="pencil" size={14} color="#00B14F" />
+                <Ionicons name="pencil" size={14} color="#7E3AF2" />
               </TouchableOpacity>
             </View>
             <Text style={styles.userName}>{currentUser.full_name}</Text>
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   heroSection: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingTop: 20,
     paddingBottom: 40,
     borderBottomLeftRadius: 32,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   userName: {
     fontSize: 26,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginBottom: 4,
   },
   statLabel: {
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuBadge: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -642,11 +642,11 @@ const styles = StyleSheet.create({
   },
   roleSwitchHint: {
     fontSize: 13,
-    color: '#00B14F',
+    color: '#7E3AF2',
     fontWeight: '500',
   },
   roleSwitchBadge: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,

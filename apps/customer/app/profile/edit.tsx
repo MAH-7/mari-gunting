@@ -215,7 +215,7 @@ export default function EditProfileScreen() {
                   {profile?.email || 'Not set'}
                 </Text>
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={16} color="#7E3AF2" />
                   <Text style={styles.verifiedText}>Verified</Text>
                 </View>
               </View>
@@ -232,7 +232,7 @@ export default function EditProfileScreen() {
                   {formatPhoneNumber(profile?.phone || profile?.phone_number || '')}
                 </Text>
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color="#00B14F" />
+                  <Ionicons name="checkmark-circle" size={16} color="#7E3AF2" />
                   <Text style={styles.verifiedText}>Verified</Text>
                 </View>
               </View>
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   hint: {
     marginTop: 6,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
   },
   saveButton: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

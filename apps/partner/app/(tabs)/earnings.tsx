@@ -336,7 +336,7 @@ export default function GrabEarningsScreen() {
         }
       >
         {/* Hero Section - Grab Style */}
-        <LinearGradient colors={['#00B14F', '#00953F']} style={styles.heroSection}>
+        <LinearGradient colors={['#7E3AF2', '#6C2BD9']} style={styles.heroSection}>
           <Text style={styles.heroLabel}>
             {selectedPeriod === 'today'
               ? "Today's Earnings"
@@ -404,7 +404,7 @@ export default function GrabEarningsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.availableBalanceContent}>
-                <Ionicons name="wallet-outline" size={18} color="#00B14F" style={{ marginRight: 8 }} />
+                <Ionicons name="wallet-outline" size={18} color="#7E3AF2" style={{ marginRight: 8 }} />
                 <Text style={styles.availableBalanceText}>Available: </Text>
                 <Text style={styles.availableBalanceValue}>RM {availableBalance.toFixed(2)}</Text>
               </View>
@@ -446,7 +446,7 @@ export default function GrabEarningsScreen() {
               </View>
               <Text style={styles.revenueModelEquals}>=</Text>
               <View style={styles.revenueModelItem}>
-                <Ionicons name="checkmark-circle" size={28} color="#00B14F" style={styles.revenueModelIcon} />
+                <Ionicons name="checkmark-circle" size={28} color="#7E3AF2" style={styles.revenueModelIcon} />
                 <Text style={styles.revenueModelLabel}>Your Pay</Text>
               </View>
             </View>
@@ -457,7 +457,7 @@ export default function GrabEarningsScreen() {
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownLeft}>
                 <View style={[styles.breakdownIcon, { backgroundColor: '#E8F5E9' }]}>
-                  <Ionicons name="cut-outline" size={20} color="#00B14F" />
+                  <Ionicons name="cut-outline" size={20} color="#7E3AF2" />
                 </View>
                 <View>
                   <Text style={styles.breakdownLabel}>Service Earnings</Text>
@@ -533,7 +533,7 @@ export default function GrabEarningsScreen() {
                   <Text style={styles.loadMoreText}>
                     Load More ({filteredBookings.length - visibleTrips} remaining)
                   </Text>
-                  <Ionicons name="chevron-down" size={20} color="#00B14F" />
+                  <Ionicons name="chevron-down" size={20} color="#7E3AF2" />
                 </TouchableOpacity>
               )}
             </>
@@ -699,7 +699,7 @@ function TripCard({ booking, onPress }: { booking: Booking; onPress?: () => void
         <View style={styles.tripLeft}>
           {/* Service Icon - Grab Standard */}
           <View style={styles.tripServiceIcon}>
-            <Ionicons name="cut" size={20} color="#00B14F" />
+            <Ionicons name="cut" size={20} color="#7E3AF2" />
           </View>
           <View style={styles.tripInfo}>
             <Text style={styles.tripServiceCount}>{serviceText}</Text>
@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   periodTabActive: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   periodText: {
     fontSize: 14,
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
   availableBalanceValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
   breakdownTotalValue: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
 
   // Trip Card - Grab Standard (Service-Focused)
@@ -1031,7 +1031,7 @@ const styles = StyleSheet.create({
   tripAmount: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginBottom: 4,
   },
   tripChevron: {
@@ -1068,7 +1068,7 @@ const styles = StyleSheet.create({
   loadMoreText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginRight: 8,
   },
 
@@ -1115,7 +1115,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#00B14F',
+    borderColor: '#7E3AF2',
   },
   revenueModelRow: {
     flexDirection: 'row',
@@ -1130,7 +1130,7 @@ const styles = StyleSheet.create({
   revenueModelValue: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginBottom: 4,
   },
   revenueModelLabel: {
@@ -1142,19 +1142,19 @@ const styles = StyleSheet.create({
   revenueModelPlus: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginHorizontal: 8,
   },
   revenueModelEquals: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00B14F',
+    color: '#7E3AF2',
     marginHorizontal: 8,
   },
   revenueModelSubtext: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
     textAlign: 'center',
   },
   revenueModelIcon: {
@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
   balanceAmount: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   inputSection: {
     marginBottom: 20,
@@ -1270,7 +1270,7 @@ const styles = StyleSheet.create({
   quickAmountText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#00B14F',
+    color: '#7E3AF2',
   },
   payoutInfo: {
     flexDirection: 'row',
@@ -1309,7 +1309,7 @@ const styles = StyleSheet.create({
     color: '#757575',
   },
   payoutBtnPrimary: {
-    backgroundColor: '#00B14F',
+    backgroundColor: '#7E3AF2',
   },
   payoutBtnPrimaryText: {
     fontSize: 16,
