@@ -10,6 +10,7 @@ import { formatCurrency, formatDistance } from '@mari-gunting/shared/utils/forma
 import { SkeletonCircle, SkeletonText, SkeletonBase, SkeletonImage } from '@/components/Skeleton';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useBarberOffline } from '@/contexts/BarberOfflineContext';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -289,7 +290,7 @@ export default function BarberProfileScreen() {
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#D1D5DB" />
+          <Ionicons name="alert-circle-outline" size={64} color={Colors.gray[300]} />
           <Text style={styles.emptyText}>Barber not found</Text>
         </View>
       </SafeAreaView>
@@ -346,7 +347,7 @@ export default function BarberProfileScreen() {
 
             {(barber.distance || distance) && (
               <View style={styles.locationRow}>
-                <Ionicons name="navigate" size={16} color="#7E3AF2" />
+                <Ionicons name="navigate" size={16} color={Colors.primary} />
                 <Text style={styles.distanceText}>{formatDistance(barber.distance || parseFloat(distance || '0'))} away</Text>
               </View>
             )}
@@ -429,11 +430,11 @@ export default function BarberProfileScreen() {
                   />
                   {imageLoading[index] && (
                     <View style={styles.imageLoadingOverlay}>
-                      <ActivityIndicator size="small" color="#7E3AF2" />
+                      <ActivityIndicator size="small" color={Colors.primary} />
                     </View>
                   )}
                   <View style={styles.zoomHint}>
-                    <Ionicons name="expand-outline" size={20} color="#FFFFFF" />
+                    <Ionicons name="expand-outline" size={20} color={Colors.white} />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -516,10 +517,12 @@ export default function BarberProfileScreen() {
                       )}
                     </View>
                     <View style={styles.reviewCustomerDetails}>
-                      <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
+                      <Text style={styles.reviewerName} numberOfLines={1} ellipsizeMode="tail">
+                        {review.customerName || 'Anonymous'}
+                      </Text>
                       {review.services && review.services.length > 0 && (
                         <View style={styles.reviewServices}>
-                          <Ionicons name="cut" size={12} color="#7E3AF2" />
+                          <Ionicons name="cut" size={12} color={Colors.primary} />
                           <Text style={styles.reviewServicesText}>
                             {review.services.map((s: any) => s.name).join(', ')}
                           </Text>
@@ -556,7 +559,9 @@ export default function BarberProfileScreen() {
                     <View style={styles.responseBadge}>
                       <View style={styles.responseBadgeLeft}>
                         <Ionicons name="checkmark-circle" size={12} color="#00C853" />
-                        <Text style={styles.responseBadgeText}>{barber.name.toUpperCase()} REPLIED</Text>
+                        <Text style={styles.responseBadgeText} numberOfLines={1} ellipsizeMode="tail">
+                          {barber.name.toUpperCase()} REPLIED
+                        </Text>
                       </View>
                       <Text style={styles.responseDate}>
                         {new Date(review.response.date).toLocaleDateString('en-MY', { 
@@ -578,7 +583,7 @@ export default function BarberProfileScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.viewAllReviewsText}>View all {reviews.length} reviews</Text>
-                <Ionicons name="chevron-forward" size={16} color="#7E3AF2" />
+                <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -603,7 +608,7 @@ export default function BarberProfileScreen() {
             onPress={closeFullscreen}
             activeOpacity={0.8}
           >
-            <Ionicons name="close" size={32} color="#FFFFFF" />
+            <Ionicons name="close" size={32} color={Colors.white} />
           </TouchableOpacity>
           
           {/* Photo Counter */}
@@ -687,7 +692,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
   },
@@ -723,7 +728,7 @@ const styles = StyleSheet.create({
   profileHeader: {
     flexDirection: 'row',
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     gap: 16,
   },
   avatarContainer: {
@@ -742,9 +747,9 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   profileInfo: {
     flex: 1,
@@ -789,11 +794,11 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   statsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingVertical: 20,
     marginTop: 8,
   },
@@ -816,7 +821,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E5EA',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     marginTop: 8,
   },
@@ -840,15 +845,15 @@ const styles = StyleSheet.create({
   tag: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#7E3AF220',
+    borderColor: '#F9731620',
   },
   tagText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   portfolioHeader: {
     flexDirection: 'row',
@@ -904,10 +909,10 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
   },
   indicatorActive: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     width: 20,
   },
   photoCounter: {
@@ -918,7 +923,7 @@ const styles = StyleSheet.create({
   // Fullscreen Gallery
   fullscreenContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.black,
   },
   fullscreenCloseButton: {
     position: 'absolute',
@@ -945,7 +950,7 @@ const styles = StyleSheet.create({
   fullscreenCounterText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   fullscreenImageContainer: {
     width: width,
@@ -976,7 +981,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   serviceInfoCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
@@ -986,18 +991,18 @@ const styles = StyleSheet.create({
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   serviceCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#E5E5EA',
   },
   serviceCardSelected: {
-    backgroundColor: '#F5F3FF',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
   },
   serviceCardInner: {
     flexDirection: 'row',
@@ -1009,13 +1014,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: Colors.gray[300],
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   serviceContent: {
     flex: 1,
@@ -1059,11 +1064,11 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   serviceDescription: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginBottom: 8,
     lineHeight: 20,
   },
@@ -1077,7 +1082,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   serviceAreaCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E5EA',
@@ -1115,13 +1120,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 8,
   },
   privacyNoteText: {
     flex: 1,
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 16,
   },
   reviewsHeader: {
@@ -1171,7 +1176,7 @@ const styles = StyleSheet.create({
   reviewAvatarText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   reviewCustomerDetails: {
     flex: 1,
@@ -1191,7 +1196,7 @@ const styles = StyleSheet.create({
   },
   reviewServicesText: {
     fontSize: 12,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '500',
   },
   reviewDate: {
@@ -1247,6 +1252,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flex: 1,
+    marginRight: 8,
   },
   responseBadgeText: {
     fontSize: 11,
@@ -1276,7 +1283,7 @@ const styles = StyleSheet.create({
   viewAllReviewsText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   bottomBar: {
     flexDirection: 'row',
@@ -1286,7 +1293,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     height: Platform.OS === 'ios' ? 95 : 75,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
@@ -1307,24 +1314,24 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   bookButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 40,
     paddingVertical: 14,
     borderRadius: 24,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   bookButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
   },
   bookButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.2,
   },
 });

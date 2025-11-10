@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import Slider from '@react-native-community/slider';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function QuickBookScreen() {
   const [radius, setRadius] = useState<number>(5);
@@ -64,7 +65,7 @@ export default function QuickBookScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Quick Book</Text>
         <View style={styles.headerRight} />
@@ -74,7 +75,7 @@ export default function QuickBookScreen() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroIcon}>
-            <Ionicons name="flash" size={40} color="#7E3AF2" />
+            <Ionicons name="flash" size={40} color={Colors.primary} />
           </View>
           <Text style={styles.heroTitle}>Quick Book</Text>
           <Text style={styles.heroSubtitle}>
@@ -82,15 +83,15 @@ export default function QuickBookScreen() {
           </Text>
           <View style={styles.heroFeatures}>
             <View style={styles.heroFeature}>
-              <Ionicons name="time" size={18} color="#7E3AF2" />
+              <Ionicons name="time" size={18} color={Colors.primary} />
               <Text style={styles.heroFeatureText}>Fast Match</Text>
             </View>
             <View style={styles.heroFeature}>
-              <Ionicons name="location" size={18} color="#7E3AF2" />
+              <Ionicons name="location" size={18} color={Colors.primary} />
               <Text style={styles.heroFeatureText}>Nearby</Text>
             </View>
             <View style={styles.heroFeature}>
-              <Ionicons name="cash" size={18} color="#7E3AF2" />
+              <Ionicons name="cash" size={18} color={Colors.primary} />
               <Text style={styles.heroFeatureText}>Best Price</Text>
             </View>
           </View>
@@ -104,7 +105,7 @@ export default function QuickBookScreen() {
               <Text style={styles.sectionSubtitle}>How far should we look?</Text>
             </View>
             <View style={styles.valueBadge}>
-              <Ionicons name="location" size={16} color="#7E3AF2" />
+              <Ionicons name="location" size={16} color={Colors.primary} />
               <Text style={styles.valueText}>{radius} km</Text>
             </View>
           </View>
@@ -115,16 +116,13 @@ export default function QuickBookScreen() {
             step={1}
             value={radius}
             onValueChange={setRadius}
-            minimumTrackTintColor="#7E3AF2"
-            maximumTrackTintColor="#E5E7EB"
-            thumbTintColor="#7E3AF2"
-          />
+            minimumTrackTintColor={Colors.primary}             maximumTrackTintColor={Colors.gray[200]}             thumbTintColor={Colors.primary}           />
           <View style={styles.sliderLabels}>
             <Text style={styles.sliderLabel}>1 km</Text>
             <Text style={styles.sliderLabel}>20 km</Text>
           </View>
           <View style={styles.estimateRow}>
-            <Ionicons name="people" size={16} color="#6B7280" />
+            <Ionicons name="people" size={16} color={Colors.gray[500]} />
             <Text style={styles.estimateText}>
               ~{estimatedBarbers} barbers available in this range
             </Text>
@@ -150,16 +148,16 @@ export default function QuickBookScreen() {
             step={5}
             value={maxPrice}
             onValueChange={setMaxPrice}
-            minimumTrackTintColor="#7E3AF2"
-            maximumTrackTintColor="#E5E7EB"
-            thumbTintColor="#7E3AF2"
+            minimumTrackTintColor={Colors.primary}
+            maximumTrackTintColor={Colors.gray[200]}
+            thumbTintColor={Colors.primary}
           />
           <View style={styles.sliderLabels}>
             <Text style={styles.sliderLabel}>RM 10</Text>
             <Text style={styles.sliderLabel}>RM 200</Text>
           </View>
           <View style={styles.priceInfo}>
-            <Ionicons name="information-circle" size={16} color="#6B7280" />
+            <Ionicons name="information-circle" size={16} color={Colors.gray[500]} />
             <Text style={styles.priceInfoText}>
               Final price may vary based on barber experience
             </Text>
@@ -170,33 +168,33 @@ export default function QuickBookScreen() {
         {/* Summary Card */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryIconContainer}>
-            <Ionicons name="checkmark-circle" size={48} color="#7E3AF2" />
+            <Ionicons name="checkmark-circle" size={48} color={Colors.primary} />
           </View>
           <Text style={styles.summaryTitle}>Ready to Find Barber</Text>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
-              <Ionicons name="flash-outline" size={24} color="#6B7280" />
+              <Ionicons name="flash-outline" size={24} color={Colors.gray[500]} />
               <Text style={styles.summaryLabel}>Service</Text>
               <Text style={styles.summaryValue}>ASAP</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Ionicons name="location-outline" size={24} color="#6B7280" />
+              <Ionicons name="location-outline" size={24} color={Colors.gray[500]} />
               <Text style={styles.summaryLabel}>Radius</Text>
               <Text style={styles.summaryValue}>{radius} km</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Ionicons name="cash-outline" size={24} color="#6B7280" />
+              <Ionicons name="cash-outline" size={24} color={Colors.gray[500]} />
               <Text style={styles.summaryLabel}>Max Budget</Text>
               <Text style={styles.summaryValue}>RM {maxPrice}</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Ionicons name="people-outline" size={24} color="#6B7280" />
+              <Ionicons name="people-outline" size={24} color={Colors.gray[500]} />
               <Text style={styles.summaryLabel}>Available</Text>
               <Text style={styles.summaryValue}>~{estimatedBarbers}</Text>
             </View>
           </View>
           <View style={styles.infoBox}>
-            <Ionicons name="information-circle-outline" size={20} color="#7E3AF2" />
+            <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
             <Text style={styles.infoBoxText}>
               Service selection will be available after barber is matched
             </Text>
@@ -217,12 +215,12 @@ export default function QuickBookScreen() {
         >
           {isSearching ? (
             <>
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={Colors.white} />
               <Text style={styles.bookButtonText}>Finding Barber...</Text>
             </>
           ) : (
             <>
-              <Ionicons name="flash" size={22} color="#FFFFFF" />
+              <Ionicons name="flash" size={22} color={Colors.white} />
               <Text style={styles.bookButtonText}>Find Barber Now</Text>
             </>
           )}
@@ -233,16 +231,16 @@ export default function QuickBookScreen() {
       {isSearching && (
         <View style={styles.searchingOverlay}>
           <View style={styles.searchingCard}>
-            <ActivityIndicator size="large" color="#7E3AF2" style={styles.searchingSpinner} />
+            <ActivityIndicator size="large" color={Colors.primary} style={styles.searchingSpinner} />
             <Text style={styles.searchingTitle}>Searching...</Text>
             <Text style={styles.searchingText}>Finding available barbers within {radius}km</Text>
             <View style={styles.searchingDetails}>
               <View style={styles.searchingDetail}>
-                <Ionicons name="location" size={16} color="#7E3AF2" />
+                <Ionicons name="location" size={16} color={Colors.primary} />
                 <Text style={styles.searchingDetailText}>Radius: {radius}km</Text>
               </View>
               <View style={styles.searchingDetail}>
-                <Ionicons name="cash-outline" size={16} color="#7E3AF2" />
+                <Ionicons name="cash-outline" size={16} color={Colors.primary} />
                 <Text style={styles.searchingDetailText}>Max: RM {maxPrice}</Text>
               </View>
             </View>
@@ -260,7 +258,7 @@ export default function QuickBookScreen() {
         <View style={styles.errorOverlay}>
           <View style={styles.errorCard}>
             <View style={styles.errorIconContainer}>
-              <Ionicons name="sad-outline" size={64} color="#EF4444" />
+              <Ionicons name="sad-outline" size={64} color={Colors.error} />
             </View>
             <Text style={styles.errorTitle}>No Barbers Available</Text>
             <Text style={styles.errorMessage}>
@@ -268,15 +266,15 @@ export default function QuickBookScreen() {
             </Text>
             <View style={styles.errorSuggestions}>
               <View style={styles.suggestionItem}>
-                <Ionicons name="location" size={20} color="#6B7280" />
+                <Ionicons name="location" size={20} color={Colors.gray[500]} />
                 <Text style={styles.suggestionText}>Try increasing your search radius</Text>
               </View>
               <View style={styles.suggestionItem}>
-                <Ionicons name="cash" size={20} color="#6B7280" />
+                <Ionicons name="cash" size={20} color={Colors.gray[500]} />
                 <Text style={styles.suggestionText}>Consider adjusting your budget</Text>
               </View>
               <View style={styles.suggestionItem}>
-                <Ionicons name="time" size={20} color="#6B7280" />
+                <Ionicons name="time" size={20} color={Colors.gray[500]} />
                 <Text style={styles.suggestionText}>Try booking for a different time</Text>
               </View>
             </View>
@@ -297,7 +295,7 @@ export default function QuickBookScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -305,22 +303,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   headerRight: {
     width: 40,
@@ -335,17 +333,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
     paddingHorizontal: 20,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
   },
   heroIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -354,12 +352,12 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
   },
   heroSubtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -370,7 +368,7 @@ const styles = StyleSheet.create({
   heroFeature: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -379,7 +377,7 @@ const styles = StyleSheet.create({
   heroFeatureText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   section: {
     paddingHorizontal: 20,
@@ -391,11 +389,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginTop: 4,
   },
   sliderHeader: {
@@ -407,7 +405,7 @@ const styles = StyleSheet.create({
   valueBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -416,12 +414,12 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   valueText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   slider: {
     width: '100%',
@@ -434,13 +432,13 @@ const styles = StyleSheet.create({
   },
   sliderLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     fontWeight: '600',
   },
   estimateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     padding: 12,
     borderRadius: 12,
     marginTop: 16,
@@ -448,13 +446,13 @@ const styles = StyleSheet.create({
   },
   estimateText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   priceInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
     padding: 12,
     borderRadius: 12,
     marginTop: 16,
@@ -467,7 +465,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 20,
     padding: 24,
     marginTop: 8,
@@ -479,7 +477,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -491,27 +489,27 @@ const styles = StyleSheet.create({
   },
   summaryItem: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginTop: 8,
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     textAlign: 'center',
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 16,
     borderRadius: 12,
     gap: 12,
@@ -520,7 +518,7 @@ const styles = StyleSheet.create({
   infoBoxText: {
     flex: 1,
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 18,
   },
   bottomBar: {
@@ -530,9 +528,9 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -543,24 +541,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 18,
     gap: 10,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   bookButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
   },
   bookButtonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   searchingOverlay: {
@@ -575,7 +573,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   searchingCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 24,
     padding: 40,
     alignItems: 'center',
@@ -588,13 +586,13 @@ const styles = StyleSheet.create({
   searchingTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   searchingText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -605,7 +603,7 @@ const styles = StyleSheet.create({
   searchingDetail: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -614,7 +612,7 @@ const styles = StyleSheet.create({
   searchingDetailText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   errorOverlay: {
     flex: 1,
@@ -624,7 +622,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 24,
     padding: 32,
     alignItems: 'center',
@@ -637,20 +635,20 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   errorSuggestions: {
     width: '100%',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
@@ -663,16 +661,16 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 14,
-    color: '#4B5563',
+    color: Colors.gray[600],
     flex: 1,
   },
   errorButton: {
     width: '100%',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -681,7 +679,7 @@ const styles = StyleSheet.create({
   errorButtonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
 });

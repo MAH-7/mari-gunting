@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { mockCustomer } from '@/services/mockData';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function OTPVerificationScreen() {
   const params = useLocalSearchParams();
@@ -127,7 +128,7 @@ export default function OTPVerificationScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={24} color="#111827" />
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
         </View>
 
@@ -136,7 +137,7 @@ export default function OTPVerificationScreen() {
           {/* Icon */}
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
-              <Ionicons name="mail-outline" size={48} color="#7E3AF2" />
+              <Ionicons name="mail-outline" size={48} color={Colors.primary} />
             </View>
           </View>
 
@@ -179,7 +180,7 @@ export default function OTPVerificationScreen() {
             activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <Text style={styles.verifyButtonText}>Verify</Text>
             )}
@@ -201,7 +202,7 @@ export default function OTPVerificationScreen() {
 
           {/* Help Text */}
           <TouchableOpacity style={styles.helpButton} activeOpacity={0.7}>
-            <Ionicons name="help-circle-outline" size={18} color="#6B7280" />
+            <Ionicons name="help-circle-outline" size={18} color={Colors.gray[500]} />
             <Text style={styles.helpText}>Didn't receive the code?</Text>
           </TouchableOpacity>
         </View>
@@ -213,7 +214,7 @@ export default function OTPVerificationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -243,27 +244,27 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 40,
   },
   phoneHighlight: {
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
   },
   otpContainer: {
@@ -276,25 +277,25 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 56,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     textAlign: 'center',
   },
   otpInputFilled: {
-    borderColor: '#7E3AF2',
-    backgroundColor: '#F5F3FF',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   verifyButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -302,14 +303,14 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   verifyButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
     elevation: 0,
   },
   verifyButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   resendContainer: {
@@ -319,15 +320,15 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   countdown: {
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '700',
   },
   resendLink: {
     fontSize: 14,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '700',
   },
   helpButton: {
@@ -339,6 +340,6 @@ const styles = StyleSheet.create({
   },
   helpText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
 });

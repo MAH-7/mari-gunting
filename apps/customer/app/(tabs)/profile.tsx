@@ -7,6 +7,7 @@ import { formatPhoneNumber } from '@mari-gunting/shared/utils/format';
 import { useProfile } from '@/hooks/useProfile';
 import { SkeletonText } from '@/components/Skeleton';
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 // Helper function to safely get avatar URL
 const getAvatarUrl = (user: any) => {
@@ -151,7 +152,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7E3AF2" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       </SafeAreaView>
@@ -193,24 +194,24 @@ export default function ProfileScreen() {
     {
       title: 'Account',
       items: [
-        { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.savedAddresses?.length || 0, color: '#7E3AF2' },
-        { id: 'favorites', icon: 'heart', label: 'Favorite Barbers', badge: null, color: '#EF4444' },
+        { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.savedAddresses?.length || 0, color: Colors.primary },
+        { id: 'favorites', icon: 'heart', label: 'Favorite Barbers', badge: null, color: Colors.error },
       ]
     },
     {
       title: 'Support',
       items: [
-        { id: 'help', icon: 'help-circle', label: 'Help Center', badge: null, color: '#F59E0B' },
-        { id: 'contact', icon: 'chatbubble', label: 'Contact Us', badge: null, color: '#8B5CF6' },
-        { id: 'about', icon: 'information-circle', label: 'About Mari Gunting', badge: null, color: '#6B7280' },
+        { id: 'help', icon: 'help-circle', label: 'Help Center', badge: null, color: Colors.warning },
+        { id: 'contact', icon: 'chatbubble', label: 'Contact Us', badge: null, color: Colors.status.ready },
+        { id: 'about', icon: 'information-circle', label: 'About Mari Gunting', badge: null, color: Colors.gray[500] },
       ]
     },
     {
       title: 'More',
       items: [
-        { id: 'settings', icon: 'settings', label: 'Settings', badge: null, color: '#6B7280' },
-        { id: 'privacy', icon: 'lock-closed', label: 'Privacy Policy', badge: null, color: '#6B7280' },
-        { id: 'terms', icon: 'document-text', label: 'Terms of Service', badge: null, color: '#6B7280' },
+        { id: 'settings', icon: 'settings', label: 'Settings', badge: null, color: Colors.gray[500] },
+        { id: 'privacy', icon: 'lock-closed', label: 'Privacy Policy', badge: null, color: Colors.gray[500] },
+        { id: 'terms', icon: 'document-text', label: 'Terms of Service', badge: null, color: Colors.gray[500] },
       ]
     }
   ];
@@ -224,8 +225,7 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#7E3AF2"
-            colors={['#7E3AF2']}
+            tintColor={Colors.primary}             colors={[Colors.primary]}
           />
         }
       >
@@ -242,7 +242,7 @@ export default function ProfileScreen() {
                 style={styles.editBadge}
                 onPress={() => router.push('/profile/edit')}
               >
-                <Ionicons name="pencil" size={14} color="#7E3AF2" />
+                <Ionicons name="pencil" size={14} color={Colors.primary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.userName}>{currentUser.full_name}</Text>
@@ -257,13 +257,13 @@ export default function ProfileScreen() {
           <View style={styles.contactSection}>
             <View style={styles.contactRow}>
               <View style={styles.contactIconContainer}>
-                <Ionicons name="mail" size={18} color="#FFFFFF" />
+                <Ionicons name="mail" size={18} color={Colors.white} />
               </View>
               <Text style={styles.contactText}>{currentUser.email}</Text>
             </View>
             <View style={styles.contactRow}>
               <View style={styles.contactIconContainer}>
-                <Ionicons name="call" size={18} color="#FFFFFF" />
+                <Ionicons name="call" size={18} color={Colors.white} />
               </View>
               <Text style={styles.contactText}>{formatPhoneNumber(currentUser.phone_number)}</Text>
             </View>
@@ -329,7 +329,7 @@ export default function ProfileScreen() {
                           <Text style={styles.menuBadgeText}>{item.badge}</Text>
                         </View>
                       )}
-                      <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+                      <Ionicons name="chevron-forward" size={20} color={Colors.gray[300]} />
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -343,7 +343,7 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
             onPress={handleLogout}
           >
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={20} color={Colors.error} />
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
@@ -361,7 +361,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -370,11 +370,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   heroSection: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingTop: 20,
     paddingBottom: 40,
     borderBottomLeftRadius: 32,
@@ -394,8 +394,8 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#F3F4F6',
+    borderColor: Colors.white,
+    backgroundColor: Colors.gray[100],
   },
   editBadge: {
     position: 'absolute',
@@ -404,16 +404,16 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   userName: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   roleText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1,
@@ -454,11 +454,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   statsSection: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     marginHorizontal: 20,
     marginTop: -20,
     borderRadius: 20,
@@ -476,18 +476,18 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '600',
     textAlign: 'center',
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     marginHorizontal: 16,
   },
   contentSection: {
@@ -500,14 +500,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 12,
     marginLeft: 4,
   },
   menuCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     flex: 1,
   },
   menuItemRight: {
@@ -551,14 +551,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuBadge: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     marginRight: 8,
   },
   menuBadgeText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -578,29 +578,29 @@ const styles = StyleSheet.create({
   testPartnerButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#3B82F6',
+    color: Colors.info,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingVertical: 16,
     borderRadius: 16,
     marginTop: 8,
     borderWidth: 2,
-    borderColor: '#FEE2E2',
+    borderColor: Colors.errorLight,
     gap: 10,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#EF4444',
+    color: Colors.error,
   },
   versionText: {
     textAlign: 'center',
     fontSize: 13,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     fontWeight: '500',
     marginTop: 24,
   },
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -630,29 +630,29 @@ const styles = StyleSheet.create({
   },
   roleSwitchLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '600',
     marginBottom: 4,
   },
   roleSwitchValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 4,
   },
   roleSwitchHint: {
     fontSize: 13,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '500',
   },
   roleSwitchBadge: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   roleSwitchBadgeText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 14,
     fontWeight: '700',
   },

@@ -18,6 +18,7 @@ import { barberOnboardingService, uploadOnboardingImage } from '@mari-gunting/sh
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 
 export default function ServiceDetailsScreen() {
@@ -234,7 +235,7 @@ export default function ServiceDetailsScreen() {
           <View style={styles.progressDot} />
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
         </TouchableOpacity>
       </View>
 
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     width: 40,
     borderRadius: 20,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

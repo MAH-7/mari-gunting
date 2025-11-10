@@ -19,6 +19,7 @@ import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import { profileService } from '@mari-gunting/shared/services/profileService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function CompleteProfileScreen() {
   const params = useLocalSearchParams();
@@ -249,7 +250,7 @@ export default function CompleteProfileScreen() {
               onPress={handleLogout}
               activeOpacity={0.7}
             >
-              <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+              <Ionicons name="log-out-outline" size={22} color={Colors.error} />
             </TouchableOpacity>
           </View>
 
@@ -273,11 +274,11 @@ export default function CompleteProfileScreen() {
                 <Image source={{ uri: avatar }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={48} color="#9CA3AF" />
+                  <Ionicons name="person" size={48} color={Colors.gray[400]} />
                 </View>
               )}
               <View style={styles.avatarBadge}>
-                <Ionicons name="camera" size={16} color="#FFFFFF" />
+                <Ionicons name="camera" size={16} color={Colors.white} />
               </View>
             </TouchableOpacity>
             <Text style={styles.avatarLabel}>Upload Photo</Text>
@@ -292,12 +293,11 @@ export default function CompleteProfileScreen() {
                 Full Name <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#6B7280" />
+                <Ionicons name="person-outline" size={20} color={Colors.gray[500]} />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your full name"
-                  placeholderTextColor="#9CA3AF"
-                  value={fullName}
+                  placeholderTextColor={Colors.gray[400]}                   value={fullName}
                   onChangeText={setFullName}
                   autoCapitalize="words"
                   autoCorrect={false}
@@ -312,12 +312,11 @@ export default function CompleteProfileScreen() {
                 Email Address <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="#6B7280" />
+                <Ionicons name="mail-outline" size={20} color={Colors.gray[500]} />
                 <TextInput
                   style={styles.input}
                   placeholder="your.email@example.com"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
+                  placeholderTextColor={Colors.gray[400]}                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -331,13 +330,13 @@ export default function CompleteProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone Number</Text>
               <View style={[styles.inputContainer, styles.inputDisabled]}>
-                <Ionicons name="call-outline" size={20} color="#6B7280" />
+                <Ionicons name="call-outline" size={20} color={Colors.gray[500]} />
                 <TextInput
                   style={[styles.input, styles.inputTextDisabled]}
                   value={phoneNumber}
                   editable={false}
                 />
-                <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
+                <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
               </View>
               <Text style={styles.helperText}>Verified via OTP</Text>
             </View>
@@ -346,7 +345,7 @@ export default function CompleteProfileScreen() {
             <View style={styles.roleSection}>
               <View style={styles.roleCard}>
                 <View style={styles.roleIconContainer}>
-                  <Ionicons name="cut" size={24} color="#7E3AF2" />
+                  <Ionicons name="cut" size={24} color={Colors.primary} />
                 </View>
                 <View style={styles.roleContent}>
                   <Text style={styles.roleLabel}>Registering as</Text>
@@ -367,11 +366,11 @@ export default function CompleteProfileScreen() {
             activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <>
                 <Text style={styles.registerButtonText}>Complete Registration</Text>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Ionicons name="arrow-forward" size={20} color={Colors.white} />
               </>
             )}
           </TouchableOpacity>
@@ -394,7 +393,7 @@ export default function CompleteProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -414,7 +413,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -426,21 +425,21 @@ const styles = StyleSheet.create({
   phoneNumberLabel: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   phoneNumberText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     marginTop: 2,
   },
   logoutIconButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -451,13 +450,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 22,
   },
   avatarSection: {
@@ -472,17 +471,17 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
   },
   avatarPlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderStyle: 'dashed',
   },
   avatarBadge: {
@@ -492,21 +491,21 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   avatarLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
     marginBottom: 4,
   },
   avatarHint: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
   },
   formSection: {
     paddingHorizontal: 24,
@@ -518,39 +517,39 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
     marginBottom: 8,
   },
   required: {
-    color: '#EF4444',
+    color: Colors.error,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 12,
   },
   inputDisabled: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
+    backgroundColor: Colors.gray[100],
+    borderColor: Colors.gray[300],
   },
   input: {
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   inputTextDisabled: {
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   helperText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginTop: 6,
     marginLeft: 4,
   },
@@ -560,7 +559,7 @@ const styles = StyleSheet.create({
   roleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderWidth: 2,
     borderColor: '#86EFAC',
     borderRadius: 12,
@@ -570,7 +569,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -593,11 +592,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     marginHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -606,14 +605,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   registerButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
     elevation: 0,
   },
   registerButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   termsContainer: {
@@ -622,12 +621,12 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 20,
   },
   termsLink: {
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
   },
 });

@@ -8,7 +8,13 @@
  */
 
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, ACTIVE_OPACITY } from '../constants';
+import { Colors, Typography as ThemeTypography, Spacing, BorderRadius } from '../theme';
+import { TYPOGRAPHY, ACTIVE_OPACITY } from '../constants';
+
+// Backward compatibility mapping
+const COLORS = Colors;
+const SPACING = Spacing;
+const RADIUS = BorderRadius;
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
 export type ButtonSize = 'small' | 'medium' | 'large';

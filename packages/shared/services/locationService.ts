@@ -163,10 +163,11 @@ class LocationService {
       }
 
       // Get location with timeout and cache
+      // Use lower accuracy and longer timeout for Android emulator compatibility
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-        maximumAge: 10000, // Use cached location if less than 10 seconds old
-        timeout: 15000, // Timeout after 15 seconds to prevent hanging
+        accuracy: Platform.OS === 'android' ? Location.Accuracy.Low : Location.Accuracy.Balanced,
+        maximumAge: 30000, // Use cached location if less than 30 seconds old (better for emulator)
+        timeout: 30000, // Timeout after 30 seconds (Android emulator needs more time)
       });
 
       // Validate location accuracy

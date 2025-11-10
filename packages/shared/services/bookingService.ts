@@ -167,9 +167,13 @@ export const bookingService = {
   /**
    * SECURE V2: Create booking with service IDs only
    * Server validates prices, calculates travel fees, applies vouchers
+   * NOW WITH: Idempotency key + Rate limiting (Grab standard)
    */
   async createBookingV2(params: CreateBookingV2Params): Promise<ApiResponse<BookingResultV2>> {
     try {
+      // Generate idempotency key (prevents duplicate bookings)
+      const idempotencyKey = `${params.customerId}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
       // Convert date + time to ISO timestamp
       const scheduledDatetime = createScheduledDateTime(
         params.scheduledDate,
@@ -180,6 +184,7 @@ export const bookingService = {
         serviceIds: params.serviceIds,
         datetime: scheduledDatetime,
         voucher: params.userVoucherId,
+        idempotencyKey,
       });
 
       // Prepare customer address with lat/lng for travel fee calculation
@@ -193,31 +198,49 @@ export const bookingService = {
         lng: params.customerAddress.lng?.toString(),
       } : null;
 
-      const { data, error } = await supabase.rpc('create_booking_v2', {
-        p_customer_id: params.customerId,
-        p_barber_id: params.barberId,
-        p_service_ids: params.serviceIds, // Array of UUIDs
-        p_scheduled_datetime: scheduledDatetime,
-        p_service_type: params.serviceType,
-        p_barbershop_id: params.barbershopId || null,
-        p_customer_address: customerAddress,
-        p_customer_notes: params.customerNotes || null,
-        p_payment_method: params.paymentMethod || 'cash',
-        p_user_voucher_id: params.userVoucherId || null,
-        p_curlec_payment_id: params.curlecPaymentId || null,
-        p_curlec_order_id: params.curlecOrderId || null,
-        p_distance_km: params.distanceKm || null, // NEW: Pre-calculated Mapbox distance
+      // NEW: Call Edge Function with rate limiting (10 req/min - Grab standard)
+      const { data, error } = await supabase.functions.invoke('create-booking-with-rate-limit', {
+        body: {
+          customerId: params.customerId,
+          p_barber_id: params.barberId,
+          p_service_ids: params.serviceIds,
+          p_scheduled_datetime: scheduledDatetime,
+          p_service_type: params.serviceType,
+          p_barbershop_id: params.barbershopId || null,
+          p_customer_address: customerAddress,
+          p_customer_notes: params.customerNotes || null,
+          p_payment_method: params.paymentMethod || 'cash',
+          p_user_voucher_id: params.userVoucherId || null,
+          p_curlec_payment_id: params.curlecPaymentId || null,
+          p_curlec_order_id: params.curlecOrderId || null,
+          p_distance_km: params.distanceKm || null,
+          p_idempotency_key: idempotencyKey, // Prevents duplicates
+        },
       });
 
       if (error) {
         console.error('❌ Create booking v2 error:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
+        
+        // Handle rate limit error specifically
+        if (error.message?.includes('Too many booking attempts')) {
+          return {
+            success: false,
+            error: 'Too many booking attempts. Please wait 1 minute and try again.',
+          };
+        }
+        
         return {
           success: false,
-          error: error.message,
+          error: error.message || 'Failed to create booking via Edge Function',
         };
       }
 
-      const result = Array.isArray(data) ? data[0] : data;
+      // Log success response for debugging
+      console.log('📦 Edge Function response:', { data, hasData: !!data, dataKeys: data ? Object.keys(data) : [] });
+
+      // Edge Function returns { success, data }
+      const result = data?.data || data;
       console.log('✅ Secure booking created:', result);
 
       return {

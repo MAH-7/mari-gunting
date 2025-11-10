@@ -15,6 +15,7 @@ import { batchCalculateDistances } from '@mari-gunting/shared/utils/directions';
 import { ENV } from '@mari-gunting/shared/config/env';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useBarberOffline } from '@/contexts/BarberOfflineContext';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function CreateBookingScreen() {
   const { barberId } = useLocalSearchParams<{ barberId: string }>();
@@ -421,9 +422,9 @@ export default function CreateBookingScreen() {
           <View style={styles.etaBannerLeft}>
             <View style={styles.etaBannerIcon}>
               {calculatingRoute ? (
-                <ActivityIndicator size="small" color="#7E3AF2" />
+                <ActivityIndicator size="small" color={Colors.primary} />
               ) : (
-                <Ionicons name="time" size={24} color="#7E3AF2" />
+                <Ionicons name="time" size={24} color={Colors.primary} />
               )}
             </View>
             <View style={styles.etaBannerContent}>
@@ -439,7 +440,7 @@ export default function CreateBookingScreen() {
           </View>
           {!calculatingRoute && estimatedETA > 0 && (
             <View style={styles.etaBadge}>
-              <Ionicons name="flash" size={14} color="#7E3AF2" />
+              <Ionicons name="flash" size={14} color={Colors.primary} />
               <Text style={styles.etaBadgeText}>ASAP</Text>
             </View>
           )}
@@ -467,7 +468,7 @@ export default function CreateBookingScreen() {
                 <Text style={styles.jobsText}>• {barber.completedJobs} jobs</Text>
               </View>
               <View style={styles.distanceRow}>
-                <Ionicons name="location" size={14} color="#7E3AF2" />
+                <Ionicons name="location" size={14} color={Colors.primary} />
                 {calculatingRoute ? (
                   <Text style={styles.distanceText}>Calculating...</Text>
                 ) : distance > 0 ? (
@@ -505,7 +506,7 @@ export default function CreateBookingScreen() {
                     styles.checkbox,
                     isSelected && styles.checkboxSelected
                   ]}>
-                    {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                    {isSelected && <Ionicons name="checkmark" size={16} color={Colors.white} />}
                   </View>
                   <View style={styles.serviceInfo}>
                     <Text style={styles.serviceName}>{service.name}</Text>
@@ -569,7 +570,7 @@ export default function CreateBookingScreen() {
                       <Text style={styles.addressLabel}>{addr.label}</Text>
                       <Text style={styles.addressText}>{fullAddress}</Text>
                     </View>
-                    <Ionicons name="location" size={20} color="#7E3AF2" />
+                    <Ionicons name="location" size={20} color={Colors.primary} />
                   </TouchableOpacity>
                 );
               })}
@@ -581,7 +582,7 @@ export default function CreateBookingScreen() {
                 activeOpacity={ACTIVE_OPACITY.SECONDARY}
               >
                 <View style={styles.addIconCircle}>
-                  <Ionicons name="add" size={20} color="#7E3AF2" />
+                  <Ionicons name="add" size={20} color={Colors.primary} />
                 </View>
                 <Text style={styles.addNewAddressText}>Add New Address</Text>
                 <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
@@ -589,14 +590,14 @@ export default function CreateBookingScreen() {
             </>
           ) : (
             <View style={styles.emptyAddresses}>
-              <Ionicons name="location-outline" size={48} color="#D1D5DB" />
+              <Ionicons name="location-outline" size={48} color={Colors.gray[300]} />
               <Text style={styles.emptyAddressesText}>No saved addresses</Text>
               <Text style={styles.emptyAddressesSubtext}>Add your address to get started</Text>
               <TouchableOpacity 
                 style={styles.addAddressButton}
                 onPress={booking.goToAddressSelection}
               >
-                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Ionicons name="add" size={20} color={Colors.white} />
                 <Text style={styles.addAddressButtonText}>Add Address</Text>
               </TouchableOpacity>
             </View>
@@ -609,8 +610,7 @@ export default function CreateBookingScreen() {
           <TextInput
             style={styles.notesInput}
             placeholder='E.g., "Prefer fade style", "Need quick service", "First time customer"'
-            placeholderTextColor="#9CA3AF"
-            value={serviceNotes}
+            placeholderTextColor={Colors.gray[400]}             value={serviceNotes}
             onChangeText={setServiceNotes}
             multiline
             numberOfLines={3}
@@ -633,7 +633,7 @@ export default function CreateBookingScreen() {
                 Travel {distance > 0 ? `(${distance.toFixed(1)} km)` : ''}
               </Text>
               {calculatingRoute ? (
-                <ActivityIndicator size="small" color="#7E3AF2" />
+                <ActivityIndicator size="small" color={Colors.primary} />
               ) : (
                 <Text style={styles.priceValue}>{formatPrice(travelCost)}</Text>
               )}
@@ -670,7 +670,7 @@ export default function CreateBookingScreen() {
           activeOpacity={ACTIVE_OPACITY.PRIMARY}
         >
           {calculatingRoute ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={Colors.white} />
           ) : (
             <Text style={styles.bookButtonText}>Request Barber Now</Text>
           )}
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
   },
@@ -712,11 +712,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginTop: 8,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     marginBottom: 8,
   },
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 16,
     marginHorizontal: 16,
     marginTop: 16,
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -763,19 +763,19 @@ const styles = StyleSheet.create({
   },
   etaBannerTitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   etaBannerTime: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   etaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
   etaBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   barberCard: {
     flexDirection: 'row',
@@ -805,9 +805,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 2.5,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   barberInfo: {
     flex: 1,
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   },
   distanceText: {
     fontSize: 13,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
   },
   servicesHeader: {
@@ -863,18 +863,18 @@ const styles = StyleSheet.create({
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   serviceCard: {
     marginBottom: 12,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E5E5EA',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   serviceCardSelected: {
-    borderColor: '#7E3AF2',
-    backgroundColor: '#F5F3FF',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   serviceCardInner: {
     flexDirection: 'row',
@@ -887,13 +887,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: Colors.gray[300],
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   serviceInfo: {
     flex: 1,
@@ -911,40 +911,40 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   addressCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#E5E5EA',
   },
   addressCardActive: {
-    backgroundColor: '#F5F3FF',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
   },
   radioCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: Colors.gray[300],
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioCircleActive: {
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   addressInfo: {
     flex: 1,
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 18,
   },
   addressNotes: {
@@ -975,24 +975,24 @@ const styles = StyleSheet.create({
   manageAddressesLink: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   addNewAddressCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
   },
   addIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   emptyAddresses: {
     alignItems: 'center',
@@ -1024,9 +1024,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1035,10 +1035,10 @@ const styles = StyleSheet.create({
   addAddressButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   notesInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: '#E5E5EA',
     borderRadius: 12,
@@ -1049,7 +1049,7 @@ const styles = StyleSheet.create({
   },
   notesCounter: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textAlign: 'right',
     marginTop: 6,
   },
@@ -1063,7 +1063,7 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   priceValue: {
     fontSize: 15,
@@ -1083,7 +1083,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   durationRow: {
     flexDirection: 'row',
@@ -1103,7 +1103,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     height: Platform.OS === 'ios' ? 95 : 75,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
@@ -1112,24 +1112,24 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bookButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   bookButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
   },
   bookButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.2,
   },
   modalOverlay: {
@@ -1138,7 +1138,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 20,
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
   },
   modalLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   modalValue: {
@@ -1191,11 +1191,11 @@ const styles = StyleSheet.create({
   modalTotalSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
   },
   modalTotalValue: {
     fontSize: 24,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '700',
   },
   modalActions: {
@@ -1221,8 +1221,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#7E3AF2',
-    shadowColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1231,6 +1231,6 @@ const styles = StyleSheet.create({
   modalConfirmButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 });

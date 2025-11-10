@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -149,7 +150,7 @@ export default function FilterModal({
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={24} color="#6B7280" />
+            <Ionicons name="close" size={24} color={Colors.gray[500]} />
           </TouchableOpacity>
         </View>
 
@@ -161,7 +162,7 @@ export default function FilterModal({
           {/* Distance Filter */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="navigate" size={20} color="#7E3AF2" />
+              <Ionicons name="navigate" size={20} color={Colors.primary} />
               <Text style={styles.sectionTitle}>Distance</Text>
             </View>
             <View style={styles.distanceContainer}>
@@ -175,10 +176,7 @@ export default function FilterModal({
               step={1}
               value={distance}
               onValueChange={setDistance}
-              minimumTrackTintColor="#7E3AF2"
-              maximumTrackTintColor="#E5E7EB"
-              thumbTintColor="#7E3AF2"
-            />
+              minimumTrackTintColor={Colors.primary}               maximumTrackTintColor={Colors.gray[200]}               thumbTintColor={Colors.primary}             />
             <View style={styles.sliderLabels}>
               <Text style={styles.sliderLabel}>0 km</Text>
               <Text style={styles.sliderLabel}>20 km</Text>
@@ -188,7 +186,7 @@ export default function FilterModal({
           {/* Price Range Filter */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="cash" size={20} color="#7E3AF2" />
+              <Ionicons name="cash" size={20} color={Colors.primary} />
               <Text style={styles.sectionTitle}>Price Range</Text>
             </View>
             <Text style={styles.sectionSubtitle}>Based on starting price</Text>
@@ -226,7 +224,7 @@ export default function FilterModal({
                 <Ionicons 
                   name="wallet" 
                   size={16} 
-                  color={priceRange === 'budget' ? '#FFFFFF' : '#6B7280'} 
+                  color={priceRange === 'budget' ? Colors.white : Colors.gray[500]} 
                 />
                 <View style={styles.priceChipContent}>
                   <Text style={[
@@ -254,7 +252,7 @@ export default function FilterModal({
                 <Ionicons 
                   name="pricetag" 
                   size={16} 
-                  color={priceRange === 'mid' ? '#FFFFFF' : '#6B7280'} 
+                  color={priceRange === 'mid' ? Colors.white : Colors.gray[500]} 
                 />
                 <View style={styles.priceChipContent}>
                   <Text style={[
@@ -282,7 +280,7 @@ export default function FilterModal({
                 <Ionicons 
                   name="diamond" 
                   size={16} 
-                  color={priceRange === 'premium' ? '#FFFFFF' : '#6B7280'} 
+                  color={priceRange === 'premium' ? Colors.white : Colors.gray[500]} 
                 />
                 <View style={styles.priceChipContent}>
                   <Text style={[
@@ -305,14 +303,14 @@ export default function FilterModal({
           {/* Quick Filters */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="funnel" size={20} color="#7E3AF2" />
+              <Ionicons name="funnel" size={20} color={Colors.primary} />
               <Text style={styles.sectionTitle}>Quick Filters</Text>
             </View>
 
             <View style={styles.toggleOption}>
               <View style={styles.toggleLeft}>
                 <View style={styles.toggleIcon}>
-                  <Ionicons name="time" size={20} color="#7E3AF2" />
+                  <Ionicons name="time" size={20} color={Colors.primary} />
                 </View>
                 <View style={styles.toggleInfo}>
                   <Text style={styles.toggleLabel}>Open Now</Text>
@@ -322,16 +320,14 @@ export default function FilterModal({
               <Switch
                 value={openNow}
                 onValueChange={setOpenNow}
-                trackColor={{ false: '#E5E7EB', true: '#7E3AF2' }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor="#E5E7EB"
-              />
+                trackColor={{ false: Colors.gray[200], true: Colors.primary }}
+                thumbColor={Colors.white}                 ios_backgroundColor={Colors.gray[200]}               />
             </View>
 
             <View style={styles.toggleOption}>
               <View style={styles.toggleLeft}>
                 <View style={styles.toggleIcon}>
-                  <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
+                  <Ionicons name="shield-checkmark" size={20} color={Colors.info} />
                 </View>
                 <View style={styles.toggleInfo}>
                   <Text style={styles.toggleLabel}>Verified Only</Text>
@@ -341,10 +337,8 @@ export default function FilterModal({
               <Switch
                 value={verifiedOnly}
                 onValueChange={setVerifiedOnly}
-                trackColor={{ false: '#E5E7EB', true: '#3B82F6' }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor="#E5E7EB"
-              />
+                trackColor={{ false: Colors.gray[200], true: Colors.info }}
+                thumbColor={Colors.white}                 ios_backgroundColor={Colors.gray[200]}               />
             </View>
           </View>
         </ScrollView>
@@ -355,7 +349,7 @@ export default function FilterModal({
             style={styles.resetButton}
             onPress={handleReset}
           >
-            <Ionicons name="refresh" size={18} color="#6B7280" />
+            <Ionicons name="refresh" size={18} color={Colors.gray[500]} />
             <Text style={styles.resetButtonText}>Reset</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -383,7 +377,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: SCREEN_HEIGHT * 0.85,
@@ -400,12 +394,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   closeButton: {
     padding: 4,
@@ -429,11 +423,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginBottom: 12,
     marginTop: -8,
   },
@@ -444,12 +438,12 @@ const styles = StyleSheet.create({
   distanceValue: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginBottom: 4,
   },
   distanceSubtext: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   slider: {
@@ -463,7 +457,7 @@ const styles = StyleSheet.create({
   },
   sliderLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     fontWeight: '600',
   },
   priceGrid: {
@@ -478,21 +472,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.gray[200],
+    backgroundColor: Colors.white,
     gap: 6,
   },
   priceChipActive: {
-    borderColor: '#7E3AF2',
-    backgroundColor: '#7E3AF2',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
   },
   priceChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
   },
   priceChipTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   priceChipContent: {
     flexDirection: 'column',
@@ -500,7 +494,7 @@ const styles = StyleSheet.create({
   },
   priceChipSubtext: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     fontWeight: '500',
     marginTop: 2,
   },
@@ -513,7 +507,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   toggleLeft: {
     flexDirection: 'row',
@@ -525,7 +519,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -535,19 +529,19 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   toggleDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   footer: {
     flexDirection: 'row',
     padding: 20,
     paddingBottom: 32,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
     gap: 12,
   },
   resetButton: {
@@ -558,14 +552,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.gray[200],
+    backgroundColor: Colors.white,
     gap: 8,
   },
   resetButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   applyButton: {
     flex: 2,
@@ -573,8 +567,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#7E3AF2',
-    shadowColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -583,7 +577,7 @@ const styles = StyleSheet.create({
   applyButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
 });

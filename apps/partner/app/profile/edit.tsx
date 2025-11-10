@@ -10,6 +10,7 @@ import { barberService, BarberProfile } from '@/shared/services/barberService';
 import { supabase } from '@/shared/config/supabase';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { BARBER_SPECIALIZATIONS } from '@mari-gunting/shared/constants/specializations';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function ProfileEditScreen() {
   const router = useRouter();
@@ -470,7 +471,7 @@ export default function ProfileEditScreen() {
               
               {profile?.isVerified && (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
                 </View>
               )}
             </TouchableOpacity>
@@ -480,7 +481,7 @@ export default function ProfileEditScreen() {
                 <Text style={styles.avatarTitle}>Profile Photo</Text>
                 {profile?.isVerified && (
                   <View style={styles.verifiedTag}>
-                    <Ionicons name="shield-checkmark" size={14} color="#7E3AF2" />
+                    <Ionicons name="shield-checkmark" size={14} color={Colors.primary} />
                     <Text style={styles.verifiedText}>Verified</Text>
                   </View>
                 )}
@@ -510,7 +511,7 @@ export default function ProfileEditScreen() {
                   placeholderTextColor="#999"
                 />
                 {formData.fullName.trim() && (
-                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
                 )}
               </View>
               {errors.fullName && (
@@ -835,7 +836,7 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   avatarHint: {
     fontSize: 13,
@@ -1089,7 +1090,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   saveButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
   },
   saveButtonText: {

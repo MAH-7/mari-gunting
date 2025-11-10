@@ -36,6 +36,7 @@ import {
 import { ENV } from "@mari-gunting/shared/config/env";
 import { useFocusEffect } from "@react-navigation/native";
 import { useStore } from "@/store/useStore";
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function BarbersScreen() {
   const currentUser = useStore((state) => state.currentUser); // Get current user to filter out self
@@ -557,7 +558,7 @@ export default function BarbersScreen() {
       {/* Location & Radius */}
       <View style={styles.locationSection}>
         <View style={styles.locationInfo}>
-          <Ionicons name="location" size={16} color="#7E3AF2" />
+          <Ionicons name="location" size={16} color={Colors.primary} />
           <Text style={styles.locationText}>Within {radius}km from you</Text>
         </View>
         <TouchableOpacity
@@ -580,7 +581,7 @@ export default function BarbersScreen() {
           onPress={() => setShowSortModal(true)}
           activeOpacity={0.7}
         >
-          <Ionicons name="swap-vertical" size={14} color="#7E3AF2" />
+          <Ionicons name="swap-vertical" size={14} color={Colors.primary} />
           <Text style={styles.sortButtonText}>{getSortLabel()}</Text>
         </TouchableOpacity>
       </View>
@@ -593,7 +594,7 @@ export default function BarbersScreen() {
       >
         {calculatingDistances && (
           <View style={styles.calculatingBanner}>
-            <ActivityIndicator size="small" color="#7E3AF2" />
+            <ActivityIndicator size="small" color={Colors.primary} />
             <Text style={styles.calculatingText}>
               Calculating driving distances...
             </Text>
@@ -604,7 +605,7 @@ export default function BarbersScreen() {
           // Location Required State (Fallback safety net)
           <View style={styles.emptyState}>
             <View style={styles.locationRequiredIcon}>
-              <Ionicons name="location-outline" size={48} color="#7E3AF2" />
+              <Ionicons name="location-outline" size={48} color={Colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>Location Required</Text>
             <Text style={styles.emptyText}>
@@ -615,7 +616,7 @@ export default function BarbersScreen() {
               onPress={requestPermission}
               activeOpacity={0.8}
             >
-              <Ionicons name="location" size={20} color="#FFFFFF" />
+              <Ionicons name="location" size={20} color={Colors.white} />
               <Text style={styles.enableLocationButtonText}>Enable Location</Text>
             </TouchableOpacity>
           </View>
@@ -664,7 +665,7 @@ export default function BarbersScreen() {
           </>
         ) : sortedBarbers.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="cut-outline" size={64} color="#D1D5DB" />
+            <Ionicons name="cut-outline" size={64} color={Colors.gray[300]} />
             <Text style={styles.emptyTitle}>No barbers found</Text>
             <Text style={styles.emptyText}>Try adjusting your filters</Text>
           </View>
@@ -707,7 +708,7 @@ export default function BarbersScreen() {
                   {sortBy === "distance" && <View style={styles.radioInner} />}
                 </View>
                 <View style={styles.sortOptionContent}>
-                  <Ionicons name="navigate" size={20} color="#7E3AF2" />
+                  <Ionicons name="navigate" size={20} color={Colors.primary} />
                   <Text
                     style={[
                       styles.sortOptionText,
@@ -739,7 +740,7 @@ export default function BarbersScreen() {
                   {sortBy === "price-low" && <View style={styles.radioInner} />}
                 </View>
                 <View style={styles.sortOptionContent}>
-                  <Ionicons name="arrow-down" size={20} color="#7E3AF2" />
+                  <Ionicons name="arrow-down" size={20} color={Colors.primary} />
                   <Text
                     style={[
                       styles.sortOptionText,
@@ -773,7 +774,7 @@ export default function BarbersScreen() {
                   )}
                 </View>
                 <View style={styles.sortOptionContent}>
-                  <Ionicons name="arrow-up" size={20} color="#7E3AF2" />
+                  <Ionicons name="arrow-up" size={20} color={Colors.primary} />
                   <Text
                     style={[
                       styles.sortOptionText,
@@ -899,7 +900,7 @@ function BarberCard({ barber }: { barber: Barber }) {
 
             {barber.distance && (
               <View style={styles.distanceRow}>
-                <Ionicons name="navigate" size={14} color="#7E3AF2" />
+                <Ionicons name="navigate" size={14} color={Colors.primary} />
                 <Text style={styles.distanceText}>
                   {formatDistance(barber.distance)}
                   {barber.durationMinutes &&
@@ -941,7 +942,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
   },
   headerTitle: {
     fontSize: 17,
@@ -955,9 +956,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#F5F3FF",
+    backgroundColor: Colors.primaryLight,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#7E3AF230",
+    borderBottomColor: "#F9731630",
   },
   locationInfo: {
     flexDirection: "row",
@@ -967,18 +968,18 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#7E3AF2",
+    color: Colors.primary,
   },
   radiusButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
     borderRadius: 12,
   },
   radiusButtonText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: Colors.white,
   },
   resultsHeader: {
     flexDirection: "row",
@@ -999,15 +1000,15 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#F5F3FF",
+    backgroundColor: Colors.primaryLight,
     borderRadius: 8,
     borderWidth: 0.5,
-    borderColor: "#7E3AF230",
+    borderColor: "#F9731630",
   },
   sortButtonText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#7E3AF2",
+    color: Colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -1049,7 +1050,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#F5F3FF",
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
@@ -1058,12 +1059,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 12,
-    shadowColor: "#7E3AF2",
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1072,10 +1073,10 @@ const styles = StyleSheet.create({
   enableLocationButtonText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: Colors.white,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 12,
@@ -1107,9 +1108,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
     borderWidth: 2.5,
-    borderColor: "#FFFFFF",
+    borderColor: Colors.white,
   },
   info: {
     flex: 1,
@@ -1170,7 +1171,7 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#7E3AF2",
+    color: Colors.primary,
   },
   // Section 3: Price
   priceSection: {
@@ -1186,7 +1187,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#7E3AF2",
+    color: Colors.primary,
     letterSpacing: -0.4,
   },
   bottom: {
@@ -1214,9 +1215,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sortOptionActive: {
-    backgroundColor: "#F5F3FF",
+    backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: "#7E3AF2",
+    borderColor: Colors.primary,
   },
   sortOptionContent: {
     flexDirection: "row",
@@ -1231,7 +1232,7 @@ const styles = StyleSheet.create({
   },
   sortOptionTextActive: {
     fontWeight: "600",
-    color: "#7E3AF2",
+    color: Colors.primary,
   },
   // Modal styles
   modalOverlay: {
@@ -1244,7 +1245,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 34,
@@ -1278,9 +1279,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   radiusOptionActive: {
-    backgroundColor: "#F5F3FF",
+    backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: "#7E3AF2",
+    borderColor: Colors.primary,
   },
   radioCircle: {
     width: 22,
@@ -1292,13 +1293,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   radioCircleActive: {
-    borderColor: "#7E3AF2",
+    borderColor: Colors.primary,
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
   },
   radiusOptionText: {
     fontSize: 16,
@@ -1307,7 +1308,7 @@ const styles = StyleSheet.create({
   },
   radiusOptionTextActive: {
     fontWeight: "600",
-    color: "#7E3AF2",
+    color: Colors.primary,
   },
   modalNote: {
     fontSize: 13,
@@ -1322,15 +1323,15 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: "#F5F3FF",
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#7E3AF230",
+    borderColor: "#F9731630",
   },
   calculatingText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#7E3AF2",
+    color: Colors.primary,
   },
 });

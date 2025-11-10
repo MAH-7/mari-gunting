@@ -22,6 +22,7 @@ import { rewardsService } from '@/services/rewardsService';
 import { bannerService, Banner } from '@/services/bannerService';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BANNER_PADDING = 20;
@@ -107,7 +108,8 @@ export default function HomeScreen() {
 
   // Auto-scroll carousel with pause functionality
   useEffect(() => {
-    if (isPaused) return;
+    // Don't run if no banners or paused
+    if (isPaused || banners.length === 0) return;
 
     const timer = setInterval(() => {
       setCurrentBannerIndex((prev) => {
@@ -254,7 +256,7 @@ export default function HomeScreen() {
                   }
                 ]}>
                   <LinearGradient
-                    colors={['#E5E7EB', '#F3F4F6', '#E5E7EB']}
+                    colors={[Colors.gray[200], Colors.gray[100], Colors.gray[200]]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.shimmerGradient}
@@ -341,7 +343,7 @@ export default function HomeScreen() {
               activeOpacity={0.9}
               onPress={handleNavigateToBarbers}
             >
-              <Ionicons name="person-outline" size={22} color="#7E3AF2" />
+              <Ionicons name="person-outline" size={22} color={Colors.primary} />
               <Text style={styles.actionLabel}>Freelance</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -349,7 +351,7 @@ export default function HomeScreen() {
               activeOpacity={0.9}
               onPress={handleNavigateToBarbershops}
             >
-              <Ionicons name="business-outline" size={22} color="#7E3AF2" />
+              <Ionicons name="business-outline" size={22} color={Colors.primary} />
               <Text style={styles.actionLabel}>Barbershop</Text>
             </TouchableOpacity>
           </View>
@@ -370,13 +372,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: Colors.backgroundSecondary,
   },
   screen: {
     flex: 1,
   },
   heroSection: {
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 20,
@@ -400,7 +402,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     marginRight: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
   },
@@ -414,7 +416,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   profileName: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 17,
     fontWeight: '700',
     marginTop: 2,
@@ -422,7 +424,7 @@ const styles = StyleSheet.create({
   pointsPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -434,7 +436,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   searchCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 14,
     flexDirection: "row",
@@ -449,7 +451,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.gray[100],
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "500",
-    color: "#111827",
+    color: Colors.text.primary,
   },
   carouselSection: {
     flex: 1,
@@ -475,7 +477,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.gray[100],
   },
   bannerImage: {
     width: "100%",
@@ -491,12 +493,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#D1D5DB",
+    backgroundColor: Colors.gray[300],
     marginHorizontal: 3,
   },
   paginationDotActive: {
     width: 20,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
   },
   bannerSkeletonContainer: {
     width: SCREEN_WIDTH,
@@ -508,7 +510,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 12,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     overflow: 'hidden',
   },
   shimmerWrapper: {
@@ -522,7 +524,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   skeletonDot: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
   },
   actionsSection: {
     justifyContent: 'center',
@@ -537,10 +539,10 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     height: 56,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.gray[200],
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -549,12 +551,12 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: Colors.text.primary,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#111827",
+    color: Colors.text.primary,
     marginBottom: 16,
   },
   filterSection: {
@@ -567,30 +569,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 24,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     marginRight: 12,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.gray[200],
   },
   filterPillActive: {
-    backgroundColor: "#7E3AF2",
-    borderColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterText: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#6B7280",
+    color: Colors.gray[500],
   },
   filterTextActive: {
-    color: "#FFFFFF",
+    color: Colors.white,
   },
   onlineDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
     marginRight: 8,
   },
   barbersSection: {
@@ -604,13 +606,13 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     marginLeft: 8,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.gray[100],
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     fontSize: 14,
     fontWeight: "700",
-    color: "#6B7280",
+    color: Colors.gray[500],
   },
   loadingState: {
     paddingVertical: 60,
@@ -619,7 +621,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 15,
-    color: "#6B7280",
+    color: Colors.gray[500],
     fontWeight: "500",
   },
   emptyState: {
@@ -633,15 +635,15 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
+    color: Colors.text.primary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 15,
-    color: "#9CA3AF",
+    color: Colors.gray[400],
   },
   barberCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     borderRadius: 20,
     marginBottom: 16,
     overflow: "hidden",
@@ -658,13 +660,13 @@ const styles = StyleSheet.create({
   barberImage: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.gray[100],
   },
   liveBadge: {
     position: "absolute",
     top: 16,
     left: 16,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -675,11 +677,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.white,
     marginRight: 6,
   },
   liveText: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -691,12 +693,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#3B82F6",
+    backgroundColor: Colors.info,
     alignItems: "center",
     justifyContent: "center",
   },
   verifiedIcon: {
-    color: "#FFFFFF",
+    color: Colors.white,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -713,13 +715,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 19,
     fontWeight: "bold",
-    color: "#111827",
+    color: Colors.text.primary,
     marginRight: 12,
   },
   ratingPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEF3C7",
+    backgroundColor: Colors.warningLight,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
@@ -762,21 +764,21 @@ const styles = StyleSheet.create({
   },
   statsText: {
     fontSize: 13,
-    color: "#6B7280",
+    color: Colors.gray[500],
     fontWeight: "500",
   },
   dot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: "#D1D5DB",
+    backgroundColor: Colors.gray[300],
     marginHorizontal: 8,
   },
   priceBadge: {
     position: "absolute",
     bottom: 16,
     right: 16,
-    backgroundColor: "#7E3AF2",
+    backgroundColor: Colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
@@ -792,6 +794,6 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: Colors.white,
   },
 });

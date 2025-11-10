@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 import {
   addressService,
   AddAddressParams,
@@ -198,18 +199,18 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
           <View style={styles.header}>
             <Text style={styles.title}>{mode === 'edit' ? 'Edit Address' : 'Add Address'}</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color="#6B7280" />
+              <Ionicons name="close" size={22} color={Colors.gray[500]} />
             </TouchableOpacity>
           </View>
 
           {/* Coordinates banner */}
           <View style={styles.coordsBanner}>
-            <Ionicons name="location" size={18} color="#7E3AF2" />
+            <Ionicons name="location" size={18} color={Colors.primary} />
             <Text style={styles.coordsText}>
               {latitude.toFixed(6)}, {longitude.toFixed(6)}
             </Text>
             <View style={styles.coordsSpacer} />
-            <Ionicons name="checkmark-circle" size={18} color="#7E3AF2" />
+            <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
             <Text style={styles.coordsOk}>Locked from map</Text>
           </View>
 
@@ -221,8 +222,7 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
               value={formData.label}
               onChangeText={(t) => setFormData({ ...formData, label: t })}
               placeholder="e.g. Home, Office, etc."
-              placeholderTextColor="#9CA3AF"
-            />
+              placeholderTextColor={Colors.gray[400]}             />
           </View>
 
           <View style={styles.formGroup}>
@@ -232,8 +232,7 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
               value={formData.addressLine1}
               onChangeText={(t) => setFormData({ ...formData, addressLine1: t })}
               placeholder="Street address"
-              placeholderTextColor="#9CA3AF"
-              multiline
+              placeholderTextColor={Colors.gray[400]}               multiline
             />
           </View>
 
@@ -244,8 +243,7 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
               value={formData.addressLine2}
               onChangeText={(t) => setFormData({ ...formData, addressLine2: t })}
               placeholder="Apartment, suite, etc. (optional)"
-              placeholderTextColor="#9CA3AF"
-            />
+              placeholderTextColor={Colors.gray[400]}             />
           </View>
 
           <View style={styles.row}>
@@ -256,8 +254,7 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
                 value={formData.city}
                 onChangeText={(t) => setFormData({ ...formData, city: t })}
                 placeholder="City"
-                placeholderTextColor="#9CA3AF"
-              />
+                placeholderTextColor={Colors.gray[400]}               />
             </View>
             <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
               <Text style={styles.label}>State *</Text>
@@ -266,8 +263,7 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
                 value={formData.state}
                 onChangeText={(t) => setFormData({ ...formData, state: t })}
                 placeholder="State"
-                placeholderTextColor="#9CA3AF"
-              />
+                placeholderTextColor={Colors.gray[400]}               />
             </View>
           </View>
 
@@ -278,8 +274,7 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
               value={formData.postalCode}
               onChangeText={(t) => setFormData({ ...formData, postalCode: t })}
               placeholder="Postal code"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="numeric"
+              placeholderTextColor={Colors.gray[400]}               keyboardType="numeric"
             />
           </View>
 
@@ -294,7 +289,7 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={Colors.white} />
               ) : (
                 <Text style={styles.saveText}>Save</Text>
               )}
@@ -316,7 +311,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 16,
@@ -331,7 +326,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 4,
     borderRadius: 4,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
   },
   header: {
     flexDirection: 'row',
@@ -342,13 +337,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   coordsBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderWidth: 1,
     borderColor: '#86EFAC',
     padding: 10,
@@ -374,17 +369,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 6,
-    color: '#111827',
+    color: Colors.text.primary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    color: Colors.text.primary,
+    backgroundColor: Colors.backgroundSecondary,
   },
   row: {
     flexDirection: 'row',
@@ -398,27 +393,27 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
   },
   cancelText: {
-    color: '#374151',
+    color: Colors.gray[700],
     fontWeight: '600',
   },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
   },
   saveBtnDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: Colors.gray[400],
   },
   saveText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontWeight: '700',
   },
 });

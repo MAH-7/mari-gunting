@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency, formatDistance, formatTimeRange } from '@mari-gunting/shared/utils/format';
 import { SkeletonImage, SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
+import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -102,7 +103,7 @@ export default function BarbershopDetailScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.iconButton}>
-                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                <Ionicons name="arrow-back" size={24} color={Colors.white} />
               </View>
             </TouchableOpacity>
             <TouchableOpacity 
@@ -110,7 +111,7 @@ export default function BarbershopDetailScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.iconButton}>
-                <Ionicons name="share-outline" size={22} color="#FFFFFF" />
+                <Ionicons name="share-outline" size={22} color={Colors.white} />
               </View>
             </TouchableOpacity>
           </View>
@@ -206,7 +207,7 @@ export default function BarbershopDetailScreen() {
           </View>
         </SafeAreaView>
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#D1D5DB" />
+          <Ionicons name="alert-circle-outline" size={64} color={Colors.gray[300]} />
           <Text style={styles.emptyText}>Barbershop not found</Text>
         </View>
       </View>
@@ -280,7 +281,7 @@ export default function BarbershopDetailScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.iconButton}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={24} color={Colors.white} />
             </View>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -288,7 +289,7 @@ export default function BarbershopDetailScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.iconButton}>
-              <Ionicons name="share-outline" size={22} color="#FFFFFF" />
+              <Ionicons name="share-outline" size={22} color={Colors.white} />
             </View>
           </TouchableOpacity>
         </View>
@@ -312,7 +313,7 @@ export default function BarbershopDetailScreen() {
               <Image source={{ uri: shop.logo }} style={styles.shopLogo} />
               {shop.isVerified && (
                 <View style={styles.logoVerifiedBadge}>
-                  <Ionicons name="shield-checkmark" size={14} color="#FFFFFF" />
+                  <Ionicons name="shield-checkmark" size={14} color={Colors.white} />
                 </View>
               )}
             </View>
@@ -325,7 +326,7 @@ export default function BarbershopDetailScreen() {
                 {shop.distance && (
                   <>
                     <View style={styles.ratingDot} />
-                    <Ionicons name="navigate" size={14} color="#7E3AF2" />
+                    <Ionicons name="navigate" size={14} color={Colors.primary} />
                     <Text style={styles.distanceText}>{formatDistance(shop.distance)}</Text>
                   </>
                 )}
@@ -337,7 +338,7 @@ export default function BarbershopDetailScreen() {
           <View style={styles.quickStats}>
             <View style={styles.statItem}>
               <View style={styles.statIconWrapper}>
-                <Ionicons name="people" size={20} color="#7E3AF2" />
+                <Ionicons name="people" size={20} color={Colors.primary} />
               </View>
               <Text style={styles.statValue}>{shop.bookingsCount}+</Text>
               <Text style={styles.statLabel}>Bookings</Text>
@@ -353,7 +354,7 @@ export default function BarbershopDetailScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <View style={styles.statIconWrapper}>
-                <Ionicons name="chatbox" size={20} color="#3B82F6" />
+                <Ionicons name="chatbox" size={20} color={Colors.info} />
               </View>
               <Text style={styles.statValue}>{shop.reviewsCount}</Text>
               <Text style={styles.statLabel}>Reviews</Text>
@@ -363,13 +364,13 @@ export default function BarbershopDetailScreen() {
           {/* Address */}
           <TouchableOpacity style={styles.addressCard} activeOpacity={0.7}>
             <View style={styles.addressIconWrapper}>
-              <Ionicons name="location" size={20} color="#7E3AF2" />
+              <Ionicons name="location" size={20} color={Colors.primary} />
             </View>
             <View style={styles.addressContent}>
               <Text style={styles.addressLabel}>Location</Text>
               <Text style={styles.addressText} numberOfLines={2}>{shop.address}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
           </TouchableOpacity>
         </View>
 
@@ -378,7 +379,7 @@ export default function BarbershopDetailScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
-                <Ionicons name="time-outline" size={22} color="#111827" />
+                <Ionicons name="time-outline" size={22} color={Colors.text.primary} />
                 <Text style={styles.sectionTitle}>Operating Hours</Text>
               </View>
               {/* Dynamic Open/Closed Status Badge */}
@@ -441,7 +442,7 @@ export default function BarbershopDetailScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="cut-outline" size={22} color="#111827" />
+              <Ionicons name="cut-outline" size={22} color={Colors.text.primary} />
               <Text style={styles.sectionTitle}>Services Available</Text>
             </View>
             <View style={styles.servicesBadge}>
@@ -451,7 +452,7 @@ export default function BarbershopDetailScreen() {
           
           <View style={styles.servicesNote}>
             <View style={styles.servicesNoteIcon}>
-              <Ionicons name="information-circle" size={16} color="#7E3AF2" />
+              <Ionicons name="information-circle" size={16} color={Colors.primary} />
             </View>
             <Text style={styles.servicesNoteText}>
               Choose your preferred service when booking
@@ -468,7 +469,7 @@ export default function BarbershopDetailScreen() {
                 ]}
               >
                 <View style={styles.serviceIconBg}>
-                  <Ionicons name="cut" size={20} color="#7E3AF2" />
+                  <Ionicons name="cut" size={20} color={Colors.primary} />
                 </View>
                 <View style={styles.serviceInfo}>
                   <Text style={styles.serviceName}>{service.name}</Text>
@@ -477,7 +478,7 @@ export default function BarbershopDetailScreen() {
                       <Text style={styles.servicePriceText}>{formatCurrency(service.price)}</Text>
                     </View>
                     <View style={styles.serviceDuration}>
-                      <Ionicons name="time-outline" size={12} color="#6B7280" />
+                      <Ionicons name="time-outline" size={12} color={Colors.gray[500]} />
                       <Text style={styles.serviceDurationText}>{service.duration} min</Text>
                     </View>
                   </View>
@@ -501,7 +502,7 @@ export default function BarbershopDetailScreen() {
                 onPress={() => router.push(`/barbershop/reviews/${id}` as any)}
               >
                 <Text style={styles.seeAllText}>See all</Text>
-                <Ionicons name="chevron-forward" size={16} color="#7E3AF2" />
+                <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -568,7 +569,7 @@ export default function BarbershopDetailScreen() {
                               key={i}
                               name={i < review.rating ? 'star' : 'star-outline'}
                               size={12}
-                              color={i < review.rating ? '#FBBF24' : '#E5E7EB'}
+                              color={i < review.rating ? '#FBBF24' : Colors.gray[200]}
                             />
                           ))}
                         </View>
@@ -582,7 +583,7 @@ export default function BarbershopDetailScreen() {
                         </Text>
                       </View>
                     </View>
-                    <Ionicons name="checkmark-circle" size={18} color="#7E3AF2" />
+                    <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
                   </View>
                   {review.comment && (
                     <Text style={styles.reviewComment}>{review.comment}</Text>
@@ -599,14 +600,14 @@ export default function BarbershopDetailScreen() {
                   <Text style={styles.viewAllReviewsText}>
                     View all {shop.reviewsCount} reviews
                   </Text>
-                  <Ionicons name="arrow-forward" size={16} color="#7E3AF2" />
+                  <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
                 </TouchableOpacity>
               )}
             </View>
           ) : (
             <View style={styles.noReviews}>
               <View style={styles.noReviewsIcon}>
-                <Ionicons name="chatbubbles-outline" size={40} color="#D1D5DB" />
+                <Ionicons name="chatbubbles-outline" size={40} color={Colors.gray[300]} />
               </View>
               <Text style={styles.noReviewsText}>No reviews yet</Text>
               <Text style={styles.noReviewsSubtext}>
@@ -638,7 +639,7 @@ export default function BarbershopDetailScreen() {
             <Text style={styles.bookButtonText}>
               {isOpen ? 'Book Now' : 'Closed'}
             </Text>
-            {isOpen && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+            {isOpen && <Ionicons name="arrow-forward" size={20} color={Colors.white} />}
           </TouchableOpacity>
         </View>
       </View>
@@ -649,7 +650,7 @@ export default function BarbershopDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   heroImageContainer: {
     position: 'absolute',
@@ -679,23 +680,23 @@ const styles = StyleSheet.create({
   currentStatusBadgeOpen: {
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#EDE9FE',
+    borderColor: getStatusBackground("ready"),
   },
   currentStatusBadgeClosed: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: Colors.errorLight,
   },
   currentStatusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   currentStatusText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   currentStatusTextClosed: {
     color: '#DC2626',
@@ -706,7 +707,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
     shadowColor: '#000',
@@ -727,7 +728,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -775,7 +776,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   shopInfoCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 20,
@@ -799,9 +800,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   logoVerifiedBadge: {
     position: 'absolute',
@@ -810,11 +811,11 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#3B82F6',
+    backgroundColor: Colors.info,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   shopInfoMain: {
     flex: 1,
@@ -823,7 +824,7 @@ const styles = StyleSheet.create({
   shopName: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
     letterSpacing: -0.5,
   },
   ratingRow: {
@@ -835,31 +836,31 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   ratingCount: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   ratingDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     marginHorizontal: 4,
   },
   distanceText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   quickStats: {
     flexDirection: 'row',
     paddingVertical: 16,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: Colors.gray[100],
     marginBottom: 16,
   },
   statItem: {
@@ -871,39 +872,39 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
   },
   addressCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   addressIconWrapper: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -914,18 +915,18 @@ const styles = StyleSheet.create({
   addressLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   addressText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     lineHeight: 20,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 20,
@@ -950,7 +951,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
     letterSpacing: -0.5,
   },
   servicesBadge: {
@@ -958,27 +959,27 @@ const styles = StyleSheet.create({
     height: 32,
     paddingHorizontal: 10,
     borderRadius: 16,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#EDE9FE',
+    borderColor: getStatusBackground("ready"),
   },
   servicesBadgeText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   servicesNote: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     marginBottom: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#EDE9FE',
+    borderColor: getStatusBackground("ready"),
   },
   servicesNoteIcon: {
     width: 20,
@@ -1000,11 +1001,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   serviceCardLast: {
     marginBottom: 0,
@@ -1013,11 +1014,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#EDE9FE',
+    borderColor: getStatusBackground("ready"),
   },
   serviceInfo: {
     flex: 1,
@@ -1026,7 +1027,7 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   serviceDetails: {
     flexDirection: 'row',
@@ -1036,15 +1037,15 @@ const styles = StyleSheet.create({
   servicePrice: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   servicePriceText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   serviceDuration: {
     flexDirection: 'row',
@@ -1054,7 +1055,7 @@ const styles = StyleSheet.create({
   serviceDurationText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   hoursContainer: {
     gap: 0,
@@ -1066,10 +1067,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   hourRowTodayOpen: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     marginHorizontal: -20,
     paddingHorizontal: 20,
     paddingVertical: 14,
@@ -1078,7 +1079,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderBottomWidth: 0,
     borderWidth: 1.5,
-    borderColor: '#EDE9FE',
+    borderColor: getStatusBackground("ready"),
   },
   hourRowTodayClosed: {
     backgroundColor: '#FEF2F2',
@@ -1090,7 +1091,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderBottomWidth: 0,
     borderWidth: 1.5,
-    borderColor: '#FEE2E2',
+    borderColor: Colors.errorLight,
   },
   hourDayWrapper: {
     flexDirection: 'row',
@@ -1102,7 +1103,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   todayIndicatorClosed: {
     backgroundColor: '#DC2626',
@@ -1114,12 +1115,12 @@ const styles = StyleSheet.create({
   hourDay: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
   },
   hourDayToday: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   hourTimeWrapper: {
     flexDirection: 'row',
@@ -1130,12 +1131,12 @@ const styles = StyleSheet.create({
   hourTime: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   hourTimeToday: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   closedText: {
     fontSize: 14,
@@ -1156,17 +1157,17 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   ratingOverview: {
     flexDirection: 'row',
     padding: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 16,
     marginBottom: 20,
     gap: 24,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: Colors.gray[100],
   },
   ratingOverviewLeft: {
     alignItems: 'center',
@@ -1174,7 +1175,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingRight: 20,
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+    borderRightColor: Colors.gray[200],
   },
   ratingScoreWrapper: {
     flexDirection: 'row',
@@ -1184,7 +1185,7 @@ const styles = StyleSheet.create({
   ratingScore: {
     fontSize: 48,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
     letterSpacing: -1,
   },
   ratingStars: {
@@ -1194,7 +1195,7 @@ const styles = StyleSheet.create({
   ratingOverviewCount: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
   },
   ratingOverviewBars: {
@@ -1210,13 +1211,13 @@ const styles = StyleSheet.create({
   ratingBarStar: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
     width: 10,
   },
   ratingBarTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -1228,7 +1229,7 @@ const styles = StyleSheet.create({
   ratingBarCount: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     width: 24,
     textAlign: 'right',
   },
@@ -1239,7 +1240,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
   },
   reviewCardLast: {
     borderBottomWidth: 0,
@@ -1254,9 +1255,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   reviewInfo: {
     flex: 1,
@@ -1265,7 +1266,7 @@ const styles = StyleSheet.create({
   reviewName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   reviewMeta: {
     flexDirection: 'row',
@@ -1280,17 +1281,17 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
   },
   reviewDate: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
   },
   reviewComment: {
     fontSize: 14,
     lineHeight: 21,
-    color: '#374151',
+    color: Colors.gray[700],
   },
   viewAllReviewsButton: {
     flexDirection: 'row',
@@ -1299,15 +1300,15 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     paddingVertical: 14,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#EDE9FE',
+    borderColor: getStatusBackground("ready"),
   },
   viewAllReviewsText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   noReviews: {
     paddingVertical: 48,
@@ -1318,7 +1319,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -1326,12 +1327,12 @@ const styles = StyleSheet.create({
   noReviewsText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   noReviewsSubtext: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textAlign: 'center',
     paddingHorizontal: 20,
   },
@@ -1340,7 +1341,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
     shadowColor: '#000',
@@ -1363,35 +1364,35 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   priceValue: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   bookButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 40,
     paddingVertical: 16,
     borderRadius: 24,
     gap: 8,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   bookButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
   },
   bookButtonText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   loadingContainer: {
@@ -1403,7 +1404,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   emptyContainer: {
     flex: 1,
@@ -1414,6 +1415,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
 });

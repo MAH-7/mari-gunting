@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocation } from '@/hooks/useLocation';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 interface LocationGuardProps {
   children: React.ReactNode;
@@ -42,7 +43,7 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
   if (isChecking || isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#7E3AF2" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Checking location services...</Text>
       </View>
     );
@@ -54,7 +55,7 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
       <View style={styles.container}>
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Ionicons name="location" size={64} color="#7E3AF2" />
+            <Ionicons name="location" size={64} color={Colors.primary} />
           </View>
           
           <Text style={styles.title}>Location Access Required</Text>
@@ -65,22 +66,22 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
           
           <View style={styles.featureList}>
             <View style={styles.featureItem}>
-              <Ionicons name="search" size={20} color="#7E3AF2" />
+              <Ionicons name="search" size={20} color={Colors.primary} />
               <Text style={styles.featureText}>Find nearby barbers</Text>
             </View>
             
             <View style={styles.featureItem}>
-              <Ionicons name="calculator" size={20} color="#7E3AF2" />
+              <Ionicons name="calculator" size={20} color={Colors.primary} />
               <Text style={styles.featureText}>Calculate accurate travel costs</Text>
             </View>
             
             <View style={styles.featureItem}>
-              <Ionicons name="navigate" size={20} color="#7E3AF2" />
+              <Ionicons name="navigate" size={20} color={Colors.primary} />
               <Text style={styles.featureText}>Show real-time barber location</Text>
             </View>
             
             <View style={styles.featureItem}>
-              <Ionicons name="time" size={20} color="#7E3AF2" />
+              <Ionicons name="time" size={20} color={Colors.primary} />
               <Text style={styles.featureText}>Provide accurate arrival times</Text>
             </View>
           </View>
@@ -90,7 +91,7 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
             onPress={handleRequestPermission}
             activeOpacity={0.8}
           >
-            <Ionicons name="location" size={20} color="#FFFFFF" />
+            <Ionicons name="location" size={20} color={Colors.white} />
             <Text style={styles.buttonText}>Enable Location</Text>
           </TouchableOpacity>
 
@@ -109,7 +110,7 @@ export function LocationGuard({ children, requireLocation = true }: LocationGuar
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -130,20 +131,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   description: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 24,
   },
   featureList: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -160,19 +161,19 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 15,
-    color: '#374151',
+    color: Colors.gray[700],
     marginLeft: 12,
     flex: 1,
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
     alignItems: 'center',
     gap: 8,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -182,18 +183,18 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   note: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textAlign: 'center',
     fontStyle: 'italic',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
 });

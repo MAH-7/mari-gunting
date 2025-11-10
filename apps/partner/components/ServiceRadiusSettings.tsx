@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { barberService } from '@mari-gunting/shared/services/barberService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 interface ServiceRadiusSettingsProps {
   barberId: string;
@@ -129,7 +130,7 @@ export function ServiceRadiusSettings({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Ionicons name="navigate-circle" size={24} color="#7E3AF2" />
+            <Ionicons name="navigate-circle" size={24} color={Colors.primary} />
           </View>
           <View style={styles.headerInfo}>
             <Text style={styles.title}>Service Radius</Text>
@@ -158,13 +159,13 @@ export function ServiceRadiusSettings({
             disabled={isLoading || !canChange}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <>
                 <Ionicons
                   name="create-outline"
                   size={18}
-                  color={canChange ? '#FFFFFF' : '#8E8E93'}
+                  color={canChange ? Colors.white : '#8E8E93'}
                 />
                 <Text
                   style={[
@@ -272,7 +273,7 @@ export function ServiceRadiusSettings({
                 disabled={selectedRadius === currentRadius || isSaving}
               >
                 {isSaving ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color={Colors.white} size="small" />
                 ) : (
                   <Text style={styles.saveButtonText}>Save Change</Text>
                 )}
@@ -287,7 +288,7 @@ export function ServiceRadiusSettings({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -337,7 +338,7 @@ const styles = StyleSheet.create({
   currentRadiusValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   lastChangedText: {
     fontSize: 13,
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     gap: 8,
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   changeButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   changeButtonTextDisabled: {
     color: '#8E8E93',
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 34,
@@ -422,9 +423,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   radiusOptionActive: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderWidth: 2,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   radiusOptionLeft: {
     flexDirection: 'row',
@@ -442,13 +443,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioCircleActive: {
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   radiusOptionLabel: {
     fontSize: 16,
@@ -456,7 +457,7 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   radiusOptionLabelActive: {
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   radiusOptionDescription: {
     fontSize: 13,
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   currentBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   modalActions: {
     flexDirection: 'row',
@@ -496,7 +497,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
   },
   saveButtonDisabled: {
@@ -505,6 +506,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 });

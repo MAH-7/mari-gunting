@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -35,7 +36,7 @@ export default function ConfirmationModal({
   title,
   message,
   icon = 'alert-circle',
-  iconColor = '#F59E0B',
+  iconColor = Colors.warning,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   onConfirm,
@@ -149,7 +150,7 @@ export default function ConfirmationModal({
                   {isLoading ? (
                     <ActivityIndicator
                       size="small"
-                      color={isDestructive ? '#FFFFFF' : '#FFFFFF'}
+                      color={isDestructive ? Colors.white : Colors.white}
                     />
                   ) : (
                     <Text
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 32,
@@ -203,13 +204,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
@@ -224,43 +225,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   confirmButtonDestructive: {
-    backgroundColor: '#EF4444',
-    shadowColor: '#EF4444',
+    backgroundColor: Colors.error,
+    shadowColor: Colors.error,
   },
   confirmButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   confirmButtonTextDestructive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   cancelButton: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
     letterSpacing: 0.3,
   },
 });

@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useProfile } from '@/hooks/useProfile';
 import { formatPhoneNumber } from '@mari-gunting/shared/utils/format';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 // Helper function to safely get avatar URL
 const getAvatarUrl = (user: any) => {
@@ -162,7 +163,7 @@ export default function EditProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#111827" />
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <View style={{ width: 24 }} />
@@ -182,7 +183,7 @@ export default function EditProfileScreen() {
                   style={styles.avatar} 
                 />
                 <View style={styles.avatarEditButton}>
-                  <Ionicons name="camera" size={20} color="#FFFFFF" />
+                  <Ionicons name="camera" size={20} color={Colors.white} />
                 </View>
               </View>
               <Text style={styles.avatarHint}>Tap to change photo</Text>
@@ -202,7 +203,7 @@ export default function EditProfileScreen() {
                 }}
                 style={styles.input}
                 placeholder="Enter your full name"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={Colors.gray[400]}
                 editable={!isLoading}
               />
             </View>
@@ -215,7 +216,7 @@ export default function EditProfileScreen() {
                   {profile?.email || 'Not set'}
                 </Text>
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
                   <Text style={styles.verifiedText}>Verified</Text>
                 </View>
               </View>
@@ -232,7 +233,7 @@ export default function EditProfileScreen() {
                   {formatPhoneNumber(profile?.phone || profile?.phone_number || '')}
                 </Text>
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
                   <Text style={styles.verifiedText}>Verified</Text>
                 </View>
               </View>
@@ -254,7 +255,7 @@ export default function EditProfileScreen() {
             disabled={!hasChanges || isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={Colors.white} />
             ) : (
               <Text style={styles.saveButtonText}>Save Changes</Text>
             )}
@@ -268,7 +269,7 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   keyboardView: {
     flex: 1,
@@ -279,9 +280,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   backButton: {
     padding: 4,
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   content: {
     flex: 1,
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
   avatarSection: {
     alignItems: 'center',
     paddingVertical: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   avatarContainer: {
     position: 'relative',
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
   },
   avatarEditButton: {
     position: 'absolute',
@@ -317,11 +318,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -331,7 +332,7 @@ const styles = StyleSheet.create({
   avatarHint: {
     marginTop: 16,
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -345,33 +346,33 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#111827',
+    color: Colors.text.primary,
   },
   inputDisabled: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   inputDisabledText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -381,31 +382,31 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   hint: {
     marginTop: 6,
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   footer: {
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
   },
   saveButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
   },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 });

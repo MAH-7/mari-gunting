@@ -17,6 +17,7 @@ import AddressFormBottomSheet, { AddressFormMode } from '@/components/AddressFor
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { CustomerAddress } from '@mari-gunting/shared/services/addressService';
 import { useBookingIfActive } from '@/contexts/BookingContext';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function MapPickerScreen() {
   const router = useRouter();
@@ -360,7 +361,7 @@ export default function MapPickerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
   },

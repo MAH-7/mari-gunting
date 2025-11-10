@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { reviewService } from '@mari-gunting/shared/services/reviewService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,7 +77,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7E3AF2" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
@@ -87,7 +88,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color="#EF4444" />
+          <Ionicons name="alert-circle" size={64} color={Colors.error} />
           <Text style={styles.errorTitle}>Booking Not Found</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Go Back</Text>
@@ -105,7 +106,7 @@ export default function ReviewScreen() {
           style={styles.backIconButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Rate & Review</Text>
         <View style={styles.headerRight} />
@@ -149,7 +150,7 @@ export default function ReviewScreen() {
                 <Ionicons
                   name={star <= rating ? 'star' : 'star-outline'}
                   size={48}
-                  color={star <= rating ? '#F59E0B' : '#D1D5DB'}
+                  color={star <= rating ? Colors.warning : Colors.gray[300]}
                 />
               </TouchableOpacity>
             ))}
@@ -174,8 +175,7 @@ export default function ReviewScreen() {
           <TextInput
             style={styles.commentInput}
             placeholder="Tell us about your experience..."
-            placeholderTextColor="#9CA3AF"
-            multiline
+            placeholderTextColor={Colors.gray[400]}             multiline
             numberOfLines={6}
             value={comment}
             onChangeText={setComment}
@@ -188,11 +188,11 @@ export default function ReviewScreen() {
         {/* Tips */}
         <View style={styles.tipsCard}>
           <View style={styles.tipRow}>
-            <Ionicons name="information-circle" size={20} color="#6B7280" />
+            <Ionicons name="information-circle" size={20} color={Colors.gray[500]} />
             <Text style={styles.tipText}>Your review will be visible to other customers</Text>
           </View>
           <View style={styles.tipRow}>
-            <Ionicons name="shield-checkmark" size={20} color="#6B7280" />
+            <Ionicons name="shield-checkmark" size={20} color={Colors.gray[500]} />
             <Text style={styles.tipText}>Reviews are verified and linked to your booking</Text>
           </View>
         </View>
@@ -207,10 +207,10 @@ export default function ReviewScreen() {
           activeOpacity={0.8}
         >
           {submitMutation.isPending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={Colors.white} />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              <Ionicons name="checkmark-circle" size={20} color={Colors.white} />
               <Text style={styles.submitButtonText}>Submit Review</Text>
             </>
           )}
@@ -223,7 +223,7 @@ export default function ReviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   errorContainer: {
@@ -246,19 +246,19 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
   },
   backButton: {
     paddingHorizontal: 32,
     paddingVertical: 14,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
   },
   backButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -266,22 +266,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   backIconButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   headerRight: {
     width: 40,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   barberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     borderRadius: 16,
     marginBottom: 24,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
   },
   barberInfo: {
     flex: 1,
@@ -325,15 +325,15 @@ const styles = StyleSheet.create({
   barberName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   bookingNumber: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     borderRadius: 16,
     marginBottom: 16,
@@ -346,12 +346,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginBottom: 20,
   },
   starsContainer: {
@@ -366,27 +366,27 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     textAlign: 'center',
   },
   commentInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
-    color: '#111827',
+    color: Colors.text.primary,
     minHeight: 120,
     marginBottom: 8,
   },
   characterCount: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textAlign: 'right',
   },
   tipsCard: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     padding: 16,
     borderRadius: 12,
     gap: 12,
@@ -399,36 +399,36 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 18,
   },
   footer: {
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   submitButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 });

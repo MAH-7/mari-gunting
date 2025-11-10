@@ -7,7 +7,7 @@ import {
   Dimensions,
   Image,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { width, height } = Dimensions.get("window");
 
@@ -57,12 +57,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   }, []);
 
   return (
-    <LinearGradient
-      colors={["#7E3AF2", "#6C2BD9", "#5B21B6"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
-    >
+    <View style={[styles.container, { backgroundColor: Colors.primary }]}>
       {/* Decorative circles */}
       <View style={styles.circle1} />
       <View style={styles.circle2} />
@@ -114,7 +109,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         <Text style={styles.poweredBy}>Powered by</Text>
         <Text style={styles.companyName}>Mari Gunting™</Text>
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -184,7 +179,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 42,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: Colors.white,
     letterSpacing: -1,
     marginBottom: 8,
     textShadowColor: "rgba(0, 0, 0, 0.2)",
@@ -210,7 +205,7 @@ const styles = StyleSheet.create({
   },
   companyName: {
     fontSize: 14,
-    color: "#FFFFFF",
+    color: Colors.white,
     fontWeight: "700",
     letterSpacing: 1,
   },

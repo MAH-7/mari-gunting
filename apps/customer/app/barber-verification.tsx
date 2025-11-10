@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function BarberVerificationScreen() {
   // Personal Info
@@ -168,14 +169,14 @@ export default function BarberVerificationScreen() {
               onPress={() => router.back()}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={24} color="#111827" />
+              <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
           </View>
 
           {/* Title Section */}
           <View style={styles.titleSection}>
             <View style={styles.iconBadge}>
-              <Ionicons name="shield-checkmark" size={32} color="#7E3AF2" />
+              <Ionicons name="shield-checkmark" size={32} color={Colors.primary} />
             </View>
             <Text style={styles.title}>Barber Verification</Text>
             <Text style={styles.subtitle}>
@@ -199,12 +200,11 @@ export default function BarberVerificationScreen() {
                 Full Name (as per IC) <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#6B7280" />
+                <Ionicons name="person-outline" size={20} color={Colors.gray[500]} />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your full name"
-                  placeholderTextColor="#9CA3AF"
-                  value={fullName}
+                  placeholderTextColor={Colors.gray[400]}                   value={fullName}
                   onChangeText={setFullName}
                   autoCapitalize="words"
                   editable={!isLoading}
@@ -218,12 +218,11 @@ export default function BarberVerificationScreen() {
                 IC Number <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="card-outline" size={20} color="#6B7280" />
+                <Ionicons name="card-outline" size={20} color={Colors.gray[500]} />
                 <TextInput
                   style={styles.input}
                   placeholder="123456-12-1234"
-                  placeholderTextColor="#9CA3AF"
-                  value={icNumber}
+                  placeholderTextColor={Colors.gray[400]}                   value={icNumber}
                   onChangeText={(text) => setIcNumber(formatICNumber(text))}
                   keyboardType="number-pad"
                   maxLength={14}
@@ -237,12 +236,11 @@ export default function BarberVerificationScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Business/Salon Name (Optional)</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="business-outline" size={20} color="#6B7280" />
+                <Ionicons name="business-outline" size={20} color={Colors.gray[500]} />
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., Premium Cuts Barbershop"
-                  placeholderTextColor="#9CA3AF"
-                  value={businessName}
+                  placeholderTextColor={Colors.gray[400]}                   value={businessName}
                   onChangeText={setBusinessName}
                   editable={!isLoading}
                 />
@@ -253,12 +251,11 @@ export default function BarberVerificationScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Years of Experience</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="time-outline" size={20} color="#6B7280" />
+                <Ionicons name="time-outline" size={20} color={Colors.gray[500]} />
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., 5"
-                  placeholderTextColor="#9CA3AF"
-                  value={yearsExperience}
+                  placeholderTextColor={Colors.gray[400]}                   value={yearsExperience}
                   onChangeText={setYearsExperience}
                   keyboardType="number-pad"
                   maxLength={2}
@@ -286,7 +283,7 @@ export default function BarberVerificationScreen() {
                   <Image source={{ uri: icFrontPhoto }} style={styles.uploadedImage} />
                 ) : (
                   <>
-                    <Ionicons name="camera" size={32} color="#6B7280" />
+                    <Ionicons name="camera" size={32} color={Colors.gray[500]} />
                     <Text style={styles.uploadText}>Upload IC Front</Text>
                     <Text style={styles.uploadHint}>Clear photo, all corners visible</Text>
                   </>
@@ -309,7 +306,7 @@ export default function BarberVerificationScreen() {
                   <Image source={{ uri: icBackPhoto }} style={styles.uploadedImage} />
                 ) : (
                   <>
-                    <Ionicons name="camera" size={32} color="#6B7280" />
+                    <Ionicons name="camera" size={32} color={Colors.gray[500]} />
                     <Text style={styles.uploadText}>Upload IC Back</Text>
                     <Text style={styles.uploadHint}>Clear photo, all corners visible</Text>
                   </>
@@ -332,7 +329,7 @@ export default function BarberVerificationScreen() {
                   <Image source={{ uri: selfiePhoto }} style={styles.uploadedImage} />
                 ) : (
                   <>
-                    <Ionicons name="person-circle" size={32} color="#6B7280" />
+                    <Ionicons name="person-circle" size={32} color={Colors.gray[500]} />
                     <Text style={styles.uploadText}>Upload Selfie</Text>
                     <Text style={styles.uploadHint}>Hold your IC next to your face</Text>
                   </>
@@ -351,7 +348,7 @@ export default function BarberVerificationScreen() {
               >
                 {certificationDoc ? (
                   <View style={styles.docInfo}>
-                    <Ionicons name="document-text" size={32} color="#7E3AF2" />
+                    <Ionicons name="document-text" size={32} color={Colors.primary} />
                     <Text style={styles.docName} numberOfLines={1}>
                       {certificationDoc.name}
                     </Text>
@@ -361,7 +358,7 @@ export default function BarberVerificationScreen() {
                   </View>
                 ) : (
                   <>
-                    <Ionicons name="document-attach" size={32} color="#6B7280" />
+                    <Ionicons name="document-attach" size={32} color={Colors.gray[500]} />
                     <Text style={styles.uploadText}>Upload Certificate</Text>
                     <Text style={styles.uploadHint}>PDF or Image (optional)</Text>
                   </>
@@ -389,11 +386,11 @@ export default function BarberVerificationScreen() {
             activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <>
                 <Text style={styles.submitButtonText}>Submit for Verification</Text>
-                <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
+                <Ionicons name="shield-checkmark" size={20} color={Colors.white} />
               </>
             )}
           </TouchableOpacity>
@@ -414,7 +411,7 @@ export default function BarberVerificationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -431,7 +428,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -444,7 +441,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -452,13 +449,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -468,18 +465,18 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   progressText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '600',
   },
   formSection: {
@@ -492,18 +489,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
     marginBottom: 8,
   },
   required: {
-    color: '#EF4444',
+    color: Colors.error,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -513,29 +510,29 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   helperText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginTop: 6,
     marginLeft: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     marginVertical: 24,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 16,
   },
   uploadButton: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
     borderStyle: 'dashed',
     padding: 24,
@@ -551,12 +548,12 @@ const styles = StyleSheet.create({
   uploadText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
     marginTop: 12,
   },
   uploadHint: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     marginTop: 4,
   },
   docInfo: {
@@ -565,13 +562,13 @@ const styles = StyleSheet.create({
   docName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     marginTop: 8,
     maxWidth: 200,
   },
   docSize: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginTop: 4,
   },
   infoBox: {
@@ -592,11 +589,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     marginHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -605,14 +602,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   submitButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
     elevation: 0,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   termsContainer: {
@@ -621,12 +618,12 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 20,
   },
   termsLink: {
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
   },
 });

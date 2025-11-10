@@ -19,6 +19,7 @@ import { useRealtimeBarberLocation } from '../../hooks/useRealtimeBarberLocation
 import { useLocation } from '../../hooks/useLocation';
 import { calculateETA } from '../../utils/eta';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 // Configure notification handler
 // TODO: Re-enable when switching to development build with native modules
@@ -301,7 +302,7 @@ export default function TrackBarberScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color="#EF4444" />
+          <Ionicons name="alert-circle" size={64} color={Colors.error} />
           <Text style={styles.errorText}>{error || 'Booking not found'}</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Go Back</Text>
@@ -361,10 +362,10 @@ export default function TrackBarberScreen() {
       {/* Map Controls */}
       <View style={styles.mapControls}>
         <TouchableOpacity style={styles.mapButton} onPress={centerMapOnBarber}>
-          <Ionicons name="locate" size={24} color="#1F2937" />
+          <Ionicons name="locate" size={24} color={Colors.gray[800]} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.mapButton} onPress={fitBothLocations}>
-          <Ionicons name="resize" size={24} color="#1F2937" />
+          <Ionicons name="resize" size={24} color={Colors.gray[800]} />
         </TouchableOpacity>
       </View>
 
@@ -376,7 +377,7 @@ export default function TrackBarberScreen() {
             {booking.barberAvatar ? (
               <Text>TODO: Image</Text>
             ) : (
-              <Ionicons name="person" size={32} color="#6B7280" />
+              <Ionicons name="person" size={32} color={Colors.gray[500]} />
             )}
           </View>
           <View style={styles.barberDetails}>
@@ -434,7 +435,7 @@ export default function TrackBarberScreen() {
 
         {/* Address */}
         <View style={styles.addressContainer}>
-          <Ionicons name="location" size={20} color="#6B7280" />
+          <Ionicons name="location" size={20} color={Colors.gray[500]} />
           <Text style={styles.addressText}>{booking.customerLocation.address}</Text>
         </View>
 
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   errorContainer: {
     flex: 1,
@@ -475,13 +476,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
   },
   backButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -509,11 +510,11 @@ const styles = StyleSheet.create({
   },
   connected: {
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: Colors.success,
   },
   disconnected: {
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: Colors.error,
   },
   statusDot: {
     width: 8,
@@ -522,15 +523,15 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   connectedDot: {
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
   },
   disconnectedDot: {
-    backgroundColor: '#EF4444',
+    backgroundColor: Colors.error,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1F2937',
+    color: Colors.gray[800],
   },
   mapControls: {
     position: 'absolute',
@@ -575,7 +576,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -586,18 +587,18 @@ const styles = StyleSheet.create({
   barberName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: Colors.gray[800],
     marginBottom: 4,
   },
   barberStatus: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   callButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -605,7 +606,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     marginBottom: 16,
   },
@@ -614,37 +615,37 @@ const styles = StyleSheet.create({
   },
   etaLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginBottom: 4,
   },
   etaValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: Colors.gray[800],
   },
   etaDivider: {
     width: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
   },
   addressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 8,
   },
   addressText: {
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: '#4B5563',
+    color: Colors.gray[600],
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     borderRadius: 8,
   },
   errorBannerText: {
@@ -656,7 +657,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#3B82F6',
+    backgroundColor: Colors.info,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -666,7 +667,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 interface ServiceModalProps {
   visible: boolean;
@@ -36,12 +36,9 @@ export function ServiceModal({ visible, onClose, onServiceAction }: ServiceModal
             activeOpacity={0.6}
           >
             <View style={styles.iconWrapper}>
-              <LinearGradient
-                colors={['#FBBF24', '#F59E0B']}
-                style={styles.iconGradient}
-              >
-                <Ionicons name="flash" size={24} color="#FFFFFF" />
-              </LinearGradient>
+              <View style={[styles.iconGradient, { backgroundColor: Colors.warning }]}>
+                <Ionicons name="flash" size={24} color={Colors.white} />
+              </View>
             </View>
             <View style={styles.textWrapper}>
               <View style={styles.titleRow}>
@@ -52,7 +49,7 @@ export function ServiceModal({ visible, onClose, onServiceAction }: ServiceModal
               </View>
               <Text style={styles.subtitle}>Auto-match with nearest barber</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
           </TouchableOpacity>
 
           {/* Choose Barber */}
@@ -62,12 +59,9 @@ export function ServiceModal({ visible, onClose, onServiceAction }: ServiceModal
             activeOpacity={0.6}
           >
             <View style={styles.iconWrapper}>
-              <LinearGradient
-                colors={['#60A5FA', '#3B82F6']}
-                style={styles.iconGradient}
-              >
-                <Ionicons name="people" size={24} color="#FFFFFF" />
-              </LinearGradient>
+              <View style={[styles.iconGradient, { backgroundColor: Colors.info }]}>
+                <Ionicons name="people" size={24} color={Colors.white} />
+              </View>
             </View>
             <View style={styles.textWrapper}>
               <View style={styles.titleRow}>
@@ -78,7 +72,7 @@ export function ServiceModal({ visible, onClose, onServiceAction }: ServiceModal
               </View>
               <Text style={styles.subtitle}>Browse profiles & select your favorite</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
           </TouchableOpacity>
 
           {/* Barbershop */}
@@ -88,18 +82,15 @@ export function ServiceModal({ visible, onClose, onServiceAction }: ServiceModal
             activeOpacity={0.6}
           >
             <View style={styles.iconWrapper}>
-              <LinearGradient
-                colors={['#A78BFA', '#8B5CF6']}
-                style={styles.iconGradient}
-              >
-                <Ionicons name="storefront" size={24} color="#FFFFFF" />
-              </LinearGradient>
+              <View style={[styles.iconGradient, { backgroundColor: Colors.primary }]}>
+                <Ionicons name="storefront" size={24} color={Colors.white} />
+              </View>
             </View>
             <View style={styles.textWrapper}>
               <Text style={styles.title}>Barbershop</Text>
               <Text style={styles.subtitle}>Visit nearby salon locations</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -114,7 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 12,
@@ -129,7 +120,7 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 20,
@@ -137,12 +128,12 @@ const styles = StyleSheet.create({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: Colors.gray[100],
   },
   lastOption: {
     marginBottom: 0,
@@ -174,16 +165,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginRight: 8,
   },
   subtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 18,
   },
   badge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -195,7 +186,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   badgeBlue: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: Colors.infoLight,
   },
   badgeTextBlue: {
     color: '#2563EB',

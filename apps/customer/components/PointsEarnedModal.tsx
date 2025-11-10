@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 interface PointsEarnedModalProps {
   visible: boolean;
@@ -205,12 +205,7 @@ export default function PointsEarnedModal({ visible, points, onClose, onComplete
             },
           ]}
         >
-          <LinearGradient
-            colors={['#7E3AF2', '#6C2BD9']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradient}
-          >
+          <View style={[styles.gradient, { backgroundColor: Colors.primary }]}>
             {/* Star icon */}
             <View style={styles.iconContainer}>
               <Ionicons name="star" size={48} color="#FFD700" />
@@ -231,7 +226,7 @@ export default function PointsEarnedModal({ visible, points, onClose, onComplete
             <TouchableOpacity style={styles.button} onPress={handleClose}>
               <Text style={styles.buttonText}>Awesome!</Text>
             </TouchableOpacity>
-          </LinearGradient>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -251,7 +246,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.4,
     shadowRadius: 24,
@@ -278,13 +273,13 @@ const styles = StyleSheet.create({
   pointsPrefix: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginRight: 4,
   },
   pointsValue: {
     fontSize: 64,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     lineHeight: 72,
   },
   pointsSuffix: {
@@ -302,7 +297,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   button: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 12,
@@ -310,7 +305,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   // Confetti
   confetti: {

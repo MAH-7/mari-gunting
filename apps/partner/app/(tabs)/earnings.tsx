@@ -13,6 +13,7 @@ import { supabase } from '@mari-gunting/shared/config/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { extractDateFromISO } from '@mari-gunting/shared/utils/format';
 import { payoutService } from '@mari-gunting/shared/services/payoutService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -332,11 +333,11 @@ export default function GrabEarningsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.white} />
         }
       >
         {/* Hero Section - Grab Style */}
-        <LinearGradient colors={['#7E3AF2', '#6C2BD9']} style={styles.heroSection}>
+        <View style={[styles.heroSection, { backgroundColor: Colors.primary }]}>
           <Text style={styles.heroLabel}>
             {selectedPeriod === 'today'
               ? "Today's Earnings"
@@ -368,7 +369,7 @@ export default function GrabEarningsScreen() {
               <Text style={styles.heroStatLabel}>Commission</Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Period Selector */}
         <View style={styles.periodSelector}>
@@ -404,7 +405,7 @@ export default function GrabEarningsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.availableBalanceContent}>
-                <Ionicons name="wallet-outline" size={18} color="#7E3AF2" style={{ marginRight: 8 }} />
+                <Ionicons name="wallet-outline" size={18} color={Colors.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.availableBalanceText}>Available: </Text>
                 <Text style={styles.availableBalanceValue}>RM {availableBalance.toFixed(2)}</Text>
               </View>
@@ -446,7 +447,7 @@ export default function GrabEarningsScreen() {
               </View>
               <Text style={styles.revenueModelEquals}>=</Text>
               <View style={styles.revenueModelItem}>
-                <Ionicons name="checkmark-circle" size={28} color="#7E3AF2" style={styles.revenueModelIcon} />
+                <Ionicons name="checkmark-circle" size={28} color={Colors.primary} style={styles.revenueModelIcon} />
                 <Text style={styles.revenueModelLabel}>Your Pay</Text>
               </View>
             </View>
@@ -456,9 +457,7 @@ export default function GrabEarningsScreen() {
           <View style={styles.breakdownCard}>
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownLeft}>
-                <View style={[styles.breakdownIcon, { backgroundColor: '#E8F5E9' }]}>
-                  <Ionicons name="cut-outline" size={20} color="#7E3AF2" />
-                </View>
+                <Ionicons name="cut-outline" size={24} color={Colors.primary} style={{ marginRight: 12 }} />
                 <View>
                   <Text style={styles.breakdownLabel}>Service Earnings</Text>
                   <Text style={styles.breakdownSub}>Before commission</Text>
@@ -471,9 +470,7 @@ export default function GrabEarningsScreen() {
 
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownLeft}>
-                <View style={[styles.breakdownIcon, { backgroundColor: '#FFF3E0' }]}>
-                  <Ionicons name="car-outline" size={20} color="#FF9800" />
-                </View>
+                <Ionicons name="car-outline" size={24} color="#FF9800" style={{ marginRight: 12 }} />
                 <View>
                   <Text style={styles.breakdownLabel}>Travel</Text>
                   <Text style={styles.breakdownSub}>100% to you</Text>
@@ -486,9 +483,7 @@ export default function GrabEarningsScreen() {
 
             <View style={styles.breakdownRow}>
               <View style={styles.breakdownLeft}>
-                <View style={[styles.breakdownIcon, { backgroundColor: '#FFEBEE' }]}>
-                  <Ionicons name="business-outline" size={20} color="#F44336" />
-                </View>
+                <Ionicons name="business-outline" size={24} color="#F44336" style={{ marginRight: 12 }} />
                 <View>
                   <Text style={styles.breakdownLabel}>Commission</Text>
                   <Text style={styles.breakdownSub}>15% of services</Text>
@@ -533,7 +528,7 @@ export default function GrabEarningsScreen() {
                   <Text style={styles.loadMoreText}>
                     Load More ({filteredBookings.length - visibleTrips} remaining)
                   </Text>
-                  <Ionicons name="chevron-down" size={20} color="#7E3AF2" />
+                  <Ionicons name="chevron-down" size={20} color={Colors.primary} />
                 </TouchableOpacity>
               )}
             </>
@@ -642,7 +637,7 @@ export default function GrabEarningsScreen() {
                   disabled={isSubmittingPayout}
                 >
                   {isSubmittingPayout ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={Colors.white} />
                   ) : (
                     <Text style={styles.payoutBtnPrimaryText}>Confirm</Text>
                   )}
@@ -698,9 +693,7 @@ function TripCard({ booking, onPress }: { booking: Booking; onPress?: () => void
       <View style={styles.tripHeader}>
         <View style={styles.tripLeft}>
           {/* Service Icon - Grab Standard */}
-          <View style={styles.tripServiceIcon}>
-            <Ionicons name="cut" size={20} color="#7E3AF2" />
-          </View>
+          <Ionicons name="cut" size={24} color={Colors.primary} style={{ marginRight: 12 }} />
           <View style={styles.tripInfo}>
             <Text style={styles.tripServiceCount}>{serviceText}</Text>
             <Text style={styles.tripTime}>
@@ -758,7 +751,7 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
     opacity: 0.9,
   },
   infoButton: {
@@ -777,14 +770,14 @@ const styles = StyleSheet.create({
   currency: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginTop: 4,
     marginRight: 4,
   },
   amount: {
     fontSize: 48,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: -1,
   },
   heroStats: {
@@ -801,13 +794,13 @@ const styles = StyleSheet.create({
   heroStatValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginBottom: 4,
   },
   heroStatLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: Colors.white,
     opacity: 0.8,
   },
   heroDivider: {
@@ -819,7 +812,7 @@ const styles = StyleSheet.create({
   // Period Selector - Clean Tabs
   periodSelector: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     marginHorizontal: 16,
     marginTop: -16,
     borderRadius: 12,
@@ -837,7 +830,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   periodTabActive: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   periodText: {
     fontSize: 14,
@@ -845,7 +838,7 @@ const styles = StyleSheet.create({
     color: '#757575',
   },
   periodTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 
   // Section
@@ -856,7 +849,7 @@ const styles = StyleSheet.create({
 
   // Payout Card - Combined Container (Grab Standard)
   payoutCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -889,7 +882,7 @@ const styles = StyleSheet.create({
   availableBalanceValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -910,7 +903,7 @@ const styles = StyleSheet.create({
 
   // Breakdown Card - Clean Design
   breakdownCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -976,12 +969,12 @@ const styles = StyleSheet.create({
   breakdownTotalValue: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
 
   // Trip Card - Grab Standard (Service-Focused)
   tripCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
@@ -1006,7 +999,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1031,7 +1024,7 @@ const styles = StyleSheet.create({
   tripAmount: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginBottom: 4,
   },
   tripChevron: {
@@ -1053,7 +1046,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     marginTop: 12,
@@ -1068,7 +1061,7 @@ const styles = StyleSheet.create({
   loadMoreText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginRight: 8,
   },
 
@@ -1110,12 +1103,12 @@ const styles = StyleSheet.create({
 
   // Revenue Model Banner
   revenueModelBanner: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   revenueModelRow: {
     flexDirection: 'row',
@@ -1130,7 +1123,7 @@ const styles = StyleSheet.create({
   revenueModelValue: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginBottom: 4,
   },
   revenueModelLabel: {
@@ -1142,19 +1135,19 @@ const styles = StyleSheet.create({
   revenueModelPlus: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginHorizontal: 8,
   },
   revenueModelEquals: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginHorizontal: 8,
   },
   revenueModelSubtext: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
     textAlign: 'center',
   },
   revenueModelIcon: {
@@ -1176,7 +1169,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   payoutModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     width: '100%',
     maxWidth: 400,
@@ -1214,7 +1207,7 @@ const styles = StyleSheet.create({
   balanceAmount: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   inputSection: {
     marginBottom: 20,
@@ -1270,7 +1263,7 @@ const styles = StyleSheet.create({
   quickAmountText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   payoutInfo: {
     flexDirection: 'row',
@@ -1309,11 +1302,11 @@ const styles = StyleSheet.create({
     color: '#757575',
   },
   payoutBtnPrimary: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   payoutBtnPrimaryText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 interface SkeletonBaseProps {
   width?: number | string;
@@ -74,7 +75,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     overflow: 'hidden',
   },
   shimmer: {

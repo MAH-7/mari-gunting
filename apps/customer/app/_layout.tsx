@@ -10,6 +10,7 @@ import { initializeMapbox } from '../utils/mapbox';
 import { BookingProvider } from '@/contexts/BookingContext';
 import { BarberOfflineProvider, useBarberOffline } from '@/contexts/BarberOfflineContext';
 import AlertModal from '@/components/AlertModal';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 // Ignore LogBox errors during development
 // Customers will see user-friendly Alert messages instead
@@ -28,8 +29,7 @@ function GlobalBarberOfflineModal() {
       title="Barber Went Offline"
       message={`${barberName || 'This barber'} is no longer available right now.`}
       icon="alert-circle-outline"
-      iconColor="#F59E0B"
-      buttonText="Find Another Barber"
+      iconColor={Colors.warning}       buttonText="Find Another Barber"
       buttonIcon="search"
       onButtonPress={() => {
         hideBarberOfflineModal();

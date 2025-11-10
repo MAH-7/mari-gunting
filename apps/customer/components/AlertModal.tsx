@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -32,7 +33,7 @@ export default function AlertModal({
   title,
   message,
   icon = 'alert-circle',
-  iconColor = '#F59E0B',
+  iconColor = Colors.warning,
   buttonText = 'OK',
   onButtonPress,
   buttonIcon,
@@ -124,8 +125,7 @@ export default function AlertModal({
                   <Ionicons
                     name={buttonIcon}
                     size={20}
-                    color="#FFFFFF"
-                    style={styles.buttonIcon}
+                    color={Colors.white}                     style={styles.buttonIcon}
                   />
                 )}
                 <Text style={styles.buttonText}>{buttonText}</Text>
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     paddingTop: 32,
     paddingHorizontal: 24,
@@ -166,13 +166,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -183,10 +183,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
 });

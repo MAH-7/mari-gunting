@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 interface BarberResponseWaitingModalProps {
   visible: boolean;
@@ -128,7 +129,7 @@ export const BarberResponseWaitingModal: React.FC<BarberResponseWaitingModalProp
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* Spinner */}
-          <ActivityIndicator size="large" color="#7E3AF2" style={styles.spinner} />
+          <ActivityIndicator size="large" color={Colors.primary} style={styles.spinner} />
 
           {/* Title */}
           <Text style={styles.title}>Finding your barber...</Text>
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   barberName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 2,
   },
   infoText: {

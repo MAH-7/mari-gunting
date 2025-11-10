@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboardingService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function BusinessInfoScreen() {
   const logout = useStore((state) => state.logout);
@@ -128,7 +129,7 @@ export default function BusinessInfoScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={[styles.progressDot, styles.progressActive]} />
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 20,
 
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

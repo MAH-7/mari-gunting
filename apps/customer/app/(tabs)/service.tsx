@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useNavigation } from 'expo-router';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
+import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 export default function ServiceScreen() {
   const [showModal, setShowModal] = useState(false);
@@ -132,7 +133,7 @@ export default function ServiceScreen() {
                 onPress={handleClose}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={20} color="#6B7280" />
+                <Ionicons name="close" size={20} color={Colors.gray[500]} />
               </TouchableOpacity>
             </View>
 
@@ -142,8 +143,8 @@ export default function ServiceScreen() {
               onPress={handleQuickBook}
               activeOpacity={0.7}
             >
-              <View style={[styles.optionIcon, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="flash" size={28} color="#F59E0B" />
+              <View style={[styles.optionIcon, { backgroundColor: Colors.warningLight }]}>
+                <Ionicons name="flash" size={28} color={Colors.warning} />
               </View>
               <View style={styles.optionContent}>
                 <Text style={styles.optionTitle}>Quick Book</Text>
@@ -162,8 +163,8 @@ export default function ServiceScreen() {
               onPress={handleChooseBarber}
               activeOpacity={0.7}
             >
-              <View style={[styles.optionIcon, { backgroundColor: '#DBEAFE' }]}>
-                <Ionicons name="person" size={28} color="#3B82F6" />
+              <View style={[styles.optionIcon, { backgroundColor: Colors.infoLight }]}>
+                <Ionicons name="person" size={28} color={Colors.info} />
               </View>
               <View style={styles.optionContent}>
                 <Text style={styles.optionTitle}>Choose Barber</Text>
@@ -171,8 +172,8 @@ export default function ServiceScreen() {
                   Browse & select your favorite
                 </Text>
               </View>
-              <View style={[styles.badge, { backgroundColor: '#DBEAFE' }]}>
-                <Text style={[styles.badgeText, { color: '#3B82F6' }]}>⭐ Popular</Text>
+              <View style={[styles.badge, { backgroundColor: Colors.infoLight }]}>
+                <Text style={[styles.badgeText, { color: Colors.info }]}>⭐ Popular</Text>
               </View>
             </TouchableOpacity>
 
@@ -182,8 +183,8 @@ export default function ServiceScreen() {
               onPress={handleBarbershop}
               activeOpacity={0.7}
             >
-              <View style={[styles.optionIcon, { backgroundColor: '#EDE9FE' }]}>
-                <Ionicons name="business" size={28} color="#8B5CF6" />
+              <View style={[styles.optionIcon, { backgroundColor: getStatusBackground("ready") }]}>
+                <Ionicons name="business" size={28} color={Colors.status.ready} />
               </View>
               <View style={styles.optionContent}>
                 <Text style={styles.optionTitle}>Barbershop</Text>
@@ -191,7 +192,7 @@ export default function ServiceScreen() {
                   Visit professional shops
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
             </TouchableOpacity>
           </View>
         </View>
@@ -215,7 +216,7 @@ export default function ServiceScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   placeholder: {
     flex: 1,
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 24,
     width: '100%',
@@ -255,20 +256,20 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -287,15 +288,15 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   optionDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   badge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -303,6 +304,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#F59E0B',
+    color: Colors.warning,
   },
 });

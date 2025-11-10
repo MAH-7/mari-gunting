@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { partnerAccountService } from '@mari-gunting/shared/services/partnerAccountService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useStore } from '@mari-gunting/shared/store/useStore';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function SelectAccountTypeScreen() {
   const router = useRouter();
@@ -181,7 +182,7 @@ export default function SelectAccountTypeScreen() {
             onPress={handleLogout}
             activeOpacity={0.7}
           >
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={20} color={Colors.error} />
           </TouchableOpacity>
         </View>
       )}
@@ -311,7 +312,7 @@ export default function SelectAccountTypeScreen() {
           activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
             <>
               <Text style={[
@@ -361,21 +362,21 @@ const styles = StyleSheet.create({
   phoneNumberLabel: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   phoneNumberText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     marginTop: 2,
   },
   logoutIconButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -486,11 +487,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.warningLight || '#FEF3C7',
+    backgroundColor: COLORS.warningLight || Colors.warningLight,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.warning || '#F59E0B',
+    borderColor: COLORS.warning || Colors.warning,
   },
   footerNote: {
     ...TYPOGRAPHY.body.small,

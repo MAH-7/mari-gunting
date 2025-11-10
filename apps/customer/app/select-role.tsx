@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function SelectRoleScreen() {
   const params = useLocalSearchParams();
@@ -33,7 +33,7 @@ export default function SelectRoleScreen() {
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
-              <Ionicons name="cut" size={40} color="#FFFFFF" />
+              <Ionicons name="cut" size={40} color={Colors.white} />
             </View>
           </View>
           
@@ -51,15 +51,10 @@ export default function SelectRoleScreen() {
             activeOpacity={0.9}
             onPress={() => handleSelectRole('customer')}
           >
-            <LinearGradient
-              colors={['#7E3AF2', '#6C2BD9']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.gradientCard}
-            >
+            <View style={[styles.gradientCard, { backgroundColor: Colors.primary }]}>
               {/* Icon */}
               <View style={styles.cardIconContainer}>
-                <Ionicons name="person" size={48} color="#FFFFFF" />
+                <Ionicons name="person" size={48} color={Colors.white} />
               </View>
 
               {/* Content */}
@@ -71,15 +66,15 @@ export default function SelectRoleScreen() {
               {/* Features */}
               <View style={styles.featuresList}>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.white} />
                   <Text style={styles.featureText}>Book barbers instantly</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.white} />
                   <Text style={styles.featureText}>Home service convenience</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.white} />
                   <Text style={styles.featureText}>Verified professionals</Text>
                 </View>
               </View>
@@ -87,9 +82,9 @@ export default function SelectRoleScreen() {
               {/* Button */}
               <View style={styles.cardButton}>
                 <Text style={styles.cardButtonText}>Continue as Customer</Text>
-                <Ionicons name="arrow-forward" size={20} color="#7E3AF2" />
+                <Ionicons name="arrow-forward" size={20} color={Colors.primary} />
               </View>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
           {/* Barber/Freelance Card */}
@@ -98,15 +93,10 @@ export default function SelectRoleScreen() {
             activeOpacity={0.9}
             onPress={() => handleSelectRole('barber')}
           >
-            <LinearGradient
-              colors={['#1E293B', '#334155']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.gradientCard}
-            >
+            <View style={[styles.gradientCard, { backgroundColor: Colors.secondary }]}>
               {/* Icon */}
               <View style={styles.cardIconContainer}>
-                <Ionicons name="cut-outline" size={48} color="#FFFFFF" />
+                <Ionicons name="cut-outline" size={48} color={Colors.white} />
               </View>
 
               {/* Content */}
@@ -118,15 +108,15 @@ export default function SelectRoleScreen() {
               {/* Features */}
               <View style={styles.featuresList}>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
                   <Text style={styles.featureText}>Earn extra income</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
                   <Text style={styles.featureText}>Flexible schedule</Text>
                 </View>
                 <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
                   <Text style={styles.featureText}>Build your clientele</Text>
                 </View>
               </View>
@@ -134,15 +124,15 @@ export default function SelectRoleScreen() {
               {/* Button */}
               <View style={styles.cardButton}>
                 <Text style={styles.cardButtonText}>Continue as Barber</Text>
-                <Ionicons name="arrow-forward" size={20} color="#7E3AF2" />
+                <Ionicons name="arrow-forward" size={20} color={Colors.primary} />
               </View>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* Help Text */}
         <View style={styles.helpContainer}>
-          <Ionicons name="information-circle-outline" size={18} color="#6B7280" />
+          <Ionicons name="information-circle-outline" size={18} color={Colors.gray[500]} />
           <Text style={styles.helpText}>
             You can change this later in your profile settings
           </Text>
@@ -155,7 +145,7 @@ export default function SelectRoleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -174,10 +164,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -186,13 +176,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
@@ -225,7 +215,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginBottom: 8,
   },
   cardDescription: {
@@ -249,7 +239,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   cardButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -261,7 +251,7 @@ const styles = StyleSheet.create({
   cardButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   helpContainer: {
     flexDirection: 'row',
@@ -272,7 +262,7 @@ const styles = StyleSheet.create({
   },
   helpText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
   },
 });

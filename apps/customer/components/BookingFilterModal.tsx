@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BookingStatus } from '@/types';
 import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -131,7 +132,7 @@ export default function BookingFilterModal({
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={24} color="#6B7280" />
+            <Ionicons name="close" size={24} color={Colors.gray[500]} />
           </TouchableOpacity>
         </View>
 
@@ -143,7 +144,7 @@ export default function BookingFilterModal({
           {/* Sort By Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="swap-vertical" size={20} color="#7E3AF2" />
+              <Ionicons name="swap-vertical" size={20} color={Colors.primary} />
               <Text style={styles.sectionTitle}>Sort By</Text>
             </View>
             <View style={styles.optionsList}>
@@ -154,7 +155,7 @@ export default function BookingFilterModal({
               >
                 <View style={styles.optionLeft}>
                   <View style={styles.optionIcon}>
-                    <Ionicons name="calendar" size={20} color={sortBy === 'date' ? '#7E3AF2' : '#6B7280'} />
+                    <Ionicons name="calendar" size={20} color={sortBy === 'date' ? Colors.primary : Colors.gray[500]} />
                   </View>
                   <View style={styles.optionInfo}>
                     <Text style={[styles.optionLabel, sortBy === 'date' && styles.optionLabelActive]}>
@@ -164,7 +165,7 @@ export default function BookingFilterModal({
                   </View>
                 </View>
                 {sortBy === 'date' && (
-                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
                 )}
               </TouchableOpacity>
 
@@ -175,7 +176,7 @@ export default function BookingFilterModal({
               >
                 <View style={styles.optionLeft}>
                   <View style={styles.optionIcon}>
-                    <Ionicons name="cash" size={20} color={sortBy === 'price' ? '#7E3AF2' : '#6B7280'} />
+                    <Ionicons name="cash" size={20} color={sortBy === 'price' ? Colors.primary : Colors.gray[500]} />
                   </View>
                   <View style={styles.optionInfo}>
                     <Text style={[styles.optionLabel, sortBy === 'price' && styles.optionLabelActive]}>
@@ -185,7 +186,7 @@ export default function BookingFilterModal({
                   </View>
                 </View>
                 {sortBy === 'price' && (
-                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
                 )}
               </TouchableOpacity>
 
@@ -196,7 +197,7 @@ export default function BookingFilterModal({
               >
                 <View style={styles.optionLeft}>
                   <View style={styles.optionIcon}>
-                    <Ionicons name="list" size={20} color={sortBy === 'status' ? '#7E3AF2' : '#6B7280'} />
+                    <Ionicons name="list" size={20} color={sortBy === 'status' ? Colors.primary : Colors.gray[500]} />
                   </View>
                   <View style={styles.optionInfo}>
                     <Text style={[styles.optionLabel, sortBy === 'status' && styles.optionLabelActive]}>
@@ -206,7 +207,7 @@ export default function BookingFilterModal({
                   </View>
                 </View>
                 {sortBy === 'status' && (
-                  <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
                 )}
               </TouchableOpacity>
             </View>
@@ -216,7 +217,7 @@ export default function BookingFilterModal({
           {showStatusFilter && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="funnel" size={20} color="#7E3AF2" />
+                <Ionicons name="funnel" size={20} color={Colors.primary} />
                 <Text style={styles.sectionTitle}>Filter by Status</Text>
               </View>
               <View style={styles.chipGrid}>
@@ -233,7 +234,7 @@ export default function BookingFilterModal({
                   style={[styles.chip, filterStatus === 'pending' && styles.chipActive]}
                   onPress={() => setFilterStatus('pending')}
                 >
-                  <Ionicons name="time" size={14} color={filterStatus === 'pending' ? '#FFFFFF' : '#F59E0B'} />
+                  <Ionicons name="time" size={14} color={filterStatus === 'pending' ? Colors.white : Colors.warning} />
                   <Text style={[styles.chipText, filterStatus === 'pending' && styles.chipTextActive]}>
                     Pending
                   </Text>
@@ -243,7 +244,7 @@ export default function BookingFilterModal({
                   style={[styles.chip, filterStatus === 'accepted' && styles.chipActive]}
                   onPress={() => setFilterStatus('accepted')}
                 >
-                  <Ionicons name="checkmark-circle" size={14} color={filterStatus === 'accepted' ? '#FFFFFF' : '#3B82F6'} />
+                  <Ionicons name="checkmark-circle" size={14} color={filterStatus === 'accepted' ? Colors.white : Colors.info} />
                   <Text style={[styles.chipText, filterStatus === 'accepted' && styles.chipTextActive]}>
                     Accepted
                   </Text>
@@ -253,7 +254,7 @@ export default function BookingFilterModal({
                   style={[styles.chip, filterStatus === 'on-the-way' && styles.chipActive]}
                   onPress={() => setFilterStatus('on-the-way')}
                 >
-                  <Ionicons name="car" size={14} color={filterStatus === 'on-the-way' ? '#FFFFFF' : '#8B5CF6'} />
+                  <Ionicons name="car" size={14} color={filterStatus === 'on-the-way' ? Colors.white : Colors.status.ready} />
                   <Text style={[styles.chipText, filterStatus === 'on-the-way' && styles.chipTextActive]}>
                     On The Way
                   </Text>
@@ -263,7 +264,7 @@ export default function BookingFilterModal({
                   style={[styles.chip, filterStatus === 'in-progress' && styles.chipActive]}
                   onPress={() => setFilterStatus('in-progress')}
                 >
-                  <Ionicons name="cut" size={14} color={filterStatus === 'in-progress' ? '#FFFFFF' : '#7E3AF2'} />
+                  <Ionicons name="cut" size={14} color={filterStatus === 'in-progress' ? Colors.white : Colors.primary} />
                   <Text style={[styles.chipText, filterStatus === 'in-progress' && styles.chipTextActive]}>
                     In Progress
                   </Text>
@@ -279,7 +280,7 @@ export default function BookingFilterModal({
             style={styles.resetButton}
             onPress={handleReset}
           >
-            <Ionicons name="refresh" size={18} color="#6B7280" />
+            <Ionicons name="refresh" size={18} color={Colors.gray[500]} />
             <Text style={styles.resetButtonText}>Reset</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: SCREEN_HEIGHT * 0.85,
@@ -324,12 +325,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   closeButton: {
     padding: 4,
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   optionsList: {
     gap: 12,
@@ -365,12 +366,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.gray[200],
+    backgroundColor: Colors.white,
   },
   optionActive: {
-    borderColor: '#7E3AF2',
-    backgroundColor: '#F5F3FF',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   optionLeft: {
     flexDirection: 'row',
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -392,15 +393,15 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
     marginBottom: 2,
   },
   optionLabelActive: {
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   optionDescription: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     fontWeight: '500',
   },
   chipGrid: {
@@ -415,28 +416,28 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.gray[200],
+    backgroundColor: Colors.white,
     gap: 6,
   },
   chipActive: {
-    borderColor: '#7E3AF2',
-    backgroundColor: '#7E3AF2',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
   },
   chipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
   },
   chipTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   footer: {
     flexDirection: 'row',
     padding: 20,
     paddingBottom: 32,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
     gap: 12,
   },
   resetButton: {
@@ -447,14 +448,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.gray[200],
+    backgroundColor: Colors.white,
     gap: 8,
   },
   resetButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   applyButton: {
     flex: 2,
@@ -462,8 +463,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#7E3AF2',
-    shadowColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   applyButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
 });

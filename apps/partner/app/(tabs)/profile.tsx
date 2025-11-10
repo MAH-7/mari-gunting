@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
 import { locationTrackingService } from '@/services/locationTrackingService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 // Type for menu items
 type MenuItem = {
@@ -128,9 +129,9 @@ export default function PartnerProfileScreen() {
           label: 'Verification & Documents', 
           action: 'verification',
           badge: profile?.isVerified ? 'Verified' : 'Pending',
-          badgeColor: profile?.isVerified ? '#4CAF50' : '#FF9800',
-          iconBg: '#FFF3E0',
-          iconColor: '#FF9800',
+          badgeColor: profile?.isVerified ? Colors.success : Colors.warning,
+          iconBg: Colors.warningLight,
+          iconColor: Colors.warning,
         },
         { 
           icon: 'lock-closed-outline', 
@@ -148,16 +149,16 @@ export default function PartnerProfileScreen() {
           icon: 'cut-outline', 
           label: 'Services & Pricing', 
           screen: '/services',
-          iconBg: '#E8F5E9',
-          iconColor: '#7E3AF2',
+          iconBg: Colors.primaryLight,
+          iconColor: Colors.primary,
         },
         { 
           icon: 'images-outline', 
           label: 'Portfolio', 
           screen: '/portfolio',
           badge: `${profile?.photos?.length || 0}`,
-          iconBg: '#F3E5F5',
-          iconColor: '#9C27B0',
+          iconBg: Colors.primaryLight,
+          iconColor: Colors.primary,
         },
         // Only show Service Radius for freelance barbers
         ...(accountType === 'freelance' ? [{ 
@@ -165,16 +166,16 @@ export default function PartnerProfileScreen() {
           label: 'Service Radius', 
           screen: '/service-radius',
           value: profile?.serviceRadiusKm ? `${profile.serviceRadiusKm} km` : undefined,
-          iconBg: '#E3F2FD',
-          iconColor: '#2196F3',
+          iconBg: Colors.infoLight,
+          iconColor: Colors.info,
         }] : []),
         // Only show Availability for barbershops, not freelance barbers
         ...(accountType === 'barbershop' ? [{
           icon: 'calendar-outline', 
           label: 'Availability', 
           screen: '/schedule',
-          iconBg: '#FFF3E0',
-          iconColor: '#FF9800',
+          iconBg: Colors.infoLight,
+          iconColor: Colors.info,
         }] : []),
       ],
     },
@@ -185,16 +186,16 @@ export default function PartnerProfileScreen() {
           icon: 'notifications-outline', 
           label: 'Notifications', 
           action: 'notifications',
-          iconBg: '#E3F2FD',
-          iconColor: '#2196F3',
+          iconBg: Colors.infoLight,
+          iconColor: Colors.info,
         },
         { 
           icon: 'globe-outline', 
           label: 'Language', 
           action: 'language',
           value: 'English',
-          iconBg: '#E8F5E9',
-          iconColor: '#4CAF50',
+          iconBg: Colors.gray[100],
+          iconColor: Colors.gray[600],
         },
       ],
     },
@@ -205,15 +206,15 @@ export default function PartnerProfileScreen() {
           icon: 'help-circle-outline', 
           label: 'Help Center', 
           action: 'help',
-          iconBg: '#E8F5E9',
-          iconColor: '#4CAF50',
+          iconBg: Colors.primaryLight,
+          iconColor: Colors.primary,
         },
         { 
           icon: 'chatbubble-ellipses-outline', 
           label: 'Contact Support', 
           action: 'contact',
-          iconBg: '#E3F2FD',
-          iconColor: '#2196F3',
+          iconBg: Colors.infoLight,
+          iconColor: Colors.info,
         },
       ],
     },
@@ -362,7 +363,7 @@ export default function PartnerProfileScreen() {
               <Text style={styles.profileName} numberOfLines={2}>{profile.name}</Text>
               {profile.isVerified && (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
                 </View>
               )}
             </View>
@@ -548,7 +549,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 3,
     borderColor: '#FFF',
   },

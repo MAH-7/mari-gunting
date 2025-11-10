@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { addressService, CustomerAddress } from '@mari-gunting/shared/services/addressService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function AddressesScreen() {
   const currentUser = useStore((state) => state.currentUser);
@@ -120,13 +121,13 @@ export default function AddressesScreen() {
       >
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <Ionicons name="location-outline" size={48} color="#D1D5DB" />
+            <Ionicons name="location-outline" size={48} color={Colors.gray[300]} />
             <Text style={styles.loadingText}>Loading addresses...</Text>
           </View>
         ) : addresses.length === 0 ? (
           <Animated.View style={[styles.emptyState, { opacity: fadeAnim }]}>
             <View style={styles.emptyIconContainer}>
-              <Ionicons name="location" size={56} color="#7E3AF2" />
+              <Ionicons name="location" size={56} color={Colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>No Saved Addresses</Text>
             <Text style={styles.emptySubtext}>
@@ -137,7 +138,7 @@ export default function AddressesScreen() {
               onPress={handleAddNew}
               activeOpacity={0.8}
             >
-              <Ionicons name="add-circle" size={22} color="#FFFFFF" />
+              <Ionicons name="add-circle" size={22} color={Colors.white} />
               <Text style={styles.emptyButtonText}>Add New Address</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -161,10 +162,10 @@ export default function AddressesScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.addNewIconContainer}>
-                <Ionicons name="add" size={24} color="#7E3AF2" />
+                <Ionicons name="add" size={24} color={Colors.primary} />
               </View>
               <Text style={styles.addNewText}>Add New Address</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -207,14 +208,14 @@ function AddressCard({
             <Ionicons 
               name={iconName as any} 
               size={18} 
-              color={address.is_default ? '#FFFFFF' : '#7E3AF2'} 
+              color={address.is_default ? Colors.white : Colors.primary} 
             />
           </View>
           <View style={styles.labelContainer}>
             <Text style={styles.addressLabel}>{address.label}</Text>
             {address.is_default && (
               <View style={styles.defaultBadgeInline}>
-                <Ionicons name="star" size={12} color="#F59E0B" />
+                <Ionicons name="star" size={12} color={Colors.warning} />
                 <Text style={styles.defaultBadgeText}>Default</Text>
               </View>
             )}
@@ -245,7 +246,7 @@ function AddressCard({
             onPress={onSetDefault}
             activeOpacity={0.7}
           >
-            <Ionicons name="star-outline" size={16} color="#6B7280" />
+            <Ionicons name="star-outline" size={16} color={Colors.gray[500]} />
             <Text style={styles.cardActionText}>Set Default</Text>
           </TouchableOpacity>
         )}
@@ -254,7 +255,7 @@ function AddressCard({
           onPress={onEdit}
           activeOpacity={0.7}
         >
-          <Ionicons name="create-outline" size={16} color="#6B7280" />
+          <Ionicons name="create-outline" size={16} color={Colors.gray[500]} />
           <Text style={styles.cardActionText}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -262,8 +263,8 @@ function AddressCard({
           onPress={onDelete}
           activeOpacity={0.7}
         >
-          <Ionicons name="trash-outline" size={16} color="#EF4444" />
-          <Text style={[styles.cardActionText, { color: '#EF4444' }]}>Delete</Text>
+          <Ionicons name="trash-outline" size={16} color={Colors.error} />
+          <Text style={[styles.cardActionText, { color: Colors.error }]}>Delete</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -289,9 +290,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: Colors.gray[200],
   },
   backButton: {
     width: 40,
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -367,27 +368,27 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 28,
     paddingVertical: 15,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 14,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   emptyButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
   },
   addressCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -417,15 +418,15 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#DDD6FE',
   },
   iconCircleDefault: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   labelContainer: {
     flex: 1,
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
   defaultBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#F59E0B',
+    color: Colors.warning,
   },
   // Address Content
   addressContent: {
@@ -457,20 +458,20 @@ const styles = StyleSheet.create({
   addressTextMain: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: Colors.gray[700],
     lineHeight: 19,
     marginBottom: 3,
   },
   addressTextSecondary: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     lineHeight: 17,
   },
   // Card Actions
   cardActions: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
     paddingTop: 10,
     marginTop: 2,
     gap: 6,
@@ -482,23 +483,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
     paddingVertical: 9,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 8,
   },
   cardActionText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   // Add New Card
   addNewCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     marginTop: 4,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderStyle: 'dashed',
     flexDirection: 'row',
     alignItems: 'center',
@@ -508,7 +509,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -516,6 +517,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
 });

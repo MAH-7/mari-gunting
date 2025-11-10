@@ -8,7 +8,11 @@
  */
 
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { getStatusColor, getStatusBackground, SPACING, TYPOGRAPHY } from '../constants';
+import { getStatusColor, getStatusBackground, Spacing } from '../theme';
+import { TYPOGRAPHY } from '../constants';
+
+// Backward compatibility
+const SPACING = Spacing;
 
 type BookingStatus = 
   | 'pending'

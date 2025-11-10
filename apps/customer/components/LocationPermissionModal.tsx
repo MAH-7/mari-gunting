@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -90,7 +91,7 @@ export function LocationPermissionModal({
           {/* Icon */}
           <View style={styles.iconContainer}>
             <View style={styles.iconCircle}>
-              <Ionicons name="location" size={48} color="#7E3AF2" />
+              <Ionicons name="location" size={48} color={Colors.primary} />
             </View>
             <View style={styles.iconPulse} />
           </View>
@@ -107,21 +108,21 @@ export function LocationPermissionModal({
           <View style={styles.featureList}>
             <View style={styles.featureItem}>
               <View style={styles.featureIconBg}>
-                <Ionicons name="search" size={18} color="#7E3AF2" />
+                <Ionicons name="search" size={18} color={Colors.primary} />
               </View>
               <Text style={styles.featureText}>Find nearby barbers</Text>
             </View>
 
             <View style={styles.featureItem}>
               <View style={styles.featureIconBg}>
-                <Ionicons name="navigate" size={18} color="#7E3AF2" />
+                <Ionicons name="navigate" size={18} color={Colors.primary} />
               </View>
               <Text style={styles.featureText}>Get directions & ETAs</Text>
             </View>
 
             <View style={styles.featureItem}>
               <View style={styles.featureIconBg}>
-                <Ionicons name="calculator" size={18} color="#7E3AF2" />
+                <Ionicons name="calculator" size={18} color={Colors.primary} />
               </View>
               <Text style={styles.featureText}>Accurate pricing</Text>
             </View>
@@ -129,7 +130,7 @@ export function LocationPermissionModal({
 
           {/* Privacy Note */}
           <View style={styles.privacyNote}>
-            <Ionicons name="shield-checkmark" size={16} color="#6B7280" />
+            <Ionicons name="shield-checkmark" size={16} color={Colors.gray[500]} />
             <Text style={styles.privacyText}>
               Your location is only used while using the app
             </Text>
@@ -141,7 +142,7 @@ export function LocationPermissionModal({
             onPress={onRequestPermission}
             activeOpacity={0.8}
           >
-            <Ionicons name="location" size={20} color="#FFFFFF" />
+            <Ionicons name="location" size={20} color={Colors.white} />
             <Text style={styles.primaryButtonText}>Enable Location</Text>
           </TouchableOpacity>
 
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
   dragHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 20,
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
@@ -218,20 +219,20 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     opacity: 0.1,
     zIndex: 1,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     textAlign: 'center',
     marginBottom: 8,
   },
   description: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
@@ -248,14 +249,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   featureText: {
     fontSize: 15,
-    color: '#374151',
+    color: Colors.gray[700],
     fontWeight: '500',
     flex: 1,
   },
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     padding: 12,
     borderRadius: 8,
     marginBottom: 24,
@@ -271,19 +272,19 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   primaryButton: {
     flexDirection: 'row',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     marginBottom: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   secondaryButton: {
     flexDirection: 'row',
@@ -300,14 +301,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     marginBottom: 8,
     gap: 8,
   },
   secondaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
   },
   tertiaryButton: {
     paddingVertical: 12,
@@ -317,6 +318,6 @@ const styles = StyleSheet.create({
   tertiaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
 });

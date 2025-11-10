@@ -8,6 +8,7 @@ import { payoutService, PayoutRequest } from '@mari-gunting/shared/services/payo
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { format } from 'date-fns';
 import { COLORS } from '@/shared/constants';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function PayoutHistoryScreen() {
   const currentUser = useStore((state) => state.currentUser);
@@ -67,7 +68,7 @@ export default function PayoutHistoryScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return '#7E3AF2';
+        return Colors.primary;
       case 'pending':
         return '#FF9800';
       case 'processing':
@@ -187,7 +188,7 @@ export default function PayoutHistoryScreen() {
               {/* Status-specific info */}
               {payout.status === 'completed' && payout.processed_at && (
                 <View style={styles.successInfo}>
-                  <Ionicons name="checkmark-circle" size={16} color="#7E3AF2" />
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
                   <Text style={styles.successInfoText}>
                     Completed on {format(new Date(payout.processed_at), 'MMM dd, yyyy')}
                   </Text>
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   payoutCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   errorInfo: {
     flexDirection: 'row',

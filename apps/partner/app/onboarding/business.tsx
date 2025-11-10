@@ -10,6 +10,7 @@ import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { VerificationStatus } from '@/types/onboarding';
 import { uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const MALAYSIAN_STATES = [
   'Johor', 'Kedah', 'Kelantan', 'Kuala Lumpur', 'Labuan', 'Malacca', 'Negeri Sembilan',
@@ -479,11 +480,11 @@ export default function BusinessScreen() {
           activeOpacity={0.8}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={Colors.white} />
           ) : (
             <>
               <Text style={styles.submitButtonText}>Submit for Verification</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={20} color={Colors.white} />
             </>
           )}
         </TouchableOpacity>
@@ -666,7 +667,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     ...TYPOGRAPHY.body.large,
-    color: '#FFFFFF',
+    color: Colors.white,
     fontWeight: '700',
   },
 });

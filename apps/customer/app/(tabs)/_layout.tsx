@@ -6,6 +6,7 @@ import { ServiceModal } from '@/components/ServiceModal';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { router } from 'expo-router';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -14,7 +15,7 @@ function TabBarIcon({ name, focused }: { name: IconName; focused: boolean }) {
     <Ionicons
       name={name}
       size={24}
-      color={focused ? '#7E3AF2' : '#9CA3AF'}
+      color={focused ? Colors.primary : Colors.gray[400]}
       style={{
         marginBottom: -3,
       }}
@@ -57,15 +58,15 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#7E3AF2',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.gray[400],
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600',
           marginTop: 4,
         },
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: Colors.white,
           borderTopWidth: 0,
           elevation: 8,
           shadowColor: '#000',

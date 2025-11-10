@@ -7,6 +7,7 @@ import { ServiceRadiusSettings } from '@/components/ServiceRadiusSettings';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
 import { COLORS } from '@/shared/constants';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function ServiceRadiusScreen() {
   const router = useRouter();
@@ -141,31 +142,31 @@ export default function ServiceRadiusScreen() {
         {/* Tips Card */}
         <View style={styles.tipsCard}>
           <View style={styles.tipsHeader}>
-            <Ionicons name="checkmark-circle-outline" size={22} color="#7E3AF2" />
+            <Ionicons name="checkmark-circle-outline" size={22} color={Colors.primary} />
             <Text style={styles.tipsTitle}>Best Practices</Text>
           </View>
           
           <View style={styles.tipsList}>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
+              <Ionicons name="checkmark" size={18} color={Colors.primary} />
               <Text style={styles.tipText}>
                 Consider travel time during peak hours
               </Text>
             </View>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
+              <Ionicons name="checkmark" size={18} color={Colors.primary} />
               <Text style={styles.tipText}>
                 Factor in fuel costs for longer distances
               </Text>
             </View>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
+              <Ionicons name="checkmark" size={18} color={Colors.primary} />
               <Text style={styles.tipText}>
                 Start conservative, increase if needed
               </Text>
             </View>
             <View style={styles.tipItem}>
-              <Ionicons name="checkmark" size={18} color="#7E3AF2" />
+              <Ionicons name="checkmark" size={18} color={Colors.primary} />
               <Text style={styles.tipText}>
                 Plan changes strategically due to 24h cooldown
               </Text>
@@ -278,16 +279,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   guidelineBulletText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   guidelineContent: {
     flex: 1,

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { barberOnboardingService } from '@mari-gunting/shared/services/onboardingService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const MALAYSIAN_BANKS = [
   'Maybank',
@@ -147,7 +148,7 @@ export default function PayoutScreen() {
           <View style={styles.progressDot} />
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
         </TouchableOpacity>
       </View>
 
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     width: 40,
     borderRadius: 20,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

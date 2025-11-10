@@ -9,6 +9,7 @@ import { formatCurrency } from '@mari-gunting/shared/utils/format';
 import { ACTIVE_OPACITY } from '@/constants/animations';
 import { Barber, BarbershopStaff } from '@/types';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
+import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 export default function SelectBarberScreen() {
   const { shopId } = useLocalSearchParams<{ shopId: string }>();
@@ -37,7 +38,7 @@ export default function SelectBarberScreen() {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             activeOpacity={ACTIVE_OPACITY.SECONDARY}
           >
-            <Ionicons name="arrow-back" size={24} color="#111827" />
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Select Barber</Text>
           <View style={{ width: 24 }} />
@@ -96,13 +97,13 @@ export default function SelectBarberScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="arrow-back" size={24} color="#111827" />
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Select Barber</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#D1D5DB" />
+          <Ionicons name="alert-circle-outline" size={64} color={Colors.gray[300]} />
           <Text style={styles.emptyText}>Barbershop not found</Text>
         </View>
       </SafeAreaView>
@@ -118,7 +119,7 @@ export default function SelectBarberScreen() {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           activeOpacity={ACTIVE_OPACITY.SECONDARY}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Select Your Barber</Text>
         <View style={{ width: 24 }} />
@@ -143,7 +144,7 @@ export default function SelectBarberScreen() {
       {/* Shop Pricing Info */}
       <View style={styles.pricingBanner}>
         <View style={styles.pricingContent}>
-          <Ionicons name="pricetag-outline" size={20} color="#7E3AF2" />
+          <Ionicons name="pricetag-outline" size={20} color={Colors.primary} />
           <View style={styles.pricingInfo}>
             <Text style={styles.pricingLabel}>Services starting from</Text>
             <Text style={styles.pricingValue}>
@@ -162,7 +163,7 @@ export default function SelectBarberScreen() {
       >
         {barbers.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={64} color="#D1D5DB" />
+            <Ionicons name="people-outline" size={64} color={Colors.gray[300]} />
             <Text style={styles.emptyTitle}>No Barbers Available</Text>
             <Text style={styles.emptyText}>This barbershop doesn't have any barbers at the moment</Text>
           </View>
@@ -190,7 +191,7 @@ export default function SelectBarberScreen() {
                       <View style={styles.barberNameRow}>
                         <Text style={styles.barberName}>{staff.name}</Text>
                         {staff.isVerified && (
-                          <Ionicons name="checkmark-circle" size={18} color="#3B82F6" />
+                          <Ionicons name="checkmark-circle" size={18} color={Colors.info} />
                         )}
                       </View>
                       
@@ -241,7 +242,7 @@ export default function SelectBarberScreen() {
                       activeOpacity={ACTIVE_OPACITY.PRIMARY}
                     >
                       <Text style={styles.selectButtonFullText}>Select {staff.name.split(' ')[0]}</Text>
-                      <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                      <Ionicons name="arrow-forward" size={18} color={Colors.white} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -257,7 +258,7 @@ export default function SelectBarberScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -265,14 +266,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   emptyContainer: {
@@ -294,15 +295,15 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
     textAlign: 'center',
   },
   shopBanner: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   shopBannerLeft: {
     flexDirection: 'row',
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
   },
   shopBannerInfo: {
     flex: 1,
@@ -322,7 +323,7 @@ const styles = StyleSheet.create({
   shopBannerName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   shopBannerMeta: {
     flexDirection: 'row',
@@ -332,21 +333,21 @@ const styles = StyleSheet.create({
   shopBannerRating: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   shopBannerDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
   },
   shopBannerText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   pricingBanner: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#DDD6FE',
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
   pricingValue: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   pricingNote: {
     fontSize: 11,
@@ -389,12 +390,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   emptyState: {
@@ -405,10 +406,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   barberCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
@@ -418,14 +419,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: Colors.gray[100],
   },
   barberHeader: {
     flexDirection: 'row',
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   avatarContainer: {
     position: 'relative',
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
   },
   onlineBadge: {
     position: 'absolute',
@@ -443,9 +444,9 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   barberInfo: {
     flex: 1,
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
   barberName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   barberMeta: {
     flexDirection: 'row',
@@ -475,52 +476,52 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   reviewsText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   metaDivider: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
   },
   jobsText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#EDE9FE',
+    backgroundColor: getStatusBackground("ready"),
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
     gap: 4,
   },
   statusBadgeOffline: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
   },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   statusTextOffline: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   specializationsContainer: {
     flexDirection: 'row',
@@ -529,7 +530,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   specPill: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -539,20 +540,20 @@ const styles = StyleSheet.create({
   specPillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   morePill: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   morePillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   barberFooter: {
     marginTop: 4,
@@ -561,7 +562,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,
@@ -569,6 +570,6 @@ const styles = StyleSheet.create({
   selectButtonFullText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 });

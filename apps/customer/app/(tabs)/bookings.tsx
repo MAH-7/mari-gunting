@@ -11,6 +11,7 @@ import BookingFilterModal, { BookingFilterOptions } from '@/components/BookingFi
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 export default function BookingsScreen() {
   const currentUser = useStore((state) => state.currentUser);
@@ -174,7 +175,7 @@ export default function BookingsScreen() {
           <Ionicons 
             name="options-outline" 
             size={24} 
-            color={hasActiveFilters ? '#7E3AF2' : '#111827'} 
+            color={hasActiveFilters ? Colors.primary : Colors.text.primary} 
           />
           {hasActiveFilters && <View style={styles.filterBadge} />}
         </TouchableOpacity>
@@ -237,8 +238,7 @@ export default function BookingsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#7E3AF2"
-            colors={['#7E3AF2']}
+            tintColor={Colors.primary}             colors={[Colors.primary]}
           />
         }
       >
@@ -248,7 +248,7 @@ export default function BookingsScreen() {
             {[1, 2, 3].map((item) => (
               <View key={item} style={styles.bookingCard}>
                 {/* Status Bar Skeleton */}
-                <View style={[styles.statusBar, { backgroundColor: '#F3F4F6' }]}>
+                <View style={[styles.statusBar, { backgroundColor: Colors.gray[100] }]}>
                   <SkeletonBase width={100} height={20} borderRadius={10} />
                   <SkeletonBase width={50} height={16} borderRadius={8} />
                 </View>
@@ -308,7 +308,7 @@ export default function BookingsScreen() {
           </>
         ) : error ? (
           <View style={styles.emptyState}>
-            <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+            <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
             <Text style={styles.emptyTitle}>Failed to load bookings</Text>
             <Text style={styles.emptySubtext}>
               Please check your connection and try again
@@ -319,8 +319,7 @@ export default function BookingsScreen() {
             <Ionicons 
               name={selectedTab === 'active' ? 'clipboard-outline' : 'checkmark-done-circle'} 
               size={64} 
-              color="#D1D5DB" 
-            />
+              color={Colors.gray[300]}             />
             <Text style={styles.emptyTitle}>
               {selectedTab === 'active' ? 'No active bookings' : 'No booking history'}
             </Text>
@@ -398,15 +397,15 @@ function BookingCard({ booking }: { booking: any }) {
   const getStatusConfig = (status: BookingStatus) => {
     const configs = {
       pending: { 
-        color: '#6B7280', 
-        bg: '#F3F4F6', 
+        color: Colors.gray[500], 
+        bg: Colors.gray[100], 
         label: 'Pending',
         iconName: 'time-outline' as const,
         progress: 25
       },
       accepted: { 
-        color: '#3B82F6', 
-        bg: '#DBEAFE', 
+        color: Colors.info, 
+        bg: Colors.infoLight, 
         label: 'Accepted',
         iconName: 'checkmark-circle' as const,
         progress: 40
@@ -426,21 +425,21 @@ function BookingCard({ booking }: { booking: any }) {
         progress: 60
       },
       'on-the-way': {
-        color: '#8B5CF6', 
+        color: Colors.status.ready, 
         bg: '#F3E8FF', 
         label: 'On The Way',
         iconName: 'car' as const,
         progress: 65
       },
       on_the_way: {
-        color: '#8B5CF6', 
+        color: Colors.status.ready, 
         bg: '#F3E8FF', 
         label: 'On The Way',
         iconName: 'car' as const,
         progress: 65
       },
       arrived: { 
-        color: '#F97316', 
+        color: Colors.status.expired, 
         bg: '#FFEDD5', 
         label: 'Arrived',
         iconName: 'location' as const,
@@ -461,29 +460,29 @@ function BookingCard({ booking }: { booking: any }) {
         progress: 90
       },
       completed: { 
-        color: '#10B981', 
-        bg: '#EDE9FE', 
+        color: Colors.success, 
+        bg: getStatusBackground("ready"), 
         label: 'Completed',
         iconName: 'checkmark-circle' as const,
         progress: 100
       },
       cancelled: { 
-        color: '#EF4444', 
-        bg: '#FEE2E2', 
+        color: Colors.error, 
+        bg: Colors.errorLight, 
         label: 'Cancelled',
         iconName: 'close-circle' as const,
         progress: 0
       },
       rejected: { 
         color: '#DC2626', 
-        bg: '#FEE2E2', 
+        bg: Colors.errorLight, 
         label: 'Declined',
         iconName: 'close-circle-outline' as const,
         progress: 0
       },
       expired: { 
-        color: '#F97316', 
-        bg: '#FFF7ED', 
+        color: Colors.status.expired, 
+        bg: getStatusBackground("expired"), 
         label: 'Expired',
         iconName: 'time-outline' as const,
         progress: 0
@@ -581,7 +580,7 @@ function BookingCard({ booking }: { booking: any }) {
         <View style={styles.detailsSection}>
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Ionicons name="calendar" size={16} color="#6B7280" />
+              <Ionicons name="calendar" size={16} color={Colors.gray[500]} />
             </View>
             <Text style={styles.detailText}>
               {booking.scheduled_datetime ? 
@@ -593,7 +592,7 @@ function BookingCard({ booking }: { booking: any }) {
           </View>
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Ionicons name="location" size={16} color="#6B7280" />
+              <Ionicons name="location" size={16} color={Colors.gray[500]} />
             </View>
             <Text style={styles.detailText} numberOfLines={1}>
               {mappedBooking.address?.fullAddress || 'Address not set'}
@@ -611,7 +610,7 @@ function BookingCard({ booking }: { booking: any }) {
                 <Ionicons 
                   name={mappedBooking.paymentMethod === 'cash' ? 'cash-outline' : 'card-outline'} 
                   size={12} 
-                  color={mappedBooking.paymentMethod === 'cash' ? '#F59E0B' : '#7E3AF2'} 
+                  color={mappedBooking.paymentMethod === 'cash' ? Colors.warning : Colors.primary} 
                 />
                 <Text style={styles.paymentMethodTextSmall}>
                   {getPaymentMethodDisplay(mappedBooking.paymentMethod || 'cash')}
@@ -628,7 +627,7 @@ function BookingCard({ booking }: { booking: any }) {
               onPress={() => router.push(`/booking/track-barber?bookingId=${mappedBooking.id}` as any)}
               activeOpacity={0.8}
             >
-              <Ionicons name="navigate" size={16} color="#FFFFFF" />
+              <Ionicons name="navigate" size={16} color={Colors.white} />
               <Text style={styles.trackButtonText}>Track</Text>
             </TouchableOpacity>
           )}
@@ -679,7 +678,7 @@ function BookingCard({ booking }: { booking: any }) {
               }}
             >
               {isCancelling ? (
-                <ActivityIndicator size="small" color="#6B7280" />
+                <ActivityIndicator size="small" color={Colors.gray[500]} />
               ) : (
                 <Text style={styles.actionButtonText}>Cancel</Text>
               )}
@@ -705,7 +704,7 @@ function BookingCard({ booking }: { booking: any }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -713,27 +712,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     letterSpacing: -0.5,
   },
   filterButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   filterButtonActive: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: getStatusBackground("ready"),
   },
   filterBadge: {
     position: 'absolute',
@@ -742,21 +741,21 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 10,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
@@ -770,25 +769,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabActive: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   tabText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   tabBadge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
     marginLeft: 6,
   },
   tabBadgeText: {
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -805,7 +804,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   emptyState: {
@@ -816,28 +815,28 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 15,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textAlign: 'center',
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
   },
   emptyButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: 'bold',
   },
   bookingCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     marginBottom: 16,
     overflow: 'hidden',
@@ -869,7 +868,7 @@ const styles = StyleSheet.create({
   bookingId: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
   },
   progressContainer: {
     paddingHorizontal: 16,
@@ -877,7 +876,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 4,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -893,7 +892,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   barberAvatarContainer: {
     position: 'relative',
@@ -902,7 +901,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
   },
   barberOnlineDot: {
     position: 'absolute',
@@ -911,9 +910,9 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   barberInfo: {
     flex: 1,
@@ -929,7 +928,7 @@ const styles = StyleSheet.create({
   barberName: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     flexShrink: 1,
   },
   ratingRow: {
@@ -942,28 +941,28 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   reviewsText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   jobsTextSeparator: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginHorizontal: 6,
   },
   jobsText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   divider: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     marginHorizontal: 8,
   },
   servicesSection: {
@@ -984,18 +983,18 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     marginRight: 10,
   },
   serviceName: {
     fontSize: 15,
-    color: '#111827',
+    color: Colors.text.primary,
     fontWeight: '500',
   },
   servicePrice: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   detailsSection: {
     marginBottom: 16,
@@ -1009,7 +1008,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1017,7 +1016,7 @@ const styles = StyleSheet.create({
   detailText: {
     flex: 1,
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   footer: {
@@ -1026,7 +1025,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
   },
   totalSection: {},
   totalRow: {
@@ -1037,13 +1036,13 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     fontWeight: '600',
   },
   totalValue: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   paymentMethodBadgeSmall: {
     flexDirection: 'row',
@@ -1052,14 +1051,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   paymentMethodTextSmall: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   trackButton: {
     flexDirection: 'row',
@@ -1073,27 +1072,27 @@ const styles = StyleSheet.create({
   trackButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   actionButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   actionButtonPrimary: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   actionButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   actionButtonTextPrimary: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 });

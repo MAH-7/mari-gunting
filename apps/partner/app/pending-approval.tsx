@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { verificationService, VerificationStep } from '@mari-gunting/shared/services/verificationService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function PendingApprovalScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -149,7 +150,7 @@ export default function PendingApprovalScreen() {
       >
         {/* Header */}
         <LinearGradient
-          colors={verificationStatus === 'rejected' ? ['#EF4444', '#DC2626'] : ['#FF9800', '#F57C00']}
+          colors={verificationStatus === 'rejected' ? [Colors.error, '#DC2626'] : ['#FF9800', '#F57C00']}
           style={styles.headerGradient}
         >
           <View style={styles.iconContainer}>
@@ -170,7 +171,7 @@ export default function PendingApprovalScreen() {
         {verificationStatus === 'rejected' && rejectionReasons.length > 0 && (
           <View style={styles.rejectionCard}>
             <View style={styles.rejectionHeader}>
-              <Ionicons name="alert-circle-outline" size={24} color="#EF4444" />
+              <Ionicons name="alert-circle-outline" size={24} color={Colors.error} />
               <Text style={styles.rejectionTitle}>Issues Found</Text>
             </View>
             <Text style={styles.rejectionDescription}>
@@ -307,7 +308,7 @@ export default function PendingApprovalScreen() {
 
             <View style={styles.infoRow}>
               <View style={[styles.infoIcon, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="rocket-outline" size={20} color="#7E3AF2" />
+                <Ionicons name="rocket-outline" size={20} color={Colors.primary} />
               </View>
               <View style={styles.infoContent}>
                 <Text style={styles.infoTitle}>Start Earning</Text>
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
+    backgroundColor: Colors.error,
     marginTop: 6,
   },
   rejectionText: {

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 import {
   View,
   ScrollView,
@@ -229,6 +230,6 @@ const styles = StyleSheet.create({
   },
   paginationDotActive: {
     width: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
 });

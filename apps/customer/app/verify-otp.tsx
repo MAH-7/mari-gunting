@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function VerifyOTPScreen() {
   const params = useLocalSearchParams();
@@ -197,7 +198,7 @@ export default function VerifyOTPScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
       </View>
 
@@ -206,7 +207,7 @@ export default function VerifyOTPScreen() {
         {/* WhatsApp Icon */}
         <View style={styles.iconContainer}>
           <View style={styles.whatsappIcon}>
-            <Ionicons name="logo-whatsapp" size={48} color="#FFFFFF" />
+            <Ionicons name="logo-whatsapp" size={48} color={Colors.white} />
           </View>
         </View>
 
@@ -249,11 +250,11 @@ export default function VerifyOTPScreen() {
           activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
+            <ActivityIndicator color={Colors.white} size="small" />
           ) : (
             <>
               <Text style={styles.verifyButtonText}>Verify Code</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={20} color={Colors.white} />
             </>
           )}
         </TouchableOpacity>
@@ -271,7 +272,7 @@ export default function VerifyOTPScreen() {
             </Text>
           ) : (
             <View style={styles.resendActive}>
-              <Ionicons name="refresh" size={18} color="#7E3AF2" />
+              <Ionicons name="refresh" size={18} color={Colors.primary} />
               <Text style={styles.resendTextActive}>Resend Code</Text>
             </View>
           )}
@@ -279,7 +280,7 @@ export default function VerifyOTPScreen() {
 
         {/* WhatsApp Help */}
         <View style={styles.helpContainer}>
-          <Ionicons name="information-circle-outline" size={16} color="#6B7280" />
+          <Ionicons name="information-circle-outline" size={16} color={Colors.gray[500]} />
           <Text style={styles.helpText}>
             Check your WhatsApp inbox for the verification code
           </Text>
@@ -292,7 +293,7 @@ export default function VerifyOTPScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   header: {
     paddingHorizontal: 20,
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -331,21 +332,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 40,
   },
   phone: {
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   otpContainer: {
     flexDirection: 'row',
@@ -357,26 +358,26 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 56,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
     textAlign: 'center',
     fontSize: 24,
     fontWeight: '600',
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
+    color: Colors.text.primary,
+    backgroundColor: Colors.backgroundSecondary,
   },
   otpInputFilled: {
     borderColor: '#25D366',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   verifyButton: {
     flexDirection: 'row',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -385,14 +386,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   verifyButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
     elevation: 0,
   },
   verifyButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   resendContainer: {
@@ -402,11 +403,11 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   countdown: {
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   resendActive: {
     flexDirection: 'row',
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
   resendTextActive: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   helpContainer: {
     flexDirection: 'row',
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
   },
   helpText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     flex: 1,
   },

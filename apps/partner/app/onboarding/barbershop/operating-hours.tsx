@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboardingService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const DAYS = [
   { key: 'mon', label: 'Monday' },
@@ -139,7 +140,7 @@ export default function OperatingHoursScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={22} color={Colors.error} />
         </TouchableOpacity>
         <View style={styles.progressContainer}>
           <View style={styles.progressDotCompleted} />
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 20,
 
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',

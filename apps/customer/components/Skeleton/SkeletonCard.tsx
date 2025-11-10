@@ -4,6 +4,7 @@ import { SkeletonBase } from './SkeletonBase';
 import { SkeletonText } from './SkeletonText';
 import { SkeletonCircle } from './SkeletonCircle';
 import { SkeletonImage } from './SkeletonImage';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 interface SkeletonCardProps {
   variant?: 'default' | 'horizontal' | 'list';
@@ -58,7 +59,7 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
 
 const styles = StyleSheet.create({
   defaultCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 12,
     shadowColor: '#000',
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
   },
   horizontalCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 12,
     gap: 12,
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
   },
   listContent: {

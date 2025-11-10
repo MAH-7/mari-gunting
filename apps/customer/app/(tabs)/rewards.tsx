@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Animated, Alert, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { rewardsService, type Voucher as DBVoucher, type UserVoucher, type PointsTransaction, type CreditTransaction } from '@/services/rewardsService';
+import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 
 
@@ -197,7 +197,7 @@ export default function RewardsScreen() {
             {/* Expiry warning badge */}
             {expiringSoon && (
               <View style={styles.expiryWarningBadge}>
-                <Ionicons name="time" size={10} color="#EF4444" />
+                <Ionicons name="time" size={10} color={Colors.error} />
                 <Text style={styles.expiryWarningText}>{daysLeft}d left</Text>
               </View>
             )}
@@ -211,7 +211,7 @@ export default function RewardsScreen() {
           
           <View style={styles.voucherFooter}>
             <View style={styles.pointsRow}>
-              <Ionicons name="pricetag" size={16} color="#7E3AF2" />
+              <Ionicons name="pricetag" size={16} color={Colors.primary} />
               <Text style={styles.pointsText}>{voucherPoints} pts</Text>
             </View>
             <Text style={[styles.expiryText, expiringSoon && styles.expiryTextWarning]}>Exp: {voucherExpiry}</Text>
@@ -228,12 +228,12 @@ export default function RewardsScreen() {
         <View style={[styles.voucherRight, isUsed ? styles.voucherRightUsed : isRedeemed ? styles.voucherRightActive : {}]}>
           {isUsed ? (
             <View style={styles.usedLabel}>
-              <Ionicons name="checkmark-done" size={24} color="#FFFFFF" />
+              <Ionicons name="checkmark-done" size={24} color={Colors.white} />
               <Text style={styles.usedText}>Used</Text>
             </View>
           ) : isRedeemed ? (
             <View style={styles.availableLabel}>
-              <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+              <Ionicons name="checkmark-circle" size={24} color={Colors.white} />
               <Text style={styles.availableText}>Available</Text>
             </View>
           ) : (
@@ -245,7 +245,7 @@ export default function RewardsScreen() {
               <Ionicons
                 name="gift"
                 size={26}
-                color={userPoints < voucherPoints ? '#FFFFFF80' : '#FFFFFF'}
+                color={userPoints < voucherPoints ? '#FFFFFF80' : Colors.white}
               />
               <Text style={[styles.redeemText, userPoints < voucherPoints && styles.redeemTextLocked]}>
                 {userPoints < voucherPoints ? 'Locked' : 'Redeem'}
@@ -258,14 +258,9 @@ export default function RewardsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Rewards Card - Points & Credits */}
-      <LinearGradient
-        colors={['#7E3AF2', '#6C2BD9']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1}}
-        style={styles.pointsCard}
-      >
+      <View style={[styles.pointsCard, { backgroundColor: Colors.primary }]}>
         <View style={styles.pointsHeader}>
           <Text style={styles.pointsLabel}>Your Rewards</Text>
           <View style={styles.memberBadge}>
@@ -291,13 +286,13 @@ export default function RewardsScreen() {
         {/* Credits Section (Primary - More Prominent) */}
         <View style={styles.creditsSection}>
           <View style={styles.sectionRow}>
-            <Ionicons name="wallet" size={20} color="#FFFFFF" />
+            <Ionicons name="wallet" size={20} color={Colors.white} />
             <Text style={styles.largeLabel}>Mari Credits</Text>
           </View>
           <Text style={styles.largeValue}>{rewardsService.formatCreditAmount(userCredits)}</Text>
           <Text style={styles.subtitle}>Use at checkout to pay for bookings</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
@@ -330,7 +325,7 @@ export default function RewardsScreen() {
       {/* Content */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7E3AF2" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading rewards...</Text>
         </View>
       ) : (
@@ -346,13 +341,12 @@ export default function RewardsScreen() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor="#7E3AF2"
-                  colors={['#7E3AF2']}
+                  tintColor={Colors.primary}                   colors={[Colors.primary]}
                 />
               }
               ListEmptyComponent={
                 <View style={styles.emptyState}>
-                  <Ionicons name="gift-outline" size={64} color="#D1D5DB" />
+                  <Ionicons name="gift-outline" size={64} color={Colors.gray[300]} />
                   <Text style={styles.emptyTitle}>All Vouchers Redeemed!</Text>
                   <Text style={styles.emptyText}>Check back later for new rewards</Text>
                 </View>
@@ -371,13 +365,12 @@ export default function RewardsScreen() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor="#7E3AF2"
-                  colors={['#7E3AF2']}
+                  tintColor={Colors.primary}                   colors={[Colors.primary]}
                 />
               }
               ListEmptyComponent={
                 <View style={styles.emptyState}>
-                  <Ionicons name="ticket-outline" size={64} color="#D1D5DB" />
+                  <Ionicons name="ticket-outline" size={64} color={Colors.gray[300]} />
                   <Text style={styles.emptyTitle}>No Vouchers Yet</Text>
                   <Text style={styles.emptyText}>Redeem vouchers to see them here</Text>
                   <TouchableOpacity
@@ -408,7 +401,7 @@ export default function RewardsScreen() {
                       <Ionicons
                         name={isAddition ? 'add-circle' : 'remove-circle'}
                         size={22}
-                        color={isAddition ? '#7E3AF2' : '#EF4444'}
+                        color={isAddition ? Colors.primary : Colors.error}
                       />
                     </View>
 
@@ -432,8 +425,7 @@ export default function RewardsScreen() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor="#7E3AF2"
-                  colors={['#7E3AF2']}
+                  tintColor={Colors.primary}                   colors={[Colors.primary]}
                 />
               }
               ListHeaderComponent={
@@ -445,7 +437,7 @@ export default function RewardsScreen() {
                 <Ionicons 
                   name="pricetag" 
                   size={15} 
-                  color={historyFilter === 'points' ? '#FFFFFF' : '#6B7280'} 
+                  color={historyFilter === 'points' ? Colors.white : Colors.gray[500]} 
                 />
                 <Text style={[styles.toggleText, historyFilter === 'points' && styles.toggleTextActive]}>
                   Points
@@ -458,7 +450,7 @@ export default function RewardsScreen() {
                 <Ionicons 
                   name="wallet" 
                   size={15} 
-                  color={historyFilter === 'credits' ? '#FFFFFF' : '#6B7280'} 
+                  color={historyFilter === 'credits' ? Colors.white : Colors.gray[500]} 
                 />
                     <Text style={[styles.toggleText, historyFilter === 'credits' && styles.toggleTextActive]}>
                       Credits
@@ -471,8 +463,7 @@ export default function RewardsScreen() {
                   <Ionicons 
                     name={historyFilter === 'points' ? 'list-outline' : 'wallet-outline'} 
                     size={64} 
-                    color="#D1D5DB" 
-                  />
+                    color={Colors.gray[300]}                   />
                   <Text style={styles.emptyTitle}>
                     {historyFilter === 'points' ? 'No Points Activity' : 'No Credits History'}
                   </Text>
@@ -508,12 +499,12 @@ export default function RewardsScreen() {
                 </View>
 
                 <View style={styles.modalPoints}>
-                  <Ionicons name="pricetag" size={20} color="#F59E0B" />
+                  <Ionicons name="pricetag" size={20} color={Colors.warning} />
                   <Text style={styles.modalPointsText}>{selectedVoucher.points_cost} points will be deducted</Text>
                 </View>
 
                 <View style={styles.modalWarning}>
-                  <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                  <Ionicons name="alert-circle" size={16} color={Colors.error} />
                   <Text style={styles.modalWarningText}>This action cannot be undone</Text>
                 </View>
               </>
@@ -554,7 +545,7 @@ export default function RewardsScreen() {
             ]}
           >
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={64} color="#7E3AF2" />
+              <Ionicons name="checkmark-circle" size={64} color={Colors.primary} />
             </View>
             <Text style={styles.successTitle}>Voucher Redeemed!</Text>
             <Text style={styles.successText}>Check My Vouchers to use it</Text>
@@ -576,7 +567,7 @@ export default function RewardsScreen() {
       {isRedeeming && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContent}>
-            <ActivityIndicator size="large" color="#7E3AF2" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Redeeming voucher...</Text>
           </View>
         </View>
@@ -588,7 +579,7 @@ export default function RewardsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   pointsCard: {
     marginHorizontal: 16,
@@ -596,7 +587,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 20,
     padding: 16,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -609,7 +600,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pointsLabel: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -620,7 +611,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   memberText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -630,7 +621,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pointsValue: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 48,
     fontWeight: 'bold',
   },
@@ -657,7 +648,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     marginHorizontal: 16,
     borderRadius: 12,
     padding: 4,
@@ -673,25 +664,25 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tabActive: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   badge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
     marginLeft: 6,
   },
   badgeText: {
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -707,7 +698,7 @@ const styles = StyleSheet.create({
     paddingVertical: 80,
   },
   voucherCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     flexDirection: 'row',
     overflow: 'hidden',
@@ -727,7 +718,7 @@ const styles = StyleSheet.create({
   voucherHero: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     marginTop: 3,
     marginBottom: 4,
     letterSpacing: -0.5,
@@ -747,7 +738,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 6,
@@ -755,13 +746,13 @@ const styles = StyleSheet.create({
   expiryWarningText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#EF4444',
+    color: Colors.error,
   },
   typeBadgeOrange: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
   },
   typeBadgeBlue: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: Colors.infoLight,
   },
   typeBadgeText: {
     fontSize: 10,
@@ -775,7 +766,7 @@ const styles = StyleSheet.create({
   },
   voucherDescription: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 17,
     marginBottom: 8,
   },
@@ -792,14 +783,14 @@ const styles = StyleSheet.create({
   pointsText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   expiryText: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
   },
   expiryTextWarning: {
-    color: '#EF4444',
+    color: Colors.error,
     fontWeight: '600',
   },
   voucherSeparatorContainer: {
@@ -811,20 +802,20 @@ const styles = StyleSheet.create({
   voucherSeparatorDot: {
     width: 2,
     height: 4,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     borderRadius: 1,
   },
   voucherRight: {
     width: 80,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   voucherRightActive: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   voucherRightUsed: {
-    backgroundColor: '#6B7280',
+    backgroundColor: Colors.gray[500],
   },
   redeemButton: {
     alignItems: 'center',
@@ -832,7 +823,7 @@ const styles = StyleSheet.create({
   redeemText: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginTop: 6,
   },
   redeemTextLocked: {
@@ -844,7 +835,7 @@ const styles = StyleSheet.create({
   usedText: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginTop: 6,
   },
   availableLabel: {
@@ -853,7 +844,7 @@ const styles = StyleSheet.create({
   availableText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
     marginTop: 6,
   },
   emptyState: {
@@ -864,26 +855,26 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   emptyButton: {
     marginTop: 16,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   emptyButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: 'bold',
   },
   activityCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     padding: 12,
     flexDirection: 'row',
@@ -902,10 +893,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activityIconEarn: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: getStatusBackground("ready"),
   },
   activityIconRedeem: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
   },
   activityDetails: {
     flex: 1,
@@ -914,23 +905,23 @@ const styles = StyleSheet.create({
   activityDescription: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 2,
     lineHeight: 18,
   },
   activityDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   activityAmount: {
     fontSize: 16,
     fontWeight: 'bold',
   },
   activityAmountEarn: {
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   activityAmountRedeem: {
-    color: '#EF4444',
+    color: Colors.error,
   },
   modalOverlay: {
     flex: 1,
@@ -940,7 +931,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 24,
     width: '100%',
@@ -949,12 +940,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 20,
     textAlign: 'center',
   },
   modalVoucher: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -962,17 +953,17 @@ const styles = StyleSheet.create({
   modalVoucherTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 4,
   },
   modalVoucherDesc: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   modalPoints: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
@@ -992,7 +983,7 @@ const styles = StyleSheet.create({
   },
   modalWarningText: {
     fontSize: 13,
-    color: '#EF4444',
+    color: Colors.error,
     fontWeight: '500',
   },
   modalButtons: {
@@ -1004,25 +995,25 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     alignItems: 'center',
   },
   modalButtonCancelText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   modalButtonConfirm: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
   },
   modalButtonConfirmText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   successOverlay: {
     flex: 1,
@@ -1032,7 +1023,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   successContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 24,
     padding: 32,
     alignItems: 'center',
@@ -1045,23 +1036,23 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
   },
   successText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginBottom: 24,
     textAlign: 'center',
   },
   successButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   successButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -1076,7 +1067,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -1085,7 +1076,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   // Stacked card layout styles
   pointsSection: {
@@ -1108,7 +1099,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   largeLabel: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 13,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1119,7 +1110,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   mediumValue: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.5,
@@ -1132,7 +1123,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   largeValue: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 40,
     fontWeight: 'bold',
     letterSpacing: -1,
@@ -1151,7 +1142,7 @@ const styles = StyleSheet.create({
   // History toggle styles
   historyToggle: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 10,
     padding: 3,
     marginBottom: 12,
@@ -1168,15 +1159,15 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   toggleButtonActive: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   toggleText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   toggleTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   historyContent: {
     gap: 12,

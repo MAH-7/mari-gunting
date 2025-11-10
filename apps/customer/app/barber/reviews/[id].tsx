@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 type RatingFilter = 'all' | 1 | 2 | 3 | 4 | 5;
 
@@ -138,7 +139,7 @@ export default function BarberReviewsScreen() {
                       styles.distributionFill, 
                       { 
                         width: `${percentage}%`,
-                        backgroundColor: ratingFilter === rating ? '#7E3AF2' : '#FBBF24'
+                        backgroundColor: ratingFilter === rating ? Colors.primary : '#FBBF24'
                       }
                     ]} 
                   />
@@ -173,7 +174,7 @@ export default function BarberReviewsScreen() {
                 <Ionicons 
                   name="star" 
                   size={14} 
-                  color={ratingFilter === rating ? '#FFFFFF' : '#FBBF24'} 
+                  color={ratingFilter === rating ? Colors.white : '#FBBF24'} 
                 />
                 <Text style={[styles.filterChipText, ratingFilter === rating && styles.filterChipTextActive]}>
                   {rating} ({count})
@@ -187,12 +188,12 @@ export default function BarberReviewsScreen() {
         <View style={styles.reviewsSection}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#7E3AF2" />
+              <ActivityIndicator size="large" color={Colors.primary} />
               <Text style={styles.loadingText}>Loading reviews...</Text>
             </View>
           ) : displayedReviews.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="chatbox-outline" size={64} color="#D1D5DB" />
+              <Ionicons name="chatbox-outline" size={64} color={Colors.gray[300]} />
               <Text style={styles.emptyText}>
                 {ratingFilter === 'all' 
                   ? 'No reviews yet' 
@@ -218,10 +219,12 @@ export default function BarberReviewsScreen() {
                       )}
                     </View>
                     <View style={styles.reviewCustomerDetails}>
-                      <Text style={styles.reviewerName}>{review.customerName || 'Anonymous'}</Text>
+                      <Text style={styles.reviewerName} numberOfLines={1} ellipsizeMode="tail">
+                        {review.customerName || 'Anonymous'}
+                      </Text>
                       {review.services && review.services.length > 0 && (
                         <View style={styles.reviewServices}>
-                          <Ionicons name="cut" size={12} color="#7E3AF2" />
+                          <Ionicons name="cut" size={12} color={Colors.primary} />
                           <Text style={styles.reviewServicesText}>
                             {review.services.map((s: any) => s.name).join(', ')}
                           </Text>
@@ -255,11 +258,13 @@ export default function BarberReviewsScreen() {
                 )}
                 {review.response && barber && (
                   <View style={styles.responseContainer}>
-                    <View style={styles.responseBadge}>
-                      <View style={styles.responseBadgeLeft}>
-                        <Ionicons name="checkmark-circle" size={12} color="#00C853" />
-                        <Text style={styles.responseBadgeText}>{barber.name.toUpperCase()} REPLIED</Text>
-                      </View>
+                  <View style={styles.responseBadge}>
+                    <View style={styles.responseBadgeLeft}>
+                      <Ionicons name="checkmark-circle" size={12} color="#00C853" />
+                      <Text style={styles.responseBadgeText} numberOfLines={1} ellipsizeMode="tail">
+                        {barber.name.toUpperCase()} REPLIED
+                      </Text>
+                    </View>
                       <Text style={styles.responseDate}>
                         {new Date(review.response.date).toLocaleDateString('en-MY', { 
                           month: 'short', 
@@ -282,7 +287,7 @@ export default function BarberReviewsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.loadMoreText}>Load More Reviews</Text>
-                  <Ionicons name="chevron-down" size={18} color="#7E3AF2" />
+                  <Ionicons name="chevron-down" size={18} color={Colors.primary} />
                 </TouchableOpacity>
               )}
               
@@ -308,7 +313,7 @@ export default function BarberReviewsScreen() {
             onPress={scrollToTop}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-up" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-up" size={24} color={Colors.white} />
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -327,7 +332,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
   },
@@ -341,7 +346,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summarySection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     marginBottom: 8,
   },
@@ -403,7 +408,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     marginBottom: 8,
   },
   filterChip: {
@@ -418,8 +423,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
   },
   filterChipActive: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterChipText: {
     fontSize: 14,
@@ -427,10 +432,10 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   reviewsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 16,
   },
   loadingContainer: {
@@ -489,7 +494,7 @@ const styles = StyleSheet.create({
   reviewAvatarText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   reviewCustomerDetails: {
     flex: 1,
@@ -509,7 +514,7 @@ const styles = StyleSheet.create({
   },
   reviewServicesText: {
     fontSize: 12,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '500',
   },
   reviewDate: {
@@ -565,6 +570,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flex: 1,
+    marginRight: 8,
   },
   responseBadgeText: {
     fontSize: 11,
@@ -590,16 +597,16 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#7E3AF220',
+    borderColor: '#F9731620',
   },
   loadMoreText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   endOfReviews: {
     alignItems: 'center',
@@ -621,7 +628,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

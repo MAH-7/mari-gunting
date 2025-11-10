@@ -16,8 +16,8 @@ import {
   Dimensions,
   Image,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { width, height } = Dimensions.get("window");
 
@@ -78,12 +78,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   });
 
   return (
-    <LinearGradient
-      colors={["#7E3AF2", "#6C2BD9", "#5B21B6"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
-    >
+    <View style={[styles.container, { backgroundColor: Colors.primary }]}>
       {/* Decorative circles */}
       <View style={styles.circle1} />
       <View style={styles.circle2} />
@@ -102,12 +97,12 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         <View style={styles.logoContainer}>
           <View style={styles.logoBackground}>
             <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-              <Ionicons name="cut" size={80} color="#7E3AF2" />
+              <Ionicons name="cut" size={80} color={Colors.primary} />
             </Animated.View>
             
             {/* Partner Badge */}
             <View style={styles.partnerBadge}>
-              <Ionicons name="briefcase" size={16} color="#FFFFFF" />
+              <Ionicons name="briefcase" size={16} color={Colors.white} />
               <Text style={styles.partnerBadgeText}>PRO</Text>
             </View>
           </View>
@@ -140,7 +135,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         <Text style={styles.poweredBy}>Powered by</Text>
         <Text style={styles.companyName}>Mari Gunting™</Text>
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -204,7 +199,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -221,7 +216,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   partnerBadgeText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -232,7 +227,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 42,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: Colors.white,
     letterSpacing: -1,
     marginBottom: 4,
     textShadowColor: "rgba(0, 0, 0, 0.2)",
@@ -270,7 +265,7 @@ const styles = StyleSheet.create({
   },
   companyName: {
     fontSize: 14,
-    color: "#FFFFFF",
+    color: Colors.white,
     fontWeight: "700",
     letterSpacing: 1,
   },

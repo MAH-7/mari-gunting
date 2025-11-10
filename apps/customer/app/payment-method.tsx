@@ -13,6 +13,7 @@ import RazorpayCheckout from 'react-native-razorpay';
 import { BarberResponseWaitingModal } from '@/components/BarberResponseWaitingModal';
 import { FEATURE_FLAGS } from '@mari-gunting/shared/constants';
 import { useBarberOffline } from '@/contexts/BarberOfflineContext';
+import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -1065,7 +1066,7 @@ export default function PaymentMethodScreen() {
           {selectedVoucher && discount > 0 ? (
             <View style={[styles.priceRow, styles.discountRow]}>
               <View style={styles.discountLeft}>
-                <Ionicons name="pricetag" size={14} color="#7E3AF2" />
+                <Ionicons name="pricetag" size={14} color={Colors.primary} />
                 <Text style={styles.discountLabel}>Voucher Discount</Text>
               </View>
               <Text style={styles.discountValue}>-RM {discount.toFixed(2)}</Text>
@@ -1076,7 +1077,7 @@ export default function PaymentMethodScreen() {
               onPress={() => setShowVoucherModal(true)}
             >
               <View style={styles.voucherButtonLeft}>
-                <Ionicons name="ticket-outline" size={20} color="#7E3AF2" />
+                <Ionicons name="ticket-outline" size={20} color={Colors.primary} />
                 <Text style={styles.voucherButtonText}>
                   {usableVouchers.length > 0 ? 'Select Voucher' : 'No Vouchers Available'}
                 </Text>
@@ -1096,7 +1097,7 @@ export default function PaymentMethodScreen() {
               onPress={() => setUseCredits(!useCredits)}
             >
               <View style={styles.creditsButtonLeft}>
-                <Ionicons name="wallet-outline" size={20} color={useCredits ? '#7E3AF2' : '#6B7280'} />
+                <Ionicons name="wallet-outline" size={20} color={useCredits ? Colors.primary : Colors.gray[500]} />
                 <View>
                   <Text style={[styles.creditsButtonText, useCredits && styles.creditsButtonTextActive]}>
                     Use Mari Credits
@@ -1107,7 +1108,7 @@ export default function PaymentMethodScreen() {
                 </View>
               </View>
               <View style={[styles.checkbox, useCredits && styles.checkboxActive]}>
-                {useCredits && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                {useCredits && <Ionicons name="checkmark" size={16} color={Colors.white} />}
               </View>
             </TouchableOpacity>
           )}
@@ -1116,7 +1117,7 @@ export default function PaymentMethodScreen() {
           {creditsToApply > 0 && (
             <View style={[styles.priceRow, styles.discountRow]}>
               <View style={styles.discountLeft}>
-                <Ionicons name="wallet" size={14} color="#7E3AF2" />
+                <Ionicons name="wallet" size={14} color={Colors.primary} />
                 <Text style={styles.discountLabel}>Credits Applied</Text>
               </View>
               <Text style={styles.discountValue}>-{rewardsService.formatCreditAmount(creditsToApply)}</Text>
@@ -1133,7 +1134,7 @@ export default function PaymentMethodScreen() {
           
           {discount > 0 && (
             <View style={styles.savingsRow}>
-              <Ionicons name="checkmark-circle" size={14} color="#7E3AF2" />
+              <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
               <Text style={styles.savingsText}>You save RM {discount.toFixed(2)}!</Text>
             </View>
           )}
@@ -1158,7 +1159,7 @@ export default function PaymentMethodScreen() {
                   <Ionicons 
                     name={option.icon} 
                     size={24} 
-                    color={selectedMethod === option.id ? '#7E3AF2' : '#3C3C43'} 
+                    color={selectedMethod === option.id ? Colors.primary : '#3C3C43'} 
                   />
                 </View>
                 
@@ -1189,7 +1190,7 @@ export default function PaymentMethodScreen() {
         {/* Fully paid with credits message */}
         {totalAmount === 0 && useCredits && (
           <View style={styles.creditsPaidBox}>
-            <Ionicons name="checkmark-circle" size={24} color="#7E3AF2" />
+            <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
             <Text style={styles.creditsPaidText}>
               Fully paid with MARI Credits! No additional payment needed.
             </Text>
@@ -1248,14 +1249,14 @@ export default function PaymentMethodScreen() {
                   setShowVoucherModal(false);
                 }}
               >
-                <Ionicons name="close-circle" size={20} color="#EF4444" />
+                <Ionicons name="close-circle" size={20} color={Colors.error} />
                 <Text style={styles.removeVoucherText}>Remove Voucher</Text>
               </TouchableOpacity>
             )}
             
             {isLoadingVouchers ? (
               <View style={styles.loadingVouchers}>
-                <ActivityIndicator size="large" color="#7E3AF2" />
+                <ActivityIndicator size="large" color={Colors.primary} />
                 <Text style={styles.loadingVouchersText}>Loading vouchers...</Text>
               </View>
             ) : usableVouchers.length > 0 ? (
@@ -1276,7 +1277,7 @@ export default function PaymentMethodScreen() {
                   >
                     <View style={styles.voucherModalCardLeft}>
                       <View style={styles.voucherModalBadge}>
-                        <Ionicons name="pricetag" size={16} color="#7E3AF2" />
+                        <Ionicons name="pricetag" size={16} color={Colors.primary} />
                       </View>
                       <View style={styles.voucherModalInfo}>
                         <Text style={styles.voucherModalCardTitle}>{voucher.title}</Text>
@@ -1288,7 +1289,7 @@ export default function PaymentMethodScreen() {
                       <Text style={styles.voucherModalDiscount}>-RM {voucherDiscount.toFixed(2)}</Text>
                       {isSelected && (
                         <View style={styles.selectedBadge}>
-                          <Ionicons name="checkmark-circle" size={20} color="#7E3AF2" />
+                          <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
                         </View>
                       )}
                     </View>
@@ -1297,7 +1298,7 @@ export default function PaymentMethodScreen() {
               })
             ) : (
               <View style={styles.emptyVouchers}>
-                <Ionicons name="ticket-outline" size={64} color="#D1D5DB" />
+                <Ionicons name="ticket-outline" size={64} color={Colors.gray[300]} />
                 <Text style={styles.emptyVouchersTitle}>No Vouchers Available</Text>
                 <Text style={styles.emptyVouchersText}>Earn points and redeem vouchers to save on bookings</Text>
               </View>
@@ -1342,7 +1343,7 @@ export default function PaymentMethodScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -1350,7 +1351,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   headerTitle: {
     fontSize: 17,
@@ -1383,7 +1384,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
   },
   methodsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   methodCard: {
     flexDirection: 'row',
@@ -1393,10 +1394,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   methodCardActive: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
   },
   methodCardLast: {
     borderBottomWidth: 0,
@@ -1429,7 +1430,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   badge: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1437,7 +1438,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   methodDesc: {
@@ -1456,14 +1457,14 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   radioActive: {
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
     borderWidth: 2,
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   infoBox: {
     flexDirection: 'row',
@@ -1489,12 +1490,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 34,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 0.5,
     borderTopColor: '#E5E5EA',
   },
   continueButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',
@@ -1506,7 +1507,7 @@ const styles = StyleSheet.create({
   continueButtonText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: -0.4,
   },
   // Price breakdown styles
@@ -1518,7 +1519,7 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '400',
   },
   priceValue: {
@@ -1541,12 +1542,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     padding: 14,
     borderRadius: 12,
     marginVertical: 12,
     borderWidth: 1.5,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
   },
   voucherButtonLeft: {
@@ -1557,10 +1558,10 @@ const styles = StyleSheet.create({
   voucherButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   voucherBadge: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1570,11 +1571,11 @@ const styles = StyleSheet.create({
   voucherBadgeText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   // Discount row
   discountRow: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     padding: 12,
     borderRadius: 8,
     marginVertical: 8,
@@ -1586,12 +1587,12 @@ const styles = StyleSheet.create({
   },
   discountLabel: {
     fontSize: 15,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
   },
   discountValue: {
     fontSize: 15,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '700',
   },
   savingsRow: {
@@ -1602,13 +1603,13 @@ const styles = StyleSheet.create({
   },
   savingsText: {
     fontSize: 13,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
   },
   // Voucher modal styles
   voucherModalContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   voucherModalHeader: {
     flexDirection: 'row',
@@ -1616,7 +1617,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
   },
@@ -1634,7 +1635,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: Colors.errorLight,
     padding: 12,
     borderRadius: 12,
     marginBottom: 16,
@@ -1642,10 +1643,10 @@ const styles = StyleSheet.create({
   removeVoucherText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#EF4444',
+    color: Colors.error,
   },
   voucherModalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -1661,8 +1662,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   voucherModalCardSelected: {
-    borderColor: '#7E3AF2',
-    backgroundColor: '#F5F3FF',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   voucherModalCardLeft: {
     flexDirection: 'row',
@@ -1674,7 +1675,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: getStatusBackground("ready"),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1689,12 +1690,12 @@ const styles = StyleSheet.create({
   },
   voucherModalCardDesc: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginBottom: 4,
   },
   voucherModalCardExpiry: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
   },
   voucherModalCardRight: {
     alignItems: 'flex-end',
@@ -1703,7 +1704,7 @@ const styles = StyleSheet.create({
   voucherModalDiscount: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   selectedBadge: {
     marginTop: 4,
@@ -1722,7 +1723,7 @@ const styles = StyleSheet.create({
   },
   emptyVouchersText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -1733,7 +1734,7 @@ const styles = StyleSheet.create({
   },
   loadingVouchersText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     marginTop: 16,
   },
   // Credits button styles
@@ -1741,16 +1742,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     padding: 14,
     borderRadius: 12,
     marginVertical: 8,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   creditsButtonActive: {
-    backgroundColor: '#F5F3FF',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
   },
   creditsButtonLeft: {
     flexDirection: 'row',
@@ -1761,14 +1762,14 @@ const styles = StyleSheet.create({
   creditsButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   creditsButtonTextActive: {
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   creditsAvailable: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     marginTop: 2,
   },
   checkbox: {
@@ -1776,31 +1777,31 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: Colors.gray[300],
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   creditsPaidBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginHorizontal: 16,
     marginTop: 16,
     borderWidth: 1.5,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   creditsPaidText: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
     lineHeight: 20,
   },
 });

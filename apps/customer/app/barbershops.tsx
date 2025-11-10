@@ -9,6 +9,7 @@ import { formatCurrency, formatDistance, formatTime } from '@mari-gunting/shared
 import { Barbershop } from '@/types';
 import FilterModal, { FilterOptions } from '@/components/FilterModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
+import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 // Get current day in user's local timezone (Grab-style)
 const getCurrentDay = () => {
@@ -131,7 +132,7 @@ export default function BarbershopsScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Barbershops</Text>
         <TouchableOpacity
@@ -141,7 +142,7 @@ export default function BarbershopsScreen() {
           <Ionicons 
             name="options-outline" 
             size={24} 
-            color={hasActiveFilters ? '#7E3AF2' : '#111827'} 
+            color={hasActiveFilters ? Colors.primary : Colors.text.primary} 
           />
           {hasActiveFilters && <View style={styles.filterBadge} />}
         </TouchableOpacity>
@@ -151,7 +152,7 @@ export default function BarbershopsScreen() {
       {/* Shop Count */}
       <View style={styles.countSection}>
         <View style={styles.countBadge}>
-          <Ionicons name="storefront" size={16} color="#7E3AF2" />
+          <Ionicons name="storefront" size={16} color={Colors.primary} />
           <Text style={styles.resultCount}>
             {sortedBarbershops.length} {sortedBarbershops.length === 1 ? 'shop' : 'shops'} available
           </Text>
@@ -220,7 +221,7 @@ export default function BarbershopsScreen() {
           </>
         ) : sortedBarbershops.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="storefront-outline" size={64} color="#D1D5DB" />
+            <Ionicons name="storefront-outline" size={64} color={Colors.gray[300]} />
             <Text style={styles.emptyTitle}>No barbershops found</Text>
             <Text style={styles.emptyText}>Try adjusting your filters</Text>
           </View>
@@ -307,7 +308,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
             </Text>
             {shop.isVerified && (
               <View style={styles.verifiedBadge}>
-                <Ionicons name="shield-checkmark" size={12} color="#3B82F6" />
+                <Ionicons name="shield-checkmark" size={12} color={Colors.info} />
               </View>
             )}
           </View>
@@ -328,7 +329,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
               <>
                 <View style={styles.metaDot} />
                 <View style={styles.distanceContainer}>
-                  <Ionicons name="navigate" size={11} color="#7E3AF2" />
+                  <Ionicons name="navigate" size={11} color={Colors.primary} />
                   <Text style={styles.distanceText}>{formatDistance(shop.distance)}</Text>
                 </View>
               </>
@@ -354,7 +355,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
           <Ionicons 
             name="time-outline" 
             size={14} 
-            color={todayHours.startsWith('Tomorrow') || todayHours.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/) ? '#F59E0B' : '#6B7280'} 
+            color={todayHours.startsWith('Tomorrow') || todayHours.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/) ? Colors.warning : Colors.gray[500]} 
           />
           <Text 
             style={[
@@ -369,7 +370,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
         </View>
         <View style={styles.quickInfoDivider} />
         <View style={styles.quickInfoItem}>
-          <Ionicons name="people-outline" size={14} color="#6B7280" />
+          <Ionicons name="people-outline" size={14} color={Colors.gray[500]} />
           <Text style={styles.quickInfoText} numberOfLines={1}>{shop.bookingsCount}+ bookings</Text>
         </View>
       </View>
@@ -397,7 +398,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
         </View>
         <View style={styles.actionButton}>
           <Text style={styles.actionButtonText}>View Shop</Text>
-          <Ionicons name="chevron-forward" size={16} color="#7E3AF2" />
+          <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
         </View>
       </View>
     </TouchableOpacity>
@@ -407,7 +408,7 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -415,34 +416,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   filterButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   filterButtonActive: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: getStatusBackground("ready"),
   },
   filterBadge: {
     position: 'absolute',
@@ -451,9 +452,9 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
   },
   countSection: {
     flexDirection: 'row',
@@ -461,25 +462,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: Colors.gray[200],
   },
   countBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   resultCount: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   clearFiltersButton: {
     paddingHorizontal: 12,
@@ -488,7 +489,7 @@ const styles = StyleSheet.create({
   clearFiltersText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
     textDecorationLine: 'underline',
   },
   scrollView: {
@@ -504,7 +505,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   emptyState: {
@@ -515,14 +516,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   shopCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     marginBottom: 16,
     padding: 16,
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: Colors.gray[100],
   },
   cardHeader: {
     flexDirection: 'row',
@@ -544,10 +545,10 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   shopLogo: {
     width: '100%',
@@ -565,7 +566,7 @@ const styles = StyleSheet.create({
   shopName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     letterSpacing: -0.3,
     flex: 1,
   },
@@ -590,18 +591,18 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   metaDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
   },
   metaText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   distanceContainer: {
     flexDirection: 'row',
@@ -611,21 +612,21 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   openBadge: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     borderWidth: 2,
-    borderColor: '#EDE9FE',
+    borderColor: getStatusBackground("ready"),
   },
   openDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   closedBadge: {
     paddingHorizontal: 8,
@@ -645,7 +646,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: Colors.gray[100],
   },
   quickInfoItem: {
     flex: 1,
@@ -656,16 +657,16 @@ const styles = StyleSheet.create({
   quickInfoText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   opensHoursText: {
-    color: '#F59E0B',
+    color: Colors.warning,
     fontWeight: '600',
   },
   quickInfoDivider: {
     width: 1,
     height: 14,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     marginHorizontal: 8,
   },
   servicesPreview: {
@@ -678,28 +679,28 @@ const styles = StyleSheet.create({
   serviceTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     gap: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   serviceTagText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
   },
   serviceTagPrice: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   moreServicesTag: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.gray[100],
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
   moreServicesText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   cardFooter: {
     flexDirection: 'row',
@@ -715,7 +716,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
   },
   priceSection: {
     gap: 2,
@@ -723,30 +724,30 @@ const styles = StyleSheet.create({
   fromLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   priceValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 10,
     gap: 4,
     borderWidth: 1.5,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   actionButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
     letterSpacing: 0.2,
   },
 });

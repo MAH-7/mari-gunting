@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 type FilterType = 'all' | '5' | '4' | '3' | '2' | '1';
 
@@ -90,7 +91,7 @@ export default function BarbershopReviewsScreen() {
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7E3AF2" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Loading reviews...</Text>
         </View>
       </SafeAreaView>
@@ -108,7 +109,7 @@ export default function BarbershopReviewsScreen() {
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#D1D5DB" />
+          <Ionicons name="alert-circle-outline" size={64} color={Colors.gray[300]} />
           <Text style={styles.emptyText}>Shop not found</Text>
         </View>
       </SafeAreaView>
@@ -206,7 +207,7 @@ export default function BarbershopReviewsScreen() {
                   activeOpacity={0.7}
                   onPress={() => setActiveFilter(star.toString() as FilterType)}
                 >
-                  <Ionicons name="star" size={14} color={activeFilter === star.toString() ? '#FFFFFF' : '#FBBF24'} />
+                  <Ionicons name="star" size={14} color={activeFilter === star.toString() ? Colors.white : '#FBBF24'} />
                   <Text style={[styles.filterButtonText, activeFilter === star.toString() && styles.filterButtonTextActive]}>
                     {star} ({count})
                   </Text>
@@ -250,7 +251,9 @@ export default function BarbershopReviewsScreen() {
                       )}
                     </View>
                     <View style={styles.reviewCustomerDetails}>
-                      <Text style={styles.reviewName}>{review.customerName || 'Anonymous'}</Text>
+                      <Text style={styles.reviewName} numberOfLines={1} ellipsizeMode="tail">
+                        {review.customerName || 'Anonymous'}
+                      </Text>
                       <Text style={styles.reviewDate}>
                         {new Date(review.createdAt).toLocaleDateString('en-MY', { 
                           month: 'short', 
@@ -282,7 +285,7 @@ export default function BarbershopReviewsScreen() {
                     <View style={styles.responseBadge}>
                       <View style={styles.responseBadgeLeft}>
                         <Ionicons name="checkmark-circle" size={12} color="#00C853" />
-                        <Text style={styles.responseBadgeText}>
+                        <Text style={styles.responseBadgeText} numberOfLines={1} ellipsizeMode="tail">
                           {review.barberName ? review.barberName.toUpperCase() : 'BARBER'} REPLIED
                         </Text>
                       </View>
@@ -308,7 +311,7 @@ export default function BarbershopReviewsScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.loadMoreText}>Load More Reviews</Text>
-                  <Ionicons name="chevron-down" size={18} color="#7E3AF2" />
+                  <Ionicons name="chevron-down" size={18} color={Colors.primary} />
                 </TouchableOpacity>
               )}
               
@@ -321,7 +324,7 @@ export default function BarbershopReviewsScreen() {
             </>
           ) : (
             <View style={styles.noResultsContainer}>
-              <Ionicons name="filter-outline" size={48} color="#D1D5DB" />
+              <Ionicons name="filter-outline" size={48} color={Colors.gray[300]} />
               <Text style={styles.noResultsText}>No {activeFilter} star reviews</Text>
               <Text style={styles.noResultsSubtext}>Try selecting a different filter</Text>
             </View>
@@ -340,7 +343,7 @@ export default function BarbershopReviewsScreen() {
             onPress={scrollToTop}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-up" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-up" size={24} color={Colors.white} />
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -359,7 +362,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
   },
@@ -394,7 +397,7 @@ const styles = StyleSheet.create({
   },
   shopHeader: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 16,
     marginBottom: 8,
     gap: 12,
@@ -404,7 +407,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   shopInfo: {
     flex: 1,
@@ -413,7 +416,7 @@ const styles = StyleSheet.create({
   shopName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   shopRating: {
     flexDirection: 'row',
@@ -423,16 +426,16 @@ const styles = StyleSheet.create({
   shopRatingText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   shopRatingCount: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   overviewCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     marginBottom: 8,
     gap: 24,
@@ -443,7 +446,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingRight: 20,
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+    borderRightColor: Colors.gray[200],
   },
   scoreContainer: {
     flexDirection: 'row',
@@ -453,7 +456,7 @@ const styles = StyleSheet.create({
   scoreText: {
     fontSize: 48,
     fontWeight: '800',
-    color: '#111827',
+    color: Colors.text.primary,
     letterSpacing: -1,
   },
   scoreStar: {
@@ -466,7 +469,7 @@ const styles = StyleSheet.create({
   overviewCount: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
   },
   overviewBars: {
@@ -482,13 +485,13 @@ const styles = StyleSheet.create({
   barStar: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
     width: 10,
   },
   barTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -500,19 +503,19 @@ const styles = StyleSheet.create({
   barCount: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
     width: 24,
     textAlign: 'right',
   },
   filterSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingVertical: 16,
     marginBottom: 8,
   },
   filterLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 12,
@@ -527,32 +530,32 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   filterButtonActive: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   filterButtonTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   reviewsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
   },
   reviewsTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 16,
   },
   reviewCard: {
@@ -594,7 +597,7 @@ const styles = StyleSheet.create({
   reviewAvatarText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   reviewCustomerDetails: {
     flex: 1,
@@ -658,6 +661,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flex: 1,
+    marginRight: 8,
   },
   responseBadgeText: {
     fontSize: 11,
@@ -684,12 +689,12 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   noResultsSubtext: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: Colors.gray[400],
   },
   loadMoreButton: {
     flexDirection: 'row',
@@ -698,16 +703,16 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#7E3AF220',
+    borderColor: '#F9731620',
   },
   loadMoreText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   endOfReviews: {
     alignItems: 'center',
@@ -729,7 +734,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

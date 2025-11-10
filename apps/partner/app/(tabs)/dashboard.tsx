@@ -22,6 +22,7 @@ import { heartbeatService } from '@/services/heartbeatService';
 import { connectionMonitor } from '@mari-gunting/shared/services/connectionMonitor';
 import * as Location from 'expo-location';
 import { getPartnerReviews, getReviewStats } from '@mari-gunting/shared/services/reviewsService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 // Responsive helper
 const { width } = Dimensions.get('window');
@@ -58,9 +59,9 @@ const VerificationBanner = ({ verificationInfo }: { verificationInfo: Verificati
       default:
         return {
           bgColor: '#E8F4FF',
-          borderColor: '#3B82F6',
+          borderColor: Colors.info,
           icon: 'alert-circle-outline' as const,
-          iconColor: '#3B82F6',
+          iconColor: Colors.info,
           title: 'Complete Your Profile',
           subtitle: verificationInfo.message,
         };
@@ -881,8 +882,8 @@ export default function PartnerDashboardScreen() {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={() => setToast({ ...toast, visible: false })} />
       
-      {/* Green Header */}
-      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.header}>
+      {/* Orange Header */}
+      <View style={[styles.header, { backgroundColor: COLORS.primary }]}>
         <SafeAreaView edges={['top']}>
           <View style={styles.headerContent}>
             <View style={styles.headerTop}>
@@ -927,7 +928,7 @@ export default function PartnerDashboardScreen() {
             </TouchableOpacity>
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -1109,7 +1110,7 @@ export default function PartnerDashboardScreen() {
                     const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     
                     // Determine urgency color
-                    let timerColor = '#7E3AF2'; // Green: > 2 min
+                    let timerColor = Colors.primary; // Green: > 2 min
                     let bgColor = '#E8F5E9';
                     if (timeRemaining <= 60) {
                       timerColor = '#FF3B30'; // Red: < 1 min
@@ -1172,8 +1173,7 @@ export default function PartnerDashboardScreen() {
               icon="checkmark-done"
               label="Acceptance"
               value={`${stats.acceptance}%`}
-              color="#10B981"
-            />
+              color={Colors.success}             />
           </View>
         </View>
 

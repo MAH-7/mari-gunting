@@ -9,8 +9,13 @@
 
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, TYPOGRAPHY, SPACING } from '../constants';
+import { Colors, Typography, Spacing } from '../theme';
+import { TYPOGRAPHY } from '../constants';
 import { Button } from './Button';
+
+// Backward compatibility
+const COLORS = Colors;
+const SPACING = Spacing;
 
 interface EmptyStateProps {
   /** Icon name from Ionicons */

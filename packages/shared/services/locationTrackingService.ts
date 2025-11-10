@@ -151,13 +151,13 @@ class LocationTrackingService {
       return;
     }
 
-    console.log(`🔄 Switching tracking mode: ${this.currentMode} → ${newMode}`);
+  console.log(`🔄 Switching tracking mode: ${this.currentMode} → ${newMode}`);
 
-    // Stop current tracking
-    this.stopTracking();
+  // Stop current tracking
+  await this.stopTracking();
 
-    // Start with new mode
-    await this.startTracking(userId, newMode);
+  // Start with new mode
+  await this.startTracking(userId, newMode);
 
     console.log('✅ Mode switched successfully');
   }

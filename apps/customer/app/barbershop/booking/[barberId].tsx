@@ -6,6 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatCurrency, formatPrice, formatTime } from '@mari-gunting/shared/utils/format';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function BarbershopBookingScreen() {
   const { barberId, shopId } = useLocalSearchParams<{ barberId: string; shopId: string }>();
@@ -244,7 +245,7 @@ export default function BarbershopBookingScreen() {
         {(selectedDate || selectedTime || selectedServiceIds.length > 0) && (
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <Ionicons name="calendar-outline" size={20} color="#7E3AF2" />
+              <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
               <Text style={styles.summaryTitle}>Booking Summary</Text>
             </View>
             
@@ -296,7 +297,7 @@ export default function BarbershopBookingScreen() {
           
           {selectedServiceIds.length === 0 && (
             <View style={styles.emptyServices}>
-              <Ionicons name="cut-outline" size={48} color="#D1D5DB" />
+              <Ionicons name="cut-outline" size={48} color={Colors.gray[300]} />
               <Text style={styles.emptyServicesText}>Select at least one service to continue</Text>
             </View>
           )}
@@ -318,7 +319,7 @@ export default function BarbershopBookingScreen() {
                     styles.checkbox,
                     isSelected && styles.checkboxSelected
                   ]}>
-                    {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                    {isSelected && <Ionicons name="checkmark" size={16} color={Colors.white} />}
                   </View>
                   <View style={styles.serviceInfo}>
                     <Text style={styles.serviceName}>{service.name}</Text>
@@ -374,8 +375,7 @@ export default function BarbershopBookingScreen() {
               <Ionicons 
                 name={showAllDates ? 'chevron-up' : 'chevron-forward'} 
                 size={16} 
-                color="#7E3AF2" 
-              />
+                color={Colors.primary}               />
             </TouchableOpacity>
           )}
         </View>
@@ -386,7 +386,7 @@ export default function BarbershopBookingScreen() {
           
           {!selectedDate ? (
             <View style={styles.timeEmptyState}>
-              <Ionicons name="time-outline" size={32} color="#D1D5DB" />
+              <Ionicons name="time-outline" size={32} color={Colors.gray[300]} />
               <Text style={styles.timeEmptyText}>Please select a date first</Text>
             </View>
           ) : (
@@ -477,7 +477,7 @@ export default function BarbershopBookingScreen() {
                timeSlots.afternoon.length === 0 && 
                timeSlots.evening.length === 0 && (
                 <View style={styles.timeEmptyState}>
-                  <Ionicons name="close-circle-outline" size={32} color="#D1D5DB" />
+                  <Ionicons name="close-circle-outline" size={32} color={Colors.gray[300]} />
                   <Text style={styles.timeEmptyText}>No time slots available for this date</Text>
                 </View>
               )}
@@ -492,7 +492,7 @@ export default function BarbershopBookingScreen() {
             {/* Shop Info */}
             <View style={styles.shopSection}>
               <View style={styles.shopHeader}>
-                <Ionicons name="storefront" size={18} color="#7E3AF2" />
+                <Ionicons name="storefront" size={18} color={Colors.primary} />
                 <Text style={styles.shopNameText}>{shop.name}</Text>
                 {shop.isVerified && (
                   <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
   },
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     marginBottom: 12,
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
   // Booking Summary Card
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 12,
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.gray[100],
   },
   summaryTitle: {
     fontSize: 17,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   summaryValueContainer: {
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: Colors.gray[100],
   },
   summaryLabelTotal: {
     fontSize: 16,
@@ -669,16 +669,16 @@ const styles = StyleSheet.create({
   },
   summaryValueTotal: {
     fontSize: 20,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '800',
   },
   // Compact Barber & Shop Info
   compactInfoCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   // Shop Section (Primary)
   shopSection: {
@@ -704,13 +704,13 @@ const styles = StyleSheet.create({
   compactLocationText: {
     flex: 1,
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 18,
   },
   // Divider
   infoDivider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.gray[200],
     marginVertical: 16,
   },
   // Barber Section (Secondary)
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   },
   compactMetaText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   // Empty States
@@ -818,18 +818,18 @@ const styles = StyleSheet.create({
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   serviceCard: {
     marginBottom: 12,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E5E5EA',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   serviceCardSelected: {
-    borderColor: '#7E3AF2',
-    backgroundColor: '#F5F3FF',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   serviceCardInner: {
     flexDirection: 'row',
@@ -842,13 +842,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: Colors.gray[300],
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   serviceInfo: {
     flex: 1,
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   // Grab Style - Date Selection
   dateListGrab: {
@@ -876,7 +876,7 @@ const styles = StyleSheet.create({
   },
   dateItemGrab: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   dateItemGrabExpanded: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
@@ -894,8 +894,8 @@ const styles = StyleSheet.create({
     width: '18%', // 5 items per row with gaps
   },
   dateItemGrabSelected: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   dateDayGrab: {
     fontSize: 11,
@@ -904,7 +904,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dateDayGrabSelected: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   dateNumberGrab: {
     fontSize: 18,
@@ -912,7 +912,7 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   dateNumberGrabSelected: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   viewMoreDates: {
     flexDirection: 'row',
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
   viewMoreDatesText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   // Grab Style - Time Selection
   timeSectionGrab: {
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   },
   timeButtonGrab: {
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
@@ -955,8 +955,8 @@ const styles = StyleSheet.create({
     width: '23%', // 4 items per row with gaps
   },
   timeButtonGrabSelected: {
-    backgroundColor: '#7E3AF2',
-    borderColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   timeTextGrab: {
     fontSize: 13,
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
   },
   timeTextGrabSelected: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   timeEmptyState: {
     paddingVertical: 40,
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   priceValue: {
     fontSize: 15,
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
   },
   durationRow: {
     flexDirection: 'row',
@@ -1026,7 +1026,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     height: Platform.OS === 'ios' ? 95 : 75,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopWidth: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
@@ -1035,24 +1035,24 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bookButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   bookButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
   },
   bookButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.2,
   },
 });

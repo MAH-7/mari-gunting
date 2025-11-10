@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SkeletonCircle, SkeletonText } from './Skeleton';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export const ProfileSkeleton = () => {
   return (
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingVertical: 32,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
   },
   contactSection: {
     width: '100%',

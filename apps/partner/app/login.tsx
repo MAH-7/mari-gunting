@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function PartnerLoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -166,15 +167,14 @@ export default function PartnerLoginScreen() {
               <View style={styles.countryCodeButton}>
                 <Text style={styles.flag}>🇲🇾</Text>
                 <Text style={styles.countryCode}>{countryCode}</Text>
-                <Ionicons name="lock-closed" size={14} color="#9CA3AF" />
+                <Ionicons name="lock-closed" size={14} color={Colors.gray[400]} />
               </View>
 
               {/* Phone Number Input */}
               <TextInput
                 style={styles.phoneInput}
                 placeholder="12-345 6789"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
+                placeholderTextColor={Colors.gray[400]}                 keyboardType="phone-pad"
                 maxLength={13} // Formatted: 12-345 6789
                 value={phoneNumber}
                 onChangeText={handlePhoneChange}
@@ -185,7 +185,7 @@ export default function PartnerLoginScreen() {
 
           {/* Helper Text */}
             <View style={styles.helperContainer}>
-              <Ionicons name="information-circle-outline" size={14} color="#6B7280" />
+              <Ionicons name="information-circle-outline" size={14} color={Colors.gray[500]} />
               <Text style={styles.helperText}>
                 We'll send an OTP to verify your number
               </Text>
@@ -203,7 +203,7 @@ export default function PartnerLoginScreen() {
             activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <Text style={styles.continueButtonText}>Continue</Text>
             )}
@@ -211,7 +211,7 @@ export default function PartnerLoginScreen() {
 
           {/* Helper Text for New Partners */}
           <View style={styles.newPartnerContainer}>
-            <Ionicons name="information-circle" size={20} color="#7E3AF2" />
+            <Ionicons name="information-circle" size={20} color={Colors.primary} />
             <Text style={styles.newPartnerText}>
               First time? We'll set up your partner account automatically
             </Text>
@@ -223,7 +223,7 @@ export default function PartnerLoginScreen() {
             onPress={handleContactSupport}
             activeOpacity={0.7}
           >
-            <Ionicons name="help-circle-outline" size={18} color="#6B7280" />
+            <Ionicons name="help-circle-outline" size={18} color={Colors.gray[500]} />
             <Text style={styles.supportText}>
               Need help? <Text style={styles.supportLink}>Contact Support</Text>
             </Text>
@@ -247,7 +247,7 @@ export default function PartnerLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   keyboardView: {
     flex: 1,
@@ -274,13 +274,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -290,16 +290,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.gray[700],
     marginBottom: 12,
   },
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     overflow: 'hidden',
   },
   countryCodeButton: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
+    borderRightColor: Colors.gray[200],
     gap: 6,
   },
   flag: {
@@ -317,13 +317,13 @@ const styles = StyleSheet.create({
   countryCode: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   phoneInput: {
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    color: '#111827',
+    color: Colors.text.primary,
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
@@ -335,15 +335,15 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   continueButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -351,14 +351,14 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   continueButtonDisabled: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.gray[300],
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   newPartnerContainer: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   newPartnerText: {
     fontSize: 14,
-    color: '#374151',
+    color: Colors.gray[700],
     fontWeight: '500',
     textAlign: 'center',
     flex: 1,
@@ -388,11 +388,11 @@ const styles = StyleSheet.create({
   },
   supportText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   supportLink: {
     fontSize: 14,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
   },
   termsContainer: {
@@ -401,12 +401,12 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 20,
   },
   termsLink: {
     fontSize: 13,
-    color: '#7E3AF2',
+    color: Colors.primary,
     fontWeight: '600',
     lineHeight: 20,
   },

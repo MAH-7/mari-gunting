@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Mapbox } from '../utils/mapbox';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function TestMapScreen() {
   return (
@@ -11,7 +12,7 @@ export default function TestMapScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>Mapbox Test</Text>
         <View style={{ width: 24 }} />
@@ -37,7 +38,7 @@ export default function TestMapScreen() {
           coordinate={[101.7115, 3.1569]}
         >
           <View style={styles.marker}>
-            <Ionicons name="location" size={40} color="#7E3AF2" />
+            <Ionicons name="location" size={40} color={Colors.primary} />
           </View>
         </Mapbox.PointAnnotation>
 
@@ -47,7 +48,7 @@ export default function TestMapScreen() {
           coordinate={[101.7120, 3.1478]}
         >
           <View style={styles.barberMarker}>
-            <Ionicons name="cut" size={24} color="#FFFFFF" />
+            <Ionicons name="cut" size={24} color={Colors.white} />
           </View>
         </Mapbox.PointAnnotation>
       </Mapbox.MapView>
@@ -72,7 +73,7 @@ export default function TestMapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -83,38 +84,38 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginTop: 20,
     marginBottom: 12,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 8,
   },
   stepsContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     borderRadius: 12,
     marginTop: 20,
     marginBottom: 20,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   stepText: {
     fontSize: 14,
-    color: '#111827',
+    color: Colors.text.primary,
     fontFamily: 'monospace',
     marginBottom: 12,
     lineHeight: 20,
   },
   docsButton: {
     flexDirection: 'row',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   docsButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#6B7280',
+    color: Colors.gray[500],
   },
   header: {
     flexDirection: 'row',
@@ -141,14 +142,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: Colors.gray[200],
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
   },
   map: {
     flex: 1,
@@ -161,11 +162,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.white,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 20,
     right: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     padding: 20,
     borderRadius: 16,
     shadowColor: '#000',
@@ -189,23 +190,23 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
     marginBottom: 8,
   },
   infoText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     lineHeight: 20,
     marginBottom: 16,
   },
   testButton: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
   testButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 15,
     fontWeight: '700',
   },

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ANIMATION, ACTIVE_OPACITY } from '@/constants/animations';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -40,7 +41,7 @@ export default function SuccessModal({
   title,
   message,
   icon = 'checkmark-circle',
-  iconColor = '#7E3AF2',
+  iconColor = Colors.primary,
   primaryButton,
   secondaryButton,
   details,
@@ -166,8 +167,7 @@ export default function SuccessModal({
                     <Ionicons
                       name={primaryButton.icon}
                       size={20}
-                      color="#FFFFFF"
-                      style={styles.buttonIcon}
+                      color={Colors.white}                       style={styles.buttonIcon}
                     />
                   )}
                   <Text style={styles.primaryButtonText}>
@@ -187,8 +187,7 @@ export default function SuccessModal({
                     <Ionicons
                       name={secondaryButton.icon}
                       size={20}
-                      color="#7E3AF2"
-                      style={styles.buttonIcon}
+                      color={Colors.primary}                       style={styles.buttonIcon}
                     />
                   )}
                   <Text style={styles.secondaryButtonText}>
@@ -211,7 +210,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 32,
@@ -226,13 +225,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -240,12 +239,12 @@ const styles = StyleSheet.create({
   },
   detailsCard: {
     width: '100%',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.gray[200],
   },
   detailRow: {
     flexDirection: 'row',
@@ -255,16 +254,16 @@ const styles = StyleSheet.create({
   },
   detailRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: Colors.gray[200],
   },
   detailLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.gray[500],
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 14,
-    color: '#111827',
+    color: Colors.text.primary,
     fontWeight: '700',
   },
   primaryButton: {
@@ -272,11 +271,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7E3AF2',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#7E3AF2',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -285,7 +284,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   secondaryButton: {
@@ -293,17 +292,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#7E3AF2',
+    borderColor: Colors.primary,
   },
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: Colors.primary,
     letterSpacing: 0.3,
   },
   buttonIcon: {

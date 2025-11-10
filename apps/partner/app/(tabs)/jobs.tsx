@@ -16,6 +16,7 @@ import { uploadEvidencePhoto } from '@mari-gunting/shared/services/storage';
 import { useLocalSearchParams, router } from 'expo-router';
 import { formatTime, formatLocalDate, formatLocalTime } from '@/utils/format';
 import { useFocusEffect } from '@react-navigation/native';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'completed';
 
@@ -742,7 +743,14 @@ export default function PartnerJobsScreen() {
     try {
       // Update evidence_photos with after photos
       if (afterPhotoUrls.length > 0) {
-        const currentBeforePhotos = selectedJob.evidence_photos?.before || beforePhotos;
+        // IMPORTANT: Fetch latest evidence_photos from database to avoid overwriting before photos
+        const { data: latestBooking } = await supabase
+          .from('bookings')
+          .select('evidence_photos')
+          .eq('id', selectedJob.id)
+          .single();
+        
+        const currentBeforePhotos = latestBooking?.evidence_photos?.before || selectedJob.evidence_photos?.before || beforePhotos;
         
         const { error } = await supabase
           .from('bookings')
@@ -757,6 +765,8 @@ export default function PartnerJobsScreen() {
         if (error) {
           console.error('❌ Error saving after photo URLs:', error);
           // Don't fail the whole operation, just log it
+        } else {
+          console.log('✅ Evidence photos saved:', { before: currentBeforePhotos.length, after: afterPhotoUrls.length });
         }
       }
       
@@ -1157,7 +1167,7 @@ export default function PartnerJobsScreen() {
                     <Ionicons 
                       name={job.payment_method === 'cash' ? 'cash-outline' : 'card-outline'} 
                       size={14} 
-                      color={job.payment_method === 'cash' ? '#F59E0B' : '#7E3AF2'} 
+                      color={job.payment_method === 'cash' ? Colors.warning : Colors.success} 
                     />
                     <Text style={styles.paymentMethodText}>
                       {job.payment_method === 'cash' ? 'CASH' : 'CARD'}
@@ -1225,9 +1235,9 @@ export default function PartnerJobsScreen() {
                   <Ionicons 
                     name={selectedJob.payment_method === 'cash' ? 'cash-outline' : 'card-outline'} 
                     size={18} 
-                    color={selectedJob.payment_method === 'cash' ? '#F59E0B' : '#10B981'} 
+                    color={selectedJob.payment_method === 'cash' ? Colors.warning : Colors.success} 
                   />
-                  <Text style={[styles.paymentMethodTextLarge, { color: selectedJob.payment_method === 'cash' ? '#F59E0B' : '#10B981' }]}>
+                  <Text style={[styles.paymentMethodTextLarge, { color: selectedJob.payment_method === 'cash' ? Colors.warning : Colors.success }]}>
                     {selectedJob.payment_method === 'cash' ? 'CASH' : 
                      selectedJob.payment_method === 'curlec_card' || selectedJob.payment_method === 'card' ? 'CARD' : 
                      selectedJob.payment_method === 'curlec_fpx' ? 'FPX' : 'ONLINE'}
@@ -1512,7 +1522,7 @@ export default function PartnerJobsScreen() {
                   <View style={styles.priceDivider} />
                   <View style={styles.priceRow}>
                     <Text style={styles.priceTotalLabel}>You'll Earn</Text>
-                    <Text style={[styles.priceTotalValue, { color: '#7E3AF2' }]}>
+                    <Text style={[styles.priceTotalValue, { color: Colors.primary }]}>
                       RM {(((selectedJob.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.85) + (selectedJob.travelCost || 0)).toFixed(2)}
                     </Text>
                   </View>
@@ -1785,14 +1795,14 @@ export default function PartnerJobsScreen() {
                 <View style={styles.priceDivider} />
                 <View style={styles.priceRow}>
                   <Text style={styles.priceTotalLabel}>You'll Earn</Text>
-                  <Text style={[styles.priceTotalValue, { color: '#7E3AF2' }]}>
+                  <Text style={[styles.priceTotalValue, { color: Colors.primary }]}>
                     RM {(((selectedJob?.services?.reduce((sum, s) => sum + s.price, 0) || 0) * 0.85) + (selectedJob?.travelCost || 0)).toFixed(2)}
                   </Text>
                 </View>
               </View>
               {selectedJob?.payment_method === 'cash' && (
                 <View style={styles.cashNotice}>
-                  <Ionicons name="cash-outline" size={20} color="#F59E0B" />
+                  <Ionicons name="cash-outline" size={20} color={Colors.warning} />
                   <Text style={styles.cashNoticeText}>
                     💵 Collect RM {selectedJob?.totalPrice} cash from customer
                   </Text>
@@ -2301,11 +2311,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF8E1',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderColor: Colors.warning,
   },
   cashNoticeText: {
     ...TYPOGRAPHY.body.regular,
-    color: '#F59E0B',
+    color: Colors.warning,
     fontWeight: '600',
     flex: 1,
   },
@@ -2765,20 +2775,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     gap: 6,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: Colors.successLight,
   },
   paymentMethodCash: {
-    backgroundColor: '#FFF4E5',
+    backgroundColor: Colors.warningLight,
   },
   paymentMethodText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#7E3AF2',
+    color: Colors.success,
     letterSpacing: 0.5,
   },
   paymentInstructionText: {
     ...TYPOGRAPHY.body.small,
-    color: '#F59E0B',
+    color: Colors.warning,
     fontWeight: '600',
     fontStyle: 'italic',
   },

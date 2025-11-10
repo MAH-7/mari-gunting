@@ -7,6 +7,7 @@ import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { Colors, theme } from '@mari-gunting/shared/theme';
 
 const MALAYSIAN_BANKS = [
   { code: 'maybank', name: 'Maybank' },
@@ -337,11 +338,11 @@ export default function PayoutScreen() {
             activeOpacity={0.8}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={Colors.white} />
             ) : (
               <>
                 <Text style={styles.submitButtonText}>Verify Bank Account</Text>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Ionicons name="arrow-forward" size={20} color={Colors.white} />
               </>
             )}
           </TouchableOpacity>
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
@@ -522,11 +523,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: Colors.warningLight,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FCD34D',
+    borderColor: Colors.rating.filled,
   },
   noticeText: {
     ...TYPOGRAPHY.body.small,
@@ -558,7 +559,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     ...TYPOGRAPHY.body.large,
-    color: '#FFFFFF',
+    color: Colors.white,
     fontWeight: '700',
   },
   footerText: {
