@@ -75,7 +75,14 @@ class LocationTrackingService {
       async (location) => {
         try {
           const now = Date.now();
-          // No throttle needed - timeInterval already controls frequency
+          const minInterval = mode === 'on-the-way' ? 5000 : 10000; // 5s when traveling, 10s when idle
+          
+          // Throttle updates to prevent overwhelming the database
+          if (now - this.lastLocationUpdate < minInterval) {
+            console.log(`⏱️ Skipping update - too soon (${now - this.lastLocationUpdate}ms < ${minInterval}ms)`);
+            return;
+          }
+          
           this.lastLocationUpdate = now;
 
           const malaysiaTime = new Date().toLocaleString('en-MY', { 
@@ -191,9 +198,9 @@ class LocationTrackingService {
         })
         .eq('id', userId);
       
-      // Add 5 second timeout
+      // Add 15 second timeout for mobile networks
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database update timeout')), 5000)
+        setTimeout(() => reject(new Error('Database update timeout')), 15000)
       );
       
       const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
@@ -270,9 +277,9 @@ class LocationTrackingService {
         })
         .eq('id', userId);
       
-      // Add 5 second timeout
+      // Add 15 second timeout for mobile networks
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database update timeout')), 5000)
+        setTimeout(() => reject(new Error('Database update timeout')), 15000)
       );
       
       const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;

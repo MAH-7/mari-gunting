@@ -54,13 +54,26 @@ export default function BarbersScreen() {
   const lastRefetchTimestampRef = useRef<number>(0);
   const processedEventsRef = useRef<Set<string>>(new Set());
   const isScreenActiveRef = useRef<boolean>(true);
+  const [hasCheckedLocation, setHasCheckedLocation] = useState(false);
 
   // Get user location on mount
   useEffect(() => {
     if (hasPermission) {
       getCurrentLocation();
     }
+    // Mark that we've attempted to get location
+    const timer = setTimeout(() => setHasCheckedLocation(true), 1000);
+    return () => clearTimeout(timer);
   }, [hasPermission, getCurrentLocation]);
+
+  // GRAB STANDARD: Redirect if no location after checking
+  useEffect(() => {
+    // Wait for initial location check to complete
+    if (hasCheckedLocation && !location && hasPermission === false) {
+      console.log('🚫 No location permission - redirecting to home');
+      router.replace('/(tabs)/');
+    }
+  }, [hasCheckedLocation, location, hasPermission]);
 
   const {
     data: barbersResponse,

@@ -187,13 +187,8 @@ export default function HomeScreen() {
   };
 
   const handleNavigateToBarbershops = () => {
-    if (locationStatus === 'granted') {
-      router.push('/barbershops');
-    } else {
-      // Show location permission modal first
-      setShowLocationModal(true);
-      console.log('🚫 Location required - showing permission modal');
-    }
+    // Barbershops don't require location (distance is optional filter)
+    router.push('/barbershops');
   };
 
   // Handle banner click
