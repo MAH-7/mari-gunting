@@ -127,6 +127,25 @@ export default function VerifyOTPScreen() {
       } else {
         // Existing user - save to store and navigate to main app
         if (response.data?.user) {
+          const userRoles = response.data.user.roles || [response.data.user.role];
+          
+          // Auto-add 'customer' role if not present (for partners logging into customer app)
+          if (!userRoles.includes('customer')) {
+            console.log('ℹ️ Auto-adding customer role for partner user:', response.data.user.id);
+            
+            const updatedRoles = [...userRoles, 'customer'];
+            
+            // Update roles in database
+            await authService.updateProfile(response.data.user.id, {
+              roles: updatedRoles,
+            });
+            
+            console.log('✅ Customer role added. User now has roles:', updatedRoles);
+            
+            // Update local user object with new roles
+            response.data.user.roles = updatedRoles;
+          }
+          
           setCurrentUser({
             id: response.data.user.id,
             full_name: response.data.user.full_name,
@@ -142,7 +161,10 @@ export default function VerifyOTPScreen() {
         Alert.alert(
           'Welcome Back!',
           'Login successful',
-          [{ text: 'Continue', onPress: () => router.replace('/(tabs)') }]
+          [{ text: 'Continue', onPress: () => {
+            router.dismissAll();
+            router.replace('/(tabs)');
+          } }]
         );
       }
     } catch (error: any) {

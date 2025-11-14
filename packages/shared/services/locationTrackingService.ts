@@ -158,15 +158,52 @@ class LocationTrackingService {
       return;
     }
 
-  console.log(`🔄 Switching tracking mode: ${this.currentMode} → ${newMode}`);
+    console.log(`🔄 Switching tracking mode: ${this.currentMode} → ${newMode}`);
 
-  // Stop current tracking
-  await this.stopTracking();
-
-  // Start with new mode
-  await this.startTracking(userId, newMode);
-
-    console.log('✅ Mode switched successfully');
+    // CRITICAL FIX: Don't stop everything - just restart background tracking with new settings
+    // Keep foreground watcher alive to maintain heartbeat during transition
+    const oldMode = this.currentMode;
+    this.currentMode = newMode; // Update mode immediately
+    
+    try {
+      // Stop and restart background tracking with new mode settings
+      // This keeps foreground tracking alive so heartbeat continues
+      await this.stopBackgroundLocationTracking();
+      await this.startBackgroundLocationTracking(userId, newMode);
+      
+      // Update tracking interval for foreground watcher
+      if (this.trackingInterval) {
+        clearInterval(this.trackingInterval);
+        this.trackingInterval = null;
+      }
+      
+      // Restart foreground interval with new frequency
+      const intervalMs = this.updateIntervalMs[newMode];
+      this.trackingInterval = setInterval(async () => {
+        if (!this.isTracking || !this.currentUserId) return;
+        
+        try {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: newMode === 'on-the-way' ? Location.Accuracy.High : Location.Accuracy.Balanced,
+          });
+          
+          await this.updateLocationFromCoords(
+            this.currentUserId,
+            location.coords,
+            newMode
+          );
+        } catch (err) {
+          console.error('❌ Foreground location error during mode switch:', err);
+        }
+      }, intervalMs);
+      
+      console.log(`✅ Mode switched successfully: ${oldMode} → ${newMode}`);
+    } catch (error) {
+      console.error('❌ Error switching mode:', error);
+      // Revert mode on error
+      this.currentMode = oldMode;
+      throw error;
+    }
   }
 
   /**

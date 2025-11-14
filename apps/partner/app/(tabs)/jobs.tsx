@@ -789,15 +789,26 @@ export default function PartnerJobsScreen() {
       const travelCost = selectedJob.travelCost || 0;
       const actualEarnings = (servicesTotal * 0.85) + travelCost;
       
-      const paymentMessage = selectedJob.payment_method === 'cash' 
-        ? 'Cash collected from customer' 
-        : 'will be credited to your account';
+      // Payment message based on method
+      const isCash = selectedJob.payment_method === 'cash';
+      const isCardPayment = ['card', 'curlec_card', 'curlec_fpx'].includes(selectedJob.payment_method);
+      
+      let alertTitle = 'Job Completed! 🎉';
+      let alertMessage = '';
+      
+      if (isCash) {
+        alertMessage = `Great work! You earned RM ${actualEarnings.toFixed(2)}\n\n✅ Cash collected from customer\n💰 Available immediately in your earnings`;
+      } else if (isCardPayment) {
+        alertMessage = `Great work! You earned RM ${actualEarnings.toFixed(2)}\n\n⏳ Payment is on hold pending customer confirmation\n💰 Funds will be available after customer rates the service or auto-confirms in 2 hours`;
+      } else {
+        alertMessage = `Great work! You earned RM ${actualEarnings.toFixed(2)}\n\nPayment will be credited to your account.`;
+      }
 
       setIsSubmitting(false);
       
       Alert.alert(
-        'Job Completed! 🎉',
-        `Great work! You earned RM ${actualEarnings.toFixed(2)} ${paymentMessage}.`,
+        alertTitle,
+        alertMessage,
         [
           {
             text: 'Done',
@@ -1467,8 +1478,12 @@ export default function PartnerJobsScreen() {
                   </View>
                 )}
                 
-                {/* Navigation Button - Only show after accepting */}
-                {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && (
+                {/* Navigation Button - Only show after payment confirmed */}
+                {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && 
+                 // Don't show if waiting for payment
+                 !(selectedJob.status === 'accepted' && 
+                   ['card', 'curlec_card', 'curlec_fpx'].includes(selectedJob.payment_method) && 
+                   selectedJob.payment_status !== 'authorized') && (
                   <TouchableOpacity 
                     style={styles.directionsButton}
                     onPress={() => handleGetDirections(

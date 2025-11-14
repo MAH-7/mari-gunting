@@ -80,6 +80,7 @@ export default function GrabEarningsScreen() {
     useCallback(() => {
       if (barberId) {
         refetch();
+        fetchAvailableBalance(); // Also refresh available balance
       }
     }, [barberId, refetch])
   );
@@ -164,6 +165,7 @@ export default function GrabEarningsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await refetch();
+    await fetchAvailableBalance(); // Also refresh available balance
     setRefreshing(false);
   };
 

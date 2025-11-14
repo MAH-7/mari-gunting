@@ -211,6 +211,7 @@ export default function VerifyOTPScreen() {
       // Always navigate to index - it will check verification status and route appropriately
       // This handles: account setup incomplete, onboarding incomplete, pending approval, etc.
       console.log('➡️ Navigating to index for proper routing...');
+      router.dismissAll();
       router.replace('/');
     } catch (error: any) {
       console.error('OTP verification error:', error);

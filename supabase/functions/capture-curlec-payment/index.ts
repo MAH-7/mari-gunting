@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const CURLEC_API_URL = 'https://api.razorpay.com/v1'
 
@@ -25,7 +26,7 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { payment_id, amount, currency = 'MYR' } = await req.json()
+    const { payment_id, amount, currency = 'MYR', booking_id } = await req.json()
 
     if (!payment_id) {
       throw new Error('payment_id is required')
@@ -74,6 +75,35 @@ serve(async (req) => {
     console.log('[Curlec Capture] Payment ID:', payment.id)
     console.log('[Curlec Capture] Status:', payment.status)
     console.log('[Curlec Capture] Amount captured:', payment.amount_refunded ? payment.amount - payment.amount_refunded : payment.amount)
+
+    // Update booking payment_status in database (if booking_id provided)
+    if (booking_id) {
+      try {
+        console.log('[Curlec Capture] Updating booking payment status...')
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+        const { error: updateError } = await supabase
+          .from('bookings')
+          .update({ 
+            payment_status: 'completed',
+            paid_at: new Date().toISOString()
+          })
+          .eq('id', booking_id)
+          .eq('curlec_payment_id', payment_id) // Safety check
+
+        if (updateError) {
+          console.error('[Curlec Capture] Failed to update booking:', updateError)
+          // Don't fail the whole operation - capture succeeded
+        } else {
+          console.log('[Curlec Capture] Booking payment status updated to completed')
+        }
+      } catch (dbError) {
+        console.error('[Curlec Capture] Database update exception:', dbError)
+        // Don't fail the whole operation - capture succeeded
+      }
+    }
 
     return new Response(
       JSON.stringify({ 

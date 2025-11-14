@@ -916,6 +916,7 @@ export const bookingService = {
               body: {
                 payment_id: data.curlec_payment_id,
                 amount: Math.round(data.amount * 100), // Convert to sen
+                booking_id: bookingId, // Pass booking_id so Edge Function can update DB
               },
             }
           );
@@ -930,15 +931,7 @@ export const bookingService = {
 
           if (captureData?.success) {
             console.log('✅ Payment captured immediately');
-
-            // Update payment status to completed
-            await supabase
-              .from('bookings')
-              .update({ 
-                payment_status: 'completed',
-                paid_at: new Date().toISOString()
-              })
-              .eq('id', bookingId);
+            console.log('✅ Payment status updated by Edge Function');
 
             return {
               success: true,

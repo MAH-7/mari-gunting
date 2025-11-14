@@ -295,8 +295,8 @@ export default function BookingDetailScreen() {
         description: 'Barber will arrive at scheduled time'
       },
       on_the_way: { 
-        color: Colors.status.ready, 
-        bg: '#F3E8FF', 
+        color: '#6366F1', 
+        bg: '#E0E7FF', 
         label: 'On The Way',
         iconName: 'car' as const,
         description: 'Your barber is heading to your location'

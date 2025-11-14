@@ -11,6 +11,8 @@ import BookingFilterModal, { BookingFilterOptions } from '@/components/BookingFi
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
+import { curlecService } from '@mari-gunting/shared/services/curlecService';
+import RazorpayCheckout from 'react-native-razorpay';
 import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
 
 export default function BookingsScreen() {
@@ -351,6 +353,7 @@ export default function BookingsScreen() {
 function BookingCard({ booking }: { booking: any }) {
   const currentUser = useStore((state) => state.currentUser);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
   // Helper to display user-friendly payment method names
   const getPaymentMethodDisplay = (method: string) => {
@@ -425,15 +428,15 @@ function BookingCard({ booking }: { booking: any }) {
         progress: 60
       },
       'on-the-way': {
-        color: Colors.status.ready, 
-        bg: '#F3E8FF', 
+        color: '#6366F1', 
+        bg: '#E0E7FF', 
         label: 'On The Way',
         iconName: 'car' as const,
         progress: 65
       },
       on_the_way: {
-        color: Colors.status.ready, 
-        bg: '#F3E8FF', 
+        color: '#6366F1', 
+        bg: '#E0E7FF', 
         label: 'On The Way',
         iconName: 'car' as const,
         progress: 65
@@ -461,7 +464,7 @@ function BookingCard({ booking }: { booking: any }) {
       },
       completed: { 
         color: Colors.success, 
-        bg: getStatusBackground("ready"), 
+        bg: Colors.successLight, 
         label: 'Completed',
         iconName: 'checkmark-circle' as const,
         progress: 100
@@ -602,7 +605,8 @@ function BookingCard({ booking }: { booking: any }) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <View style={styles.totalSection}>
+          {/* Total Section - Full Width */}
+          <View style={styles.totalSectionFull}>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
               {/* Payment Method Badge */}
@@ -632,8 +636,107 @@ function BookingCard({ booking }: { booking: any }) {
             </TouchableOpacity>
           )}
           
-          {/* Cancel Button */}
+          {/* Action Buttons Row */}
           {(mappedBooking.status === 'pending' || mappedBooking.status === 'accepted') && (
+            <View style={styles.actionButtonsRow}>
+              {/* Complete Payment Button - Show for accepted bookings with pending payment */}
+              {mappedBooking.status === 'accepted' && (booking.payment_status === 'pending' || booking.payment_status === 'pending_payment') ? (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.actionButtonPrimary]} 
+              activeOpacity={0.8}
+              disabled={isProcessingPayment}
+              onPress={async () => {
+                if (!currentUser?.id) return;
+                
+                setIsProcessingPayment(true);
+                try {
+                  // Create Curlec order for this booking
+                  const order = await curlecService.createOrder({
+                    amount: booking.total_price,
+                    receipt: `booking_${booking.booking_number}`,
+                    notes: {
+                      customer_id: currentUser.id,
+                      barber_id: booking.barber_id,
+                      booking_id: booking.id,
+                      payment_method: booking.payment_method || 'card',
+                    },
+                  });
+
+                  // Get user profile for payment prefill
+                  const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name, email, phone_number')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                  // Prepare checkout options
+                  const checkoutOptions = curlecService.prepareCheckoutOptions(order, {
+                    customerName: profile?.full_name,
+                    customerEmail: profile?.email,
+                    customerContact: profile?.phone_number,
+                    description: `Booking #${booking.booking_number}`,
+                    bookingId: booking.id,
+                    barberId: booking.barber_id,
+                    customerId: currentUser.id,
+                    serviceName: 'Barber Services',
+                  });
+
+                  // Open payment popup
+                  RazorpayCheckout.open(checkoutOptions)
+                    .then(async (data: any) => {
+                      // Payment successful - link to booking
+                      const verified = await curlecService.verifyPayment({
+                        razorpay_order_id: data.razorpay_order_id,
+                        razorpay_payment_id: data.razorpay_payment_id,
+                        razorpay_signature: data.razorpay_signature,
+                      });
+
+                      if (!verified) {
+                        throw new Error('Payment verification failed');
+                      }
+
+                      // Link payment to booking
+                      const linkResult = await bookingService.linkPaymentToBooking(
+                        booking.id,
+                        currentUser.id,
+                        data.razorpay_payment_id,
+                        data.razorpay_order_id
+                      );
+
+                      if (!linkResult.success) {
+                        throw new Error(linkResult.error || 'Failed to link payment');
+                      }
+
+                      Alert.alert('Payment Successful', 'Your booking is confirmed!', [
+                        { text: 'OK', onPress: () => router.push(`/booking/${booking.id}` as any) }
+                      ]);
+                      setIsProcessingPayment(false);
+                    })
+                    .catch((error: any) => {
+                      console.error('[Payment Retry] Payment failed:', error);
+                      Alert.alert(
+                        'Payment Failed',
+                        'Payment was not completed. Please try again.',
+                        [{ text: 'OK' }]
+                      );
+                      setIsProcessingPayment(false);
+                    });
+                } catch (error: any) {
+                  console.error('[Payment Retry] Error:', error);
+                  Alert.alert('Error', error.message || 'Failed to process payment');
+                  setIsProcessingPayment(false);
+                }
+              }}
+            >
+              {isProcessingPayment ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <Text style={styles.actionButtonTextPrimary}>Complete Payment</Text>
+              )}
+            </TouchableOpacity>
+              ) : null}
+              
+              {/* Cancel Button */}
             <TouchableOpacity 
               style={styles.actionButton} 
               activeOpacity={0.8}
@@ -683,6 +786,7 @@ function BookingCard({ booking }: { booking: any }) {
                 <Text style={styles.actionButtonText}>Cancel</Text>
               )}
             </TouchableOpacity>
+            </View>
           )}
           
           {/* Rate Button - Hide if disputed (only if field exists in data) */}
@@ -690,7 +794,23 @@ function BookingCard({ booking }: { booking: any }) {
             <TouchableOpacity 
               style={[styles.actionButton, styles.actionButtonPrimary]} 
               activeOpacity={0.8}
-              onPress={() => router.push(`/booking/review/${mappedBooking.id}` as any)}
+              onPress={async () => {
+                // Auto-confirm service if not yet confirmed (Grab standard)
+                if (!booking.completion_confirmed_at && !booking.disputed_at) {
+                  console.log('⭐ Rating from card = Auto-confirming service...');
+                  const confirmResult = await bookingService.confirmServiceCompletion(
+                    mappedBooking.id,
+                    currentUser?.id || ''
+                  );
+                  if (!confirmResult.success) {
+                    Alert.alert('Error', confirmResult.error || 'Failed to confirm service');
+                    return;
+                  }
+                  console.log('✅ Service auto-confirmed via rating from card');
+                }
+                // Navigate to rating screen
+                router.push(`/booking/review/${mappedBooking.id}` as any);
+              }}
             >
               <Text style={styles.actionButtonTextPrimary}>Rate</Text>
             </TouchableOpacity>
@@ -1020,12 +1140,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.gray[100],
+    gap: 12,
+  },
+  totalSectionFull: {
+    marginBottom: 12,
   },
   totalSection: {},
   totalRow: {
@@ -1074,9 +1195,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.white,
   },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 2,
     borderColor: Colors.gray[200],
