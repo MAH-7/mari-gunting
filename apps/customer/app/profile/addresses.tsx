@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#DDD6FE',
+    borderColor: Colors.primaryBorder,
   },
   iconCircleDefault: {
     backgroundColor: Colors.primary,

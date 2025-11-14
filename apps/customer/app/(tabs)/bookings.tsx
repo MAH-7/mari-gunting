@@ -685,8 +685,8 @@ function BookingCard({ booking }: { booking: any }) {
             </TouchableOpacity>
           )}
           
-          {/* Rate Button */}
-          {mappedBooking.status === 'completed' && !mappedBooking.review && (
+          {/* Rate Button - Hide if disputed (only if field exists in data) */}
+          {mappedBooking.status === 'completed' && !mappedBooking.review && !(booking.disputed_at) && (
             <TouchableOpacity 
               style={[styles.actionButton, styles.actionButtonPrimary]} 
               activeOpacity={0.8}

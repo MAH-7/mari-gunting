@@ -345,14 +345,14 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#86EFAC',
+    borderColor: Colors.primaryBorder,
     padding: 10,
     borderRadius: 10,
     marginBottom: 14,
   },
   coordsText: {
     fontSize: 13,
-    color: '#065F46',
+    color: Colors.primaryText,
     fontWeight: '600',
   },
   coordsSpacer: {
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
   coordsOk: {
     fontSize: 12,
-    color: '#065F46',
+    color: Colors.primaryText,
   },
   formGroup: {
     marginBottom: 12,

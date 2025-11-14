@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, Linking, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { formatCurrency, formatPrice, formatShortDate, formatTime, formatLocalTime, formatLocalDate, formatLocalDateTime } from '@mari-gunting/shared/utils/format';
 import { BookingStatus } from '@/types';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import SuccessModal from '@/components/SuccessModal';
@@ -22,6 +22,9 @@ export default function BookingDetailScreen() {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
   
   // Check if this is a Quick Book flow (service not selected yet)
   const isQuickBookFlow = quickBook === 'true';
@@ -91,7 +94,120 @@ export default function BookingDetailScreen() {
     },
   });
 
+  // Confirm service completion mutation
+  const confirmServiceMutation = useMutation({
+    mutationFn: () => {
+      if (!currentUser?.id) throw new Error('Not authenticated');
+      return bookingService.confirmServiceCompletion(id, currentUser.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['booking', id] });
+      // Navigation happens in the button's onPress after timeout
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.message || 'Failed to confirm service');
+    },
+  });
+
+  // Report issue mutation
+  const reportIssueMutation = useMutation({
+    mutationFn: (reason: string) => {
+      if (!currentUser?.id) throw new Error('Not authenticated');
+      return bookingService.reportServiceIssue(id, currentUser.id, reason);
+    },
+    onSuccess: (response) => {
+      if (response.success) {
+        setShowDisputeModal(false);
+        setDisputeReason('');
+        Alert.alert(
+          'Issue Reported', 
+          'Your concern has been submitted. Our admin will review and contact you within 24 hours.',
+          [{ text: 'OK' }]
+        );
+        queryClient.invalidateQueries({ queryKey: ['booking', id] });
+      }
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.message || 'Failed to report issue');
+    },
+  });
+
   const booking = bookingResponse?.data;
+  
+  // Calculate time remaining for auto-confirmation (MUST be before any early returns)
+  useEffect(() => {
+    if (!booking) return;
+    
+    // Only show timer if booking is completed but not confirmed/disputed
+    if (
+      booking.status === 'completed' &&
+      !booking.completion_confirmed_at &&
+      !booking.disputed_at &&
+      booking.payment_status === 'authorized'
+    ) {
+      // Calculate time remaining based on completed_at + 2 hours
+      const calculateTimeRemaining = () => {
+        if (!booking.completed_at) return 0;
+        
+        const completedTime = new Date(booking.completed_at).getTime();
+        const autoConfirmTime = completedTime + (2 * 60 * 60 * 1000); // +2 hours
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((autoConfirmTime - now) / 1000)); // in seconds
+        
+        return remaining;
+      };
+      
+      // Initial calculation
+      setTimeRemaining(calculateTimeRemaining());
+      
+      // Update every second
+      const timer = setInterval(() => {
+        const remaining = calculateTimeRemaining();
+        setTimeRemaining(remaining);
+        
+        if (remaining <= 0) {
+          clearInterval(timer);
+          // Refresh booking to get updated status from cron job
+          queryClient.invalidateQueries({ queryKey: ['booking', id] });
+        }
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    } else {
+      setTimeRemaining(0);
+    }
+  }, [booking, id, queryClient]);
+
+  // Format time remaining as human-readable
+  const formatTimeRemaining = (seconds: number) => {
+    if (seconds <= 0) return 'Processing...';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  // Get timer color based on urgency (Grab style)
+  const getTimerColor = (seconds: number) => {
+    if (seconds > 3600) return Colors.success; // > 1 hour: green
+    if (seconds > 1800) return Colors.warning; // 30min - 1h: yellow
+    return Colors.error; // < 30min: red
+  };
+
+  // Determine if we should show confirmation card
+  const needsConfirmation = booking && 
+    booking.status === 'completed' &&
+    !booking.completion_confirmed_at &&
+    !booking.disputed_at &&
+    booking.payment_status === 'authorized';
   
   // Fetch barber details to get services and other info (for Quick Book flow)
   const { data: barberResponse } = useQuery({
@@ -115,36 +231,6 @@ export default function BookingDetailScreen() {
     travelFee = 5 + ((distance - 4) * 1);
   }
   travelFee = Math.round(travelFee * 100) / 100; // Round to 2 decimals
-  
-  const confirmServiceMutation = useMutation({
-    mutationFn: (serviceId: string) => {
-      // TODO: Update booking with selected service
-      return Promise.resolve({ success: true });
-    },
-    onSuccess: () => {
-      // Navigate to payment method selection
-      const service = availableServices.find(s => s.id === selectedService);
-      const total = (service?.price || 0) + travelFee;
-      
-      router.push({
-        pathname: '/payment-method',
-        params: {
-          bookingId: booking?.id || '',
-          amount: total.toFixed(2),
-          serviceName: service?.name || '',
-          barberName: booking?.barberName || '',
-        },
-      } as any);
-    },
-  });
-  
-  const handleConfirmService = () => {
-    if (!selectedService) {
-      Alert.alert('Required', 'Please select a service');
-      return;
-    }
-    confirmServiceMutation.mutate(selectedService);
-  };
 
   // Helper to display user-friendly payment method names
   const getPaymentMethodDisplay = (method: string) => {
@@ -275,7 +361,22 @@ export default function BookingDetailScreen() {
     Alert.alert('Coming Soon', 'Chat feature will be available soon');
   };
 
-  const handleRateBarber = () => {
+  const handleRateBarber = async () => {
+    // If service not yet confirmed, auto-confirm first (Grab style)
+    if (!booking.completion_confirmed_at && !booking.disputed_at) {
+      console.log('⭐ Rating = Auto-confirming service...');
+      
+      const confirmResult = await bookingService.confirmServiceCompletion(id, currentUser?.id || '');
+      
+      if (!confirmResult.success) {
+        Alert.alert('Error', confirmResult.error || 'Failed to confirm service');
+        return;
+      }
+      
+      console.log('✅ Service auto-confirmed via rating');
+    }
+    
+    // Navigate to rating screen
     router.push(`/booking/review/${id}` as any);
   };
 
@@ -402,7 +503,8 @@ export default function BookingDetailScreen() {
 
   const statusConfig = getStatusConfig(booking.status);
   const canCancel = booking.status === 'pending' || booking.status === 'accepted';
-  const canRate = booking.status === 'completed' && !booking.review;
+  // Can rate if completed, no review, and NOT disputed
+  const canRate = booking.status === 'completed' && !booking.review && !booking.disputed_at;
   
   // Smart contact button logic - Chat only for now
   const canChat = ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(booking.status);
@@ -600,32 +702,131 @@ export default function BookingDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status Card */}
-        <View style={[styles.statusCard, { backgroundColor: statusConfig.bg }]}>
-          <Ionicons name={statusConfig.iconName} size={48} color={statusConfig.color} style={styles.statusIcon} />
-          <Text style={[styles.statusLabel, { color: statusConfig.color }]}>
-            {statusConfig.label}
-          </Text>
-          <Text style={styles.statusDescription}>{statusConfig.description}</Text>
-          <Text style={styles.bookingId}>Booking #{booking.booking_number || booking.id.slice(-8).toUpperCase()}</Text>
-          
-          {/* Service Type Badge */}
-          <View style={styles.serviceTypeBadge}>
-            <Ionicons 
-              name={booking.service_type === 'home_service' ? 'home' : 'storefront'} 
-              size={14} 
-              color={Colors.gray[500]}             />
-            <Text style={styles.serviceTypeText}>
-              {booking.service_type === 'home_service' ? 'Home Service' : 'Walk-in'}
+        {/* Status Card - Modified for pending confirmation */}
+        {!needsConfirmation ? (
+          <View style={[styles.statusCard, { backgroundColor: statusConfig.bg }]}>
+            <Ionicons name={statusConfig.iconName} size={48} color={statusConfig.color} style={styles.statusIcon} />
+            <Text style={[styles.statusLabel, { color: statusConfig.color }]}>
+              {statusConfig.label}
+            </Text>
+            <Text style={styles.statusDescription}>{statusConfig.description}</Text>
+            <Text style={styles.bookingId}>Booking #{booking.booking_number || booking.id.slice(-8).toUpperCase()}</Text>
+            
+            {/* Service Type Badge */}
+            <View style={styles.serviceTypeBadge}>
+              <Ionicons 
+                name={booking.service_type === 'home_service' ? 'home' : 'storefront'} 
+                size={14} 
+                color={Colors.gray[500]}             />
+              <Text style={styles.serviceTypeText}>
+                {booking.service_type === 'home_service' ? 'Home Service' : 'Walk-in'}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.statusCard, { backgroundColor: '#FEF3C7' }]}>
+            <Ionicons name="time-outline" size={48} color={Colors.warning} style={styles.statusIcon} />
+            <Text style={[styles.statusLabel, { color: Colors.warning }]}>
+              AWAITING CONFIRMATION
+            </Text>
+            <Text style={styles.statusDescription}>Service completed - please confirm below</Text>
+            <Text style={styles.bookingId}>Booking #{booking.booking_number || booking.id.slice(-8).toUpperCase()}</Text>
+          </View>
+        )}
+
+        {/* Service Completion Confirmation - New Compact Design */}
+        {needsConfirmation && timeRemaining > 0 && (
+          <View style={styles.confirmationCard}>
+            {/* Header */}
+            <View style={styles.confirmHeader}>
+              <View style={[styles.timerDot, { backgroundColor: getTimerColor(timeRemaining) }]} />
+              <Text style={styles.confirmHeaderTitle}>Service Completed</Text>
+            </View>
+
+            {/* Description */}
+            <Text style={styles.confirmDescription}>
+              Rate your experience or report an issue.
+            </Text>
+
+            {/* Action Buttons - Side by Side */}
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                onPress={() => {
+                  confirmServiceMutation.mutate();
+                  setTimeout(() => {
+                    if (!booking.disputed_at) {
+                      router.push(`/booking/review/${id}` as any);
+                    }
+                  }, 1500);
+                }}
+                disabled={confirmServiceMutation.isPending}
+              >
+                {confirmServiceMutation.isPending ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <>
+                    <Ionicons name="star" size={18} color={Colors.white} />
+                    <Text style={styles.confirmBtnText}>Rate Now</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.reportBtn}
+                onPress={() => setShowDisputeModal(true)}
+                disabled={reportIssueMutation.isPending}
+              >
+                <Ionicons name="flag-outline" size={18} color={Colors.error} />
+                <Text style={styles.reportBtnText}>Report</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Info Text with Timer */}
+            <View style={styles.confirmInfoContainer}>
+              <Text style={styles.confirmInfo}>
+                💡 Auto-confirms if no action taken in{' '}
+                <Text style={[styles.confirmInfoTimer, { color: getTimerColor(timeRemaining) }]}>
+                  {formatTimeRemaining(timeRemaining)}
+                </Text>
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Confirmed Service Notice */}
+        {booking.completion_confirmed_at && (
+          <View style={styles.confirmedCard}>
+            <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
+            <Text style={styles.confirmedText}>
+              Service confirmed on {formatLocalDate(booking.completion_confirmed_at)}
             </Text>
           </View>
-        </View>
+        )}
+
+        {/* Disputed Service Notice */}
+        {booking.disputed_at && (
+          <View style={styles.disputedCard}>
+            <Ionicons name="alert-circle" size={24} color={Colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.disputedTitle}>Issue Reported</Text>
+              <Text style={styles.disputedText}>
+                Your concern is under review. Admin will contact you within 24 hours.
+              </Text>
+              {booking.dispute_reason && (
+                <Text style={styles.disputeReason}>
+                  Reason: {booking.dispute_reason}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Progress Tracker - Grab Style */}
-        {!['cancelled', 'rejected', 'expired'].includes(booking.status) && (
+        {!['completed', 'cancelled', 'rejected', 'expired'].includes(booking.status) && (
           <View style={styles.progressCard}>
             {/* Completed Steps */}
-            {booking.status !== 'pending' && (
+            {booking.status !== 'pending' && booking.status !== 'cancelled' && booking.status !== 'rejected' && booking.status !== 'expired' && (
               <View style={styles.completedSection}>
                 {booking.acceptedAt && (
                   <View style={styles.completedStep}>
@@ -658,16 +859,17 @@ export default function BookingDetailScreen() {
               </View>
             )}
 
-            {/* Current Step - BIG & PROMINENT */}
-            <View style={styles.currentStepContainer}>
-              <View style={[styles.currentStepIcon, { backgroundColor: statusConfig.bg }]}>
-                <Ionicons name={statusConfig.iconName} size={36} color={statusConfig.color} />
-              </View>
-              <View style={styles.currentStepInfo}>
-                <Text style={[styles.currentStepLabel, { color: statusConfig.color }]}>
-                  {statusConfig.label.toUpperCase()}
-                </Text>
-                <Text style={styles.currentStepDescription}>{statusConfig.description}</Text>
+            {/* Current Step - Only show if NOT completed */}
+            {booking.status !== 'completed' && (
+              <View style={styles.currentStepContainer}>
+                <View style={[styles.currentStepIcon, { backgroundColor: statusConfig.bg }]}>
+                  <Ionicons name={statusConfig.iconName} size={36} color={statusConfig.color} />
+                </View>
+                <View style={styles.currentStepInfo}>
+                  <Text style={[styles.currentStepLabel, { color: statusConfig.color }]}>
+                    {statusConfig.label.toUpperCase()}
+                  </Text>
+                  <Text style={styles.currentStepDescription}>{statusConfig.description}</Text>
                 
                 {/* ETA for on_the_way and arrived */}
                 {booking.status === 'on_the_way' && (
@@ -698,8 +900,9 @@ export default function BookingDetailScreen() {
                     </Text>
                   </View>
                 )}
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Next Steps */}
             {booking.status !== 'completed' && (
@@ -1038,6 +1241,7 @@ export default function BookingDetailScreen() {
           )}
         </View>
 
+
       </ScrollView>
 
       {/* Bottom Action Buttons */}
@@ -1070,7 +1274,7 @@ export default function BookingDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {canRate && (
+        {canRate && !needsConfirmation && (
           <TouchableOpacity
             style={styles.rateButton}
             onPress={handleRateBarber}
@@ -1131,6 +1335,40 @@ export default function BookingDetailScreen() {
           icon: 'list-outline',
         }}
       />
+
+      {/* Dispute Modal */}
+      <ConfirmationModal
+        visible={showDisputeModal}
+        onClose={() => {
+          setShowDisputeModal(false);
+          setDisputeReason('');
+        }}
+        title="Report Service Issue"
+        message="Please describe the issue with the service. Our admin will review and contact you."
+        icon="alert-circle"
+        iconColor={Colors.warning}
+        confirmText="Submit Report"
+        cancelText="Cancel"
+        onConfirm={() => {
+          if (disputeReason.trim().length < 10) {
+            Alert.alert('Required', 'Please provide at least 10 characters describing the issue');
+            return;
+          }
+          reportIssueMutation.mutate(disputeReason);
+        }}
+        isDestructive={false}
+        isLoading={reportIssueMutation.isPending}
+      >
+        <TextInput
+          style={styles.disputeInput}
+          placeholder="Describe the issue (minimum 10 characters)"
+          value={disputeReason}
+          onChangeText={setDisputeReason}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+      </ConfirmationModal>
     </SafeAreaView>
   );
 }
@@ -1910,5 +2148,178 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: Colors.gray[400],
+  },
+  // Service Completion Confirmation Styles - New Compact Design
+  confirmationCard: {
+    backgroundColor: Colors.white,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  confirmHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  timerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  confirmHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text.primary,
+  },
+  confirmDescription: {
+    fontSize: 13,
+    color: Colors.text.secondary,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  confirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 6,
+  },
+  confirmBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  reportBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.error,
+    gap: 6,
+  },
+  reportBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.error,
+  },
+  confirmInfoContainer: {
+    alignItems: 'center',
+  },
+  confirmInfo: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+  confirmInfoTimer: {
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.error,
+    gap: 8,
+  },
+  reportButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.error,
+  },
+  reportButtonLink: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 12,
+  },
+  reportButtonLinkText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.error,
+    marginBottom: 6,
+  },
+  reportButtonSubtext: {
+    fontSize: 12,
+    color: Colors.gray[500],
+  },
+  confirmationNote: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  confirmedCard: {
+    backgroundColor: Colors.successLight,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  confirmedText: {
+    fontSize: 14,
+    color: Colors.success,
+    fontWeight: '600',
+  },
+  disputedCard: {
+    backgroundColor: '#FEF3C7',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  disputedTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#92400E',
+    marginBottom: 4,
+  },
+  disputedText: {
+    fontSize: 14,
+    color: '#78350F',
+    lineHeight: 20,
+  },
+  disputeReason: {
+    fontSize: 13,
+    color: '#92400E',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  disputeInput: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.gray[300],
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: Colors.text.primary,
+    minHeight: 100,
+    marginTop: 12,
   },
 });

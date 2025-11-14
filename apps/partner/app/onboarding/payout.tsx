@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#86EFAC',
+    borderColor: Colors.primaryBorder,
   },
   securityTextContainer: {
     flex: 1,
@@ -481,12 +481,12 @@ const styles = StyleSheet.create({
   securityTitle: {
     ...TYPOGRAPHY.body.medium,
     fontWeight: '600',
-    color: '#166534',
+    color: Colors.primaryText,
     marginBottom: 4,
   },
   securityText: {
     ...TYPOGRAPHY.body.small,
-    color: '#166534',
+    color: Colors.primaryText,
     lineHeight: 18,
   },
   infoCard: {

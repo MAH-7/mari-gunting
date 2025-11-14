@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
     borderWidth: 2,
-    borderColor: '#86EFAC',
+    borderColor: Colors.primaryBorder,
     borderRadius: 12,
     padding: 16,
   },
@@ -497,14 +497,14 @@ const styles = StyleSheet.create({
   },
   roleLabel: {
     fontSize: 12,
-    color: '#065F46',
+    color: Colors.primaryText,
     fontWeight: '500',
     marginBottom: 2,
   },
   roleValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#065F46',
+    color: Colors.primaryText,
   },
   changeText: {
     fontSize: 14,

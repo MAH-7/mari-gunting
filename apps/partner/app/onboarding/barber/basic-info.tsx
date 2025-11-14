@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 24,
   },
   content: {
@@ -344,8 +344,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   experienceButtonActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   experienceButtonText: {
     fontSize: 14,
@@ -369,8 +369,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   specializationChipActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   specializationChipText: {
     fontSize: 14,
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,

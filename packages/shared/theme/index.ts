@@ -12,6 +12,8 @@ export const Colors = {
   primary: "#F97316",
   primaryDark: "#EA580C",
   primaryLight: "#FED7AA",
+  primaryBorder: "#FDBA74", // Medium orange for borders
+  primaryText: "#9A3412", // Dark orange for text on light backgrounds
 
   // Secondary Colors
   secondary: "#1E293B",

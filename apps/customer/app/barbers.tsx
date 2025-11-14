@@ -614,7 +614,7 @@ export default function BarbersScreen() {
           </View>
         )}
 
-        {!location ? (
+        {!location && hasPermission === false ? (
           // Location Required State (Fallback safety net)
           <View style={styles.emptyState}>
             <View style={styles.locationRequiredIcon}>

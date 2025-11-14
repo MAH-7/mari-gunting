@@ -162,12 +162,19 @@ class LocationService {
         }
       }
 
+      // GRAB STANDARD: Return cached location immediately if fresh
+      const cached = this.getFreshCachedLocation();
+      if (cached) {
+        console.log('📍 Using cached location (fresh within 60s)');
+        return cached;
+      }
+
       // Get location with timeout and cache
-      // Use lower accuracy and longer timeout for Android emulator compatibility
+      console.log('📍 Fetching fresh GPS location...');
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Platform.OS === 'android' ? Location.Accuracy.Low : Location.Accuracy.Balanced,
-        maximumAge: 30000, // Use cached location if less than 30 seconds old (better for emulator)
-        timeout: 30000, // Timeout after 30 seconds (Android emulator needs more time)
+        accuracy: Location.Accuracy.Balanced,
+        maximumAge: 10000, // Use cached location if less than 10 seconds old
+        timeout: 15000, // Timeout after 15 seconds
       });
 
       // Validate location accuracy

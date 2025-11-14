@@ -28,6 +28,7 @@ interface ConfirmationModalProps {
   onConfirm: () => void;
   isDestructive?: boolean;
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 export default function ConfirmationModal({
@@ -42,6 +43,7 @@ export default function ConfirmationModal({
   onConfirm,
   isDestructive = false,
   isLoading = false,
+  children,
 }: ConfirmationModalProps) {
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -135,6 +137,9 @@ export default function ConfirmationModal({
               {/* Message */}
               <Text style={styles.message}>{message}</Text>
 
+              {/* Children (for custom content like TextInput) */}
+              {children && <View style={styles.childrenContainer}>{children}</View>}
+
               {/* Buttons */}
               <View style={styles.buttonContainer}>
                 {/* Confirm Button */}
@@ -213,8 +218,12 @@ const styles = StyleSheet.create({
     color: Colors.gray[500],
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 32,
+    marginBottom: 24,
     paddingHorizontal: 8,
+  },
+  childrenContainer: {
+    width: '100%',
+    marginBottom: 24,
   },
   buttonContainer: {
     width: '100%',

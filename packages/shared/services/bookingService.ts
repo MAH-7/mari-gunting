@@ -410,48 +410,30 @@ export const bookingService = {
       // RPC returns payment_status as 'returned_payment_status' to avoid SQL ambiguity
       const paymentStatus = result?.returned_payment_status || result?.payment_status;
       
-      console.log('[Capture Debug] New status:', newStatus);
-      console.log('[Capture Debug] Result payment_status:', paymentStatus);
-      console.log('[Capture Debug] Will capture?', newStatus === 'completed' && paymentStatus === 'authorized');
+      console.log('[Queue Debug] New status:', newStatus);
+      console.log('[Queue Debug] Result payment_status:', paymentStatus);
 
-      // If status is 'completed' and payment is authorized, capture it
+      // If status is 'completed' and payment is authorized, queue capture (2-hour delay)
       if (newStatus === 'completed' && paymentStatus === 'authorized') {
-        console.log('💳 Service completed - capturing authorized payment');
+        console.log('⏰ Service completed - queueing payment capture (2-hour delay)');
         
         try {
-          // Get booking details to capture payment
-          const { data: booking } = await supabase
-            .from('bookings')
-            .select('curlec_payment_id, total_price')
-            .eq('id', bookingId)
-            .single();
+          // Queue payment capture with 2-hour delay (Grab standard)
+          const { data: queueData, error: queueError } = await supabase.rpc(
+            'queue_payment_capture',
+            { p_booking_id: bookingId }
+          );
 
-          if (booking?.curlec_payment_id) {
-            const { data: captureData, error: captureError } = await supabase.functions.invoke(
-              'capture-curlec-payment',
-              {
-                body: {
-                  payment_id: booking.curlec_payment_id,
-                  amount: Math.round(booking.total_price * 100), // Convert to sen
-                },
-              }
-            );
-
-            if (captureError) {
-              console.error('❌ Capture failed:', captureError);
-              console.error('⚠️ Payment capture failed - manual processing required');
-            } else if (captureData?.success) {
-              console.log('✅ Payment captured successfully');
-              
-              // Update payment status to completed
-              await supabase
-                .from('bookings')
-                .update({ payment_status: 'completed' })
-                .eq('id', bookingId);
-            }
+          if (queueError) {
+            console.error('❌ Failed to queue capture:', queueError);
+            console.error('⚠️ Payment capture NOT queued - manual processing required');
+          } else {
+            console.log('✅ Payment capture queued:', queueData);
+            console.log(`📅 Scheduled for: ${queueData.scheduled_at}`);
+            console.log('ℹ️ Customer can confirm early or dispute within 2 hours');
           }
-        } catch (captureException: any) {
-          console.error('❌ Capture exception:', captureException);
+        } catch (queueException: any) {
+          console.error('❌ Queue exception:', queueException);
         }
       }
 
@@ -893,6 +875,145 @@ export const bookingService = {
       return {
         success: false,
         error: error.message || 'Failed to fetch booking',
+      };
+    }
+  },
+
+  /**
+   * Confirm service completion (Customer action)
+   * Triggers immediate payment capture and cancels any pending queue jobs
+   */
+  async confirmServiceCompletion(
+    bookingId: string,
+    customerId: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      console.log('✅ Customer confirming service completion:', bookingId);
+
+      const { data, error } = await supabase.rpc('confirm_service_completion', {
+        p_booking_id: bookingId,
+        p_customer_id: customerId,
+      });
+
+      if (error) {
+        console.error('❌ Confirm service error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      console.log('✅ Service confirmed by customer:', data);
+
+      // If function returns trigger_immediate_capture = true, capture payment now
+      if (data?.trigger_immediate_capture) {
+        console.log('💳 Triggering immediate payment capture');
+
+        try {
+          const { data: captureData, error: captureError } = await supabase.functions.invoke(
+            'capture-curlec-payment',
+            {
+              body: {
+                payment_id: data.curlec_payment_id,
+                amount: Math.round(data.amount * 100), // Convert to sen
+              },
+            }
+          );
+
+          if (captureError) {
+            console.error('❌ Immediate capture failed:', captureError);
+            return {
+              success: false,
+              error: 'Service confirmed but payment capture failed',
+            };
+          }
+
+          if (captureData?.success) {
+            console.log('✅ Payment captured immediately');
+
+            // Update payment status to completed
+            await supabase
+              .from('bookings')
+              .update({ 
+                payment_status: 'completed',
+                paid_at: new Date().toISOString()
+              })
+              .eq('id', bookingId);
+
+            return {
+              success: true,
+              data: {
+                ...data,
+                payment_captured: true,
+              },
+            };
+          }
+        } catch (captureException: any) {
+          console.error('❌ Capture exception:', captureException);
+          return {
+            success: false,
+            error: 'Service confirmed but payment capture failed',
+          };
+        }
+      }
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error: any) {
+      console.error('❌ Confirm service exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to confirm service completion',
+      };
+    }
+  },
+
+  /**
+   * Report service issue (Customer action)
+   * Cancels pending payment capture and flags booking for admin review
+   */
+  async reportServiceIssue(
+    bookingId: string,
+    customerId: string,
+    disputeReason: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      console.log('🚨 Customer reporting service issue:', bookingId);
+
+      if (!disputeReason || disputeReason.trim().length < 10) {
+        return {
+          success: false,
+          error: 'Please provide a detailed reason (at least 10 characters)',
+        };
+      }
+
+      const { data, error } = await supabase.rpc('report_service_issue', {
+        p_booking_id: bookingId,
+        p_customer_id: customerId,
+        p_dispute_reason: disputeReason.trim(),
+      });
+
+      if (error) {
+        console.error('❌ Report issue error:', error);
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      console.log('✅ Service issue reported:', data);
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error: any) {
+      console.error('❌ Report issue exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to report service issue',
       };
     }
   },

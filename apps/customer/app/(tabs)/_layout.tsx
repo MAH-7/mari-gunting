@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { Platform, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ServiceModal } from '@/components/ServiceModal';
 import { LocationPermissionModal } from '@/components/LocationPermissionModal';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
@@ -27,6 +28,7 @@ export default function TabLayout() {
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const { status: locationStatus, requestPermission } = useLocationPermission();
+  const insets = useSafeAreaInsets();
 
   const handleServiceAction = (action: 'quick-book' | 'barbers' | 'barbershops') => {
     setShowServiceModal(false);
@@ -76,9 +78,9 @@ export default function TabLayout() {
           },
           shadowOpacity: 0.1,
           shadowRadius: 8,
-          height: Platform.OS === 'ios' ? 95 : 75,
-          paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-          paddingTop: 12,
+          height: Platform.OS === 'ios' ? 95 : 70 + insets.bottom,
+          paddingBottom: Platform.OS === 'ios' ? 32 : insets.bottom + 8,
+          paddingTop: Platform.OS === 'ios' ? 12 : 8,
         },
       }}
     >

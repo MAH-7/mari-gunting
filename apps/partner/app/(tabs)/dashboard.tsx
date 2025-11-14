@@ -23,6 +23,7 @@ import { connectionMonitor } from '@mari-gunting/shared/services/connectionMonit
 import * as Location from 'expo-location';
 import { getPartnerReviews, getReviewStats } from '@mari-gunting/shared/services/reviewsService';
 import { Colors, theme } from '@mari-gunting/shared/theme';
+import { serviceService } from '@mari-gunting/shared/services/serviceService';
 
 // Responsive helper
 const { width } = Dimensions.get('window');
@@ -701,6 +702,44 @@ export default function PartnerDashboardScreen() {
     
     setIsTogglingStatus(true);
     const newStatus = !isOnline;
+    
+    // CRITICAL: Check if services are set up before going online
+    if (newStatus) {
+      try {
+        const services = await serviceService.getMyServices(currentUser.id);
+        
+        if (services.length === 0) {
+          console.warn('⚠️ No services found - blocking online toggle');
+          
+          Alert.alert(
+            'Services Required',
+            'You need to add at least one service with pricing before going online. Customers need to see what services you offer.',
+            [
+              { 
+                text: 'Cancel', 
+                style: 'cancel',
+                onPress: () => setIsTogglingStatus(false),
+              },
+              { 
+                text: 'Set Up Services', 
+                onPress: () => {
+                  setIsTogglingStatus(false);
+                  router.push('/services');
+                },
+              },
+            ]
+          );
+          return; // Don't proceed with going online
+        }
+        
+        console.log('✅ Services validated - proceeding with online toggle');
+      } catch (error) {
+        console.error('Error checking services:', error);
+        Alert.alert('Error', 'Failed to verify services. Please try again.');
+        setIsTogglingStatus(false);
+        return;
+      }
+    }
     
     // CRITICAL: Check background location permission before going online (freelance only)
     if (newStatus && accountType === 'freelance') {

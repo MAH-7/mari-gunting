@@ -454,7 +454,7 @@ export default function EKYCScreen() {
               onPress={() => takePhoto('ic_front')}
               disabled={uploading}
             >
-              <Ionicons name="camera" size={32} color="#4CAF50" />
+              <Ionicons name="camera" size={32} color={Colors.primary} />
               <Text style={styles.cameraButtonText}>Take Photo</Text>
               <Text style={styles.cameraButtonHint}>Camera only for security</Text>
             </TouchableOpacity>
@@ -482,7 +482,7 @@ export default function EKYCScreen() {
               onPress={() => takePhoto('ic_back')}
               disabled={uploading}
             >
-              <Ionicons name="camera" size={32} color="#4CAF50" />
+              <Ionicons name="camera" size={32} color={Colors.primary} />
               <Text style={styles.cameraButtonText}>Take Photo</Text>
               <Text style={styles.cameraButtonHint}>Camera only for security</Text>
             </TouchableOpacity>
@@ -511,7 +511,7 @@ export default function EKYCScreen() {
               onPress={() => takePhoto('selfie')}
               disabled={uploading}
             >
-              <Ionicons name="camera" size={32} color="#4CAF50" />
+              <Ionicons name="camera" size={32} color={Colors.primary} />
               <Text style={styles.selfieButtonText}>Take Selfie</Text>
             </TouchableOpacity>
           )}
@@ -529,7 +529,7 @@ export default function EKYCScreen() {
                 <View key={index} style={styles.certificateItem}>
                   <Image source={{ uri }} style={styles.certificateImage} />
                   <View style={styles.certificateInfo}>
-                    <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                    <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
                     <Text style={styles.certificateText}>Certificate {index + 1}</Text>
                   </View>
                   <TouchableOpacity onPress={() => handleRemoveCertificate(index)}>
@@ -545,7 +545,7 @@ export default function EKYCScreen() {
             onPress={() => pickImage('certificate')}
             disabled={uploading}
           >
-            <Ionicons name="add-circle" size={24} color="#4CAF50" />
+            <Ionicons name="add-circle" size={24} color={Colors.primary} />
             <Text style={styles.uploadButtonText}>
               {certificateUris.length > 0 ? 'Add Another Certificate' : 'Add Certificate'}
             </Text>
@@ -555,7 +555,7 @@ export default function EKYCScreen() {
         {/* Info: Photos stored locally */}
         {!isLoadedFromProgress && (icFrontUri || icBackUri || selfieUri || certificateUris.length > 0) && (
           <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={20} color="#4CAF50" />
+            <Ionicons name="information-circle" size={20} color={Colors.primary} />
             <Text style={styles.infoText}>
               Photos saved locally. They will be uploaded when you click Continue.
             </Text>
@@ -564,7 +564,7 @@ export default function EKYCScreen() {
 
         {uploading && (
           <View style={styles.uploadingIndicator}>
-            <ActivityIndicator size="large" color="#4CAF50" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.uploadingText}>Uploading all photos...</Text>
             <Text style={styles.uploadingSubtext}>This may take a moment</Text>
           </View>
@@ -631,10 +631,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 24,
   },
   content: {
@@ -693,14 +693,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
   },
   uploadButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   cameraButton: {
     alignItems: 'center',
@@ -708,14 +708,14 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
   },
   cameraButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
     marginTop: 8,
   },
   cameraButtonHint: {
@@ -729,14 +729,14 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
   },
   selfieButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
     marginTop: 8,
   },
   imagePreview: {
@@ -765,20 +765,20 @@ const styles = StyleSheet.create({
   changePhotoText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   uploadingIndicator: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 24,
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     marginBottom: 16,
   },
   uploadingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
     marginTop: 12,
   },
   uploadingSubtext: {
@@ -790,12 +790,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primaryBorder,
   },
   infoText: {
     flex: 1,
@@ -810,9 +810,9 @@ const styles = StyleSheet.create({
   certificateItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primaryBorder,
     borderRadius: 12,
     padding: 12,
     gap: 12,
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   certificateText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   footer: {
     paddingHorizontal: 20,
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,

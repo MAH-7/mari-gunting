@@ -113,6 +113,11 @@ export default function CompleteProfileScreen() {
       return;
     }
 
+    if (!avatar) {
+      Alert.alert('Profile Photo Required', 'Please upload your profile photo. Customers need to see who will be serving them.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -223,7 +228,7 @@ export default function CompleteProfileScreen() {
     }
   };
 
-  const isFormValid = fullName.trim() && email.trim() && validateEmail(email);
+  const isFormValid = fullName.trim() && email.trim() && validateEmail(email) && avatar;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -281,8 +286,10 @@ export default function CompleteProfileScreen() {
                 <Ionicons name="camera" size={16} color={Colors.white} />
               </View>
             </TouchableOpacity>
-            <Text style={styles.avatarLabel}>Upload Photo</Text>
-            <Text style={styles.avatarHint}>Optional</Text>
+            <Text style={styles.avatarLabel}>
+              Upload Photo <Text style={styles.required}>*</Text>
+            </Text>
+            <Text style={styles.avatarHint}>Required for verification</Text>
           </View>
 
           {/* Form Section */}
@@ -561,7 +568,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
     borderWidth: 2,
-    borderColor: '#86EFAC',
+    borderColor: Colors.primaryBorder,
     borderRadius: 12,
     padding: 16,
   },
@@ -579,14 +586,14 @@ const styles = StyleSheet.create({
   },
   roleLabel: {
     fontSize: 12,
-    color: '#065F46',
+    color: Colors.primaryText,
     fontWeight: '500',
     marginBottom: 2,
   },
   roleValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#065F46',
+    color: Colors.primaryText,
   },
   registerButton: {
     flexDirection: 'row',

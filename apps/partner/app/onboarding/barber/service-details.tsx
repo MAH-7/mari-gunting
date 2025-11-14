@@ -260,9 +260,9 @@ export default function ServiceDetailsScreen() {
               step={1}
               value={radius}
               onValueChange={setRadius}
-              minimumTrackTintColor="#4CAF50"
+              minimumTrackTintColor={Colors.primary}
               maximumTrackTintColor="#e0e0e0"
-              thumbTintColor="#4CAF50"
+              thumbTintColor={Colors.primary}
             />
             <View style={styles.radiusLabels}>
               <Text style={styles.radiusLabel}>5 km</Text>
@@ -270,7 +270,7 @@ export default function ServiceDetailsScreen() {
             </View>
           </View>
           <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={16} color="#4CAF50" />
+            <Ionicons name="information-circle" size={16} color={Colors.primary} />
             <Text style={styles.infoText}>
               Travel fees are set by the platform: RM 5 (0-4km) + RM 1/km after 4km. Max search radius: 20km.
             </Text>
@@ -304,10 +304,10 @@ export default function ServiceDetailsScreen() {
                 disabled={uploading}
               >
                 {uploading ? (
-                  <ActivityIndicator size="small" color="#4CAF50" />
+                  <ActivityIndicator size="small" color={Colors.primary} />
                 ) : (
                   <>
-                    <Ionicons name="add-circle" size={32} color="#4CAF50" />
+                    <Ionicons name="add-circle" size={32} color={Colors.primary} />
                     <Text style={styles.addPhotoText}>Add Photo</Text>
                   </>
                 )}
@@ -377,10 +377,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 24,
   },
   content: {
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   radiusValue: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: Colors.primary,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
     padding: 12,
     borderRadius: 8,
     marginTop: 12,
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: '#4CAF50',
+    color: Colors.primaryText,
     lineHeight: 18,
   },
   dayRow: {
@@ -479,8 +479,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   dayLabel: {
     fontSize: 16,
@@ -541,16 +541,16 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
-    backgroundColor: '#f0f9f4',
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addPhotoText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
     marginTop: 4,
   },
   footer: {
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
