@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,16 +7,49 @@ import { useMutation } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import Slider from '@react-native-community/slider';
 import { Colors, theme } from '@mari-gunting/shared/theme';
+import { useLocation } from '@/hooks/useLocation';
 
 export default function QuickBookScreen() {
   const [radius, setRadius] = useState<number>(5);
   const [maxPrice, setMaxPrice] = useState<number>(50);
   const [isSearching, setIsSearching] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const { location, getCurrentLocation } = useLocation();
+
+  // Get location on mount
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
 
   const quickBookMutation = useMutation({
-    mutationFn: (data: { time: string; radius: number; maxPrice: number }) => 
-      api.quickBook('any', data.time),
+    mutationFn: async (data: { radius: number; maxPrice: number; location: any }) => {
+      // Use same API as Available Barbers screen
+      const response = await api.getBarbers({
+        isOnline: true,
+        isAvailable: true,
+        location: data.location ? {
+          lat: data.location.latitude,
+          lng: data.location.longitude,
+          radius: data.radius,
+        } : undefined,
+      });
+      
+      if (!response.success || !response.data?.data || response.data.data.length === 0) {
+        throw new Error('No barbers available');
+      }
+      
+      // Filter by price - find barbers with at least one service within budget
+      const affordableBarbers = response.data.data.filter(barber =>
+        barber.services.some(service => service.price <= data.maxPrice)
+      );
+      
+      if (affordableBarbers.length === 0) {
+        throw new Error(`No barbers available within RM ${data.maxPrice} budget`);
+      }
+      
+      // Return first barber (already sorted by distance from getBarbers)
+      return { success: true, data: { barber: affordableBarbers[0] } };
+    },
     onSuccess: (response) => {
       // Check if the response was successful and has barber data
       if (response.success && response.data?.barber?.id) {
@@ -47,9 +80,9 @@ export default function QuickBookScreen() {
     // Simulate search for nearest barber (2 seconds)
     setTimeout(() => {
       quickBookMutation.mutate({
-        time: 'now', // Always ASAP for Quick Book
         radius,
         maxPrice,
+        location,
       });
     }, 2000);
   };
