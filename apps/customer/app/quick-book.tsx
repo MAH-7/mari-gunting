@@ -8,6 +8,8 @@ import { api } from '@/services/api';
 import Slider from '@react-native-community/slider';
 import { Colors, theme } from '@mari-gunting/shared/theme';
 import { useLocation } from '@/hooks/useLocation';
+import { getBlacklistedBarberIds, clearBlacklist, getBlacklistedBarbers } from '@/utils/quickBookStorage';
+import { Alert } from 'react-native';
 
 export default function QuickBookScreen() {
   const [radius, setRadius] = useState<number>(5);
@@ -23,6 +25,10 @@ export default function QuickBookScreen() {
 
   const quickBookMutation = useMutation({
     mutationFn: async (data: { radius: number; maxPrice: number; location: any }) => {
+      // Get blacklisted barbers from previous rejections
+      const blacklistedIds = await getBlacklistedBarberIds();
+      console.log('[QuickBook] Blacklisted barbers:', blacklistedIds.length);
+      
       // Use same API as Available Barbers screen
       const response = await api.getBarbers({
         isOnline: true,
@@ -39,26 +45,107 @@ export default function QuickBookScreen() {
       }
       
       // Filter by price - find barbers with at least one service within budget
-      const affordableBarbers = response.data.data.filter(barber =>
+      console.log('[QuickBook] Checking prices for', response.data.data.length, 'barbers (max budget: RM', data.maxPrice + ')');
+      response.data.data.forEach(barber => {
+        const cheapestService = Math.min(...barber.services.map(s => s.price));
+        console.log(`[QuickBook] - ${barber.name}: ${barber.services.length} services, cheapest: RM ${cheapestService}`);
+      });
+      
+      let affordableBarbers = response.data.data.filter(barber =>
         barber.services.some(service => service.price <= data.maxPrice)
       );
       
+      console.log('[QuickBook] Found', affordableBarbers.length, 'affordable barbers');
+      
       if (affordableBarbers.length === 0) {
-        throw new Error(`No barbers available within RM ${data.maxPrice} budget`);
+        const minPrice = Math.min(...response.data.data.flatMap(b => b.services.map(s => s.price)));
+        throw new Error(`No barbers available within RM ${data.maxPrice} budget. Cheapest service found: RM ${minPrice}`);
       }
       
-      // Return first barber (already sorted by distance from getBarbers)
-      return { success: true, data: { barber: affordableBarbers[0] } };
+      // Filter out blacklisted barbers
+      affordableBarbers = affordableBarbers.filter(barber => 
+        !blacklistedIds.includes(barber.id)
+      );
+      
+      if (affordableBarbers.length === 0) {
+        throw new Error('All available barbers have been tried. Please adjust your search criteria.');
+      }
+      
+      // Smart selection: Score barbers by distance + rating + experience
+      // Distance weight: 40%, Rating weight: 30%, Experience weight: 30%
+      const scoredBarbers = affordableBarbers.map(barber => {
+        // Get distance (handle both field names: distance or straightLineDistance)
+        const barberDistance = (barber as any).distance || (barber as any).straightLineDistance || 0;
+        
+        // Normalize distance (0-20km range, lower is better)
+        const distanceScore = barberDistance > 0 
+          ? Math.max(0, 1 - (barberDistance / 20)) * 100
+          : 50; // Default score if no distance available
+        
+        // Normalize rating (0-5 range, higher is better)
+        const ratingScore = (barber.rating / 5) * 100;
+        
+        // Normalize experience by completed jobs (higher is better)
+        // Assume 100 jobs is excellent, use logarithmic scale
+        const experienceScore = Math.min(100, (Math.log10(barber.completedJobs + 1) / Math.log10(101)) * 100);
+        
+        // Calculate weighted score
+        const totalScore = (
+          distanceScore * 0.4 + 
+          ratingScore * 0.3 + 
+          experienceScore * 0.3
+        );
+        
+        return {
+          barber,
+          score: totalScore,
+          distanceScore,
+          ratingScore,
+          experienceScore,
+          barberDistance,
+        };
+      });
+      
+      // Sort by score (highest first)
+      scoredBarbers.sort((a, b) => b.score - a.score);
+      
+      // Select TOP 3 barbers (Grab approach - pre-fetch backups)
+      const top3Barbers = scoredBarbers.slice(0, 3).map(sb => sb.barber);
+      
+      console.log('[QuickBook] Selected top 3 barbers:');
+      scoredBarbers.slice(0, 3).forEach((sb, idx) => {
+        console.log(`[QuickBook] ${idx + 1}. ${sb.barber.name} | Score: ${sb.score.toFixed(1)} | Distance: ${sb.barberDistance.toFixed(1)}km`);
+      });
+      
+      // Return top 3 barbers (first one is primary, others are backups)
+      return { 
+        success: true, 
+        data: { 
+          barber: top3Barbers[0],
+          backupBarbers: top3Barbers, // All 3 for retry flow
+        } 
+      };
     },
     onSuccess: (response) => {
       // Check if the response was successful and has barber data
-      if (response.success && response.data?.barber?.id) {
+      if (response.success && response.data?.barber?.id && response.data?.backupBarbers) {
         const barberId = response.data.barber.id;
+        const backupBarbers = response.data.backupBarbers;
+        
         // Small delay to allow modal to close smoothly before navigation
         setTimeout(() => {
           setIsSearching(false);
-          // Navigate to confirm booking screen (unified flow)
-          router.push(`/booking/create?barberId=${barberId}` as any);
+          // Navigate to confirm booking screen with Quick Book context + backup barbers
+          router.push({
+            pathname: '/booking/create',
+            params: {
+              barberId: barberId,
+              isQuickBook: 'true',
+              searchRadius: radius.toString(),
+              searchMaxPrice: maxPrice.toString(),
+              backupBarbers: JSON.stringify(backupBarbers.map(b => b.id)), // Pass barber IDs
+            },
+          } as any);
         }, 300);
       } else {
         // No barber available
@@ -87,6 +174,31 @@ export default function QuickBookScreen() {
     }, 2000);
   };
   
+  // DEBUG: Reset blacklist (for testing)
+  const handleResetBlacklist = async () => {
+    const blacklist = await getBlacklistedBarbers();
+    if (blacklist.length === 0) {
+      Alert.alert('Debug', 'Blacklist is already empty');
+      return;
+    }
+    
+    Alert.alert(
+      'Reset Blacklist',
+      `Clear ${blacklist.length} blacklisted barber(s)?\n\n${blacklist.map(b => b.barberName).join('\n')}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            await clearBlacklist();
+            Alert.alert('✅ Done', 'Blacklist cleared successfully');
+          },
+        },
+      ]
+    );
+  };
+  
   // Calculate estimated barbers in range
   const estimatedBarbers = Math.floor(radius * 2.5 + (maxPrice / 10));
 
@@ -101,7 +213,12 @@ export default function QuickBookScreen() {
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Quick Book</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity
+          style={styles.debugButton}
+          onPress={handleResetBlacklist}
+        >
+          <Ionicons name="refresh" size={20} color={Colors.error} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -355,6 +472,14 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+  },
+  debugButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

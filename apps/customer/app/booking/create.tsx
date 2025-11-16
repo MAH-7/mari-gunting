@@ -18,9 +18,20 @@ import { useBarberOffline } from '@/contexts/BarberOfflineContext';
 import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function CreateBookingScreen() {
-  const { barberId } = useLocalSearchParams<{ barberId: string }>();
+  const params = useLocalSearchParams<{ 
+    barberId: string;
+    isQuickBook?: string;
+    searchRadius?: string;
+    searchMaxPrice?: string;
+    retryAttempt?: string;
+    backupBarbers?: string; // JSON string of barber IDs
+  }>();
+  const barberId = params.barberId;
   const currentUser = useStore((state) => state.currentUser);
   const booking = useBooking();
+  
+  // Check if this is a retry (to control back button behavior)
+  const isRetry = params.isQuickBook === 'true' && parseInt(params.retryAttempt || '0', 10) > 0;
   
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [serviceNotes, setServiceNotes] = useState<string>('');
@@ -287,6 +298,13 @@ export default function CreateBookingScreen() {
         
         // Display
         serviceName: selectedServices.map(s => s.name).join(', '),
+        
+        // Quick Book context (for auto-retry)
+        isQuickBook: params.isQuickBook || 'false',
+        searchRadius: params.searchRadius || '',
+        searchMaxPrice: params.searchMaxPrice || '',
+        retryAttempt: params.retryAttempt || '0',
+        backupBarbers: params.backupBarbers || '[]',
       },
     } as any);
   };
@@ -409,10 +427,30 @@ export default function CreateBookingScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => {
+          if (isRetry) {
+            // During retry, cancel and go home
+            Alert.alert(
+              'Cancel Quick Book?',
+              'Do you want to cancel and return home?',
+              [
+                { text: 'Stay', style: 'cancel' },
+                { 
+                  text: 'Go Home', 
+                  style: 'destructive',
+                  onPress: () => router.replace('/' as any)
+                },
+              ]
+            );
+          } else {
+            router.back();
+          }
+        }}>
           <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirm Booking</Text>
+        <Text style={styles.headerTitle}>
+          {isRetry ? `Retry ${params.retryAttempt}/3` : 'Confirm Booking'}
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 

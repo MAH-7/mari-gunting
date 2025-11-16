@@ -14,6 +14,7 @@ import { BarberResponseWaitingModal } from '@/components/BarberResponseWaitingMo
 import { FEATURE_FLAGS } from '@mari-gunting/shared/constants';
 import { useBarberOffline } from '@/contexts/BarberOfflineContext';
 import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
+import { addToBlacklist, getBlacklistedBarberIds } from '@/utils/quickBookStorage';
 
 type PaymentMethod = 'card' | 'fpx' | 'ewallet' | 'cash';
 
@@ -99,6 +100,13 @@ export default function PaymentMethodScreen() {
     
     // Display
     serviceName: string;
+    
+    // Quick Book context (for auto-retry)
+    isQuickBook?: string;
+    searchRadius?: string;
+    searchMaxPrice?: string;
+    retryAttempt?: string;
+    backupBarbers?: string; // JSON string of barber IDs
   }>();
   
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
@@ -122,6 +130,12 @@ export default function PaymentMethodScreen() {
     isAvailable: boolean;
   } | null>(null);
   const { showBarberOfflineModal } = useBarberOffline();
+  
+  // Quick Book retry state
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryModalVisible, setRetryModalVisible] = useState(false);
+  const [retryModalMessage, setRetryModalMessage] = useState('');
+  const currentRetryAttempt = parseInt(params.retryAttempt || '0', 10);
 
   // Load current user and their vouchers
   useEffect(() => {
@@ -671,13 +685,157 @@ export default function PaymentMethodScreen() {
     setShowWaitingModal(false);
     setIsProcessing(false);
     
-    Alert.alert(
-      'Barber Unavailable',
-      'Sorry, the barber is not available right now. Let\'s find you another barber.',
-      [
-        { text: 'Try Another Barber', onPress: () => router.replace('/') },
-      ]
-    );
+    // Check if this is a Quick Book booking with auto-retry
+    const isQuickBook = params.isQuickBook === 'true';
+    
+    if (isQuickBook) {
+      // Add rejected barber to blacklist (for 30-min cooldown)
+      await addToBlacklist(params.barberId, params.barberName);
+      console.log('[QuickBook] Barber rejected and blacklisted:', params.barberName);
+      
+      // Check retry attempts
+      const nextRetryAttempt = currentRetryAttempt + 1;
+      
+      // Parse backup barbers list
+      let backupBarberIds: string[] = [];
+      try {
+        backupBarberIds = JSON.parse(params.backupBarbers || '[]');
+      } catch (e) {
+        console.error('[QuickBook] Error parsing backup barbers:', e);
+      }
+      
+      console.log('[QuickBook] Backup barbers:', backupBarberIds);
+      console.log('[QuickBook] Current retry attempt:', nextRetryAttempt);
+      
+      // Check if we have a backup barber for this attempt
+      const nextBarberIndex = nextRetryAttempt; // Attempt 1 = index 1 (barber #2)
+      
+      if (nextRetryAttempt <= 3 && nextBarberIndex < backupBarberIds.length) {
+        const nextBarberId = backupBarberIds[nextBarberIndex];
+        console.log(`[QuickBook] Using pre-fetched backup barber #${nextRetryAttempt + 1}: ${nextBarberId}`);
+        
+        // Show loading modal first
+        setRetryModalMessage('Finding another barber...');
+        setRetryModalVisible(true);
+        setIsRetrying(true);
+        
+        // Wait a moment for modal to render before starting search
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const searchStartTime = Date.now();
+        
+        try {
+          // Fetch barber details for the next backup barber
+          const barberResponse = await api.getBarberById(nextBarberId);
+          
+          if (!barberResponse.success || !barberResponse.data) {
+            throw new Error('Backup barber not available');
+          }
+          
+          const newBarber = barberResponse.data;
+          console.log(`[QuickBook] Found backup barber: ${newBarber.name}`);
+          
+          // Calculate elapsed time and ensure minimum LOADING display (1000ms)
+          const elapsedTime = Date.now() - searchStartTime;
+          const minLoadingTime = 1000; // Show "Finding..." for at least 1 second
+          const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+          
+          // Wait for remaining time to ensure minimum display
+          if (remainingTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, remainingTime));
+          }
+          
+          // Update message to show found state (in same modal)
+          setRetryModalMessage(`Found ${newBarber.name}!`);
+          
+          // Brief moment to show found message, then navigate
+          setTimeout(() => {
+            setRetryModalVisible(false);
+            setIsRetrying(false);
+            
+            // Navigate to new barber (keep backup list)
+            router.replace({
+              pathname: '/booking/create',
+              params: {
+                barberId: newBarber.id,
+                isQuickBook: 'true',
+                searchRadius: params.searchRadius,
+                searchMaxPrice: params.searchMaxPrice,
+                retryAttempt: nextRetryAttempt.toString(),
+                backupBarbers: params.backupBarbers, // Pass through backup list
+              },
+            } as any);
+          }, 500); // Show "Found" message for 500ms
+          return;
+        } catch (error: any) {
+          console.error('[QuickBook] Backup barber failed:', error);
+          
+          // Close all modals first
+          setRetryModalVisible(false);
+          setShowWaitingModal(false);
+          setIsRetrying(false);
+          
+          // Wait for modal to close before showing alert
+          setTimeout(() => {
+            Alert.alert(
+              'Barber Unavailable',
+              `Sorry, that barber is no longer available. ${backupBarberIds.length > nextBarberIndex + 1 ? "Let's try another one." : "No more backup barbers available."}`,
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    router.replace('/' as any);
+                  },
+                },
+              ]
+            );
+          }, 300);
+          return;
+        }
+      } else {
+        // No more backup barbers available
+        console.log('[QuickBook] No more backup barbers available');
+        
+        // Close all modals first
+        setRetryModalVisible(false);
+        setShowWaitingModal(false);
+        setIsRetrying(false);
+        
+        // Wait for modal to close before showing alert
+        setTimeout(() => {
+          Alert.alert(
+            'All Barbers Unavailable',
+            `We've tried ${backupBarberIds.length} barber(s) but none were available. Would you like to search again or go home?`,
+            [
+              {
+                text: 'Search Again',
+                onPress: () => {
+                  // Navigate to home first, then push Quick Book
+                  router.replace('/' as any);
+                  setTimeout(() => router.push('/quick-book' as any), 100);
+                },
+              },
+              {
+                text: 'Go Home',
+                onPress: () => {
+                  router.replace('/' as any);
+                },
+              },
+            ]
+          );
+        }, 300);
+        return;
+      }
+    } else {
+      // Regular booking (not Quick Book)
+      Alert.alert(
+        'Barber Unavailable',
+        'Sorry, the barber is not available right now. Let\'s find you another barber.',
+        [
+          { text: 'Try Another Barber', onPress: () => router.replace('/') },
+        ]
+      );
+    }
   };
 
   /**
@@ -1336,6 +1494,17 @@ export default function PaymentMethodScreen() {
           icon: 'calendar-outline',
         }}
       />
+      
+      {/* Quick Book Retry Loading Overlay (same style as Quick Book) */}
+      {retryModalVisible && (
+        <View style={styles.searchingOverlay}>
+          <View style={styles.searchingCard}>
+            <ActivityIndicator size="large" color={Colors.primary} style={styles.searchingSpinner} />
+            <Text style={styles.searchingTitle}>{retryModalMessage}</Text>
+            <Text style={styles.searchingText}>Looking for next available barber</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -1803,5 +1972,41 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary,
     lineHeight: 20,
+  },
+  // Quick Book retry overlay styles (matching Quick Book searching overlay)
+  searchingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  searchingCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    width: '90%',
+    maxWidth: 340,
+  },
+  searchingSpinner: {
+    marginBottom: 24,
+  },
+  searchingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  searchingText: {
+    fontSize: 15,
+    color: Colors.gray[500],
+    textAlign: 'center',
+    marginBottom: 24,
   },
 });
