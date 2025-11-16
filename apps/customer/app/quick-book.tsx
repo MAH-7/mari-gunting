@@ -10,8 +10,10 @@ import { Colors, theme } from '@mari-gunting/shared/theme';
 import { useLocation } from '@/hooks/useLocation';
 import { getBlacklistedBarberIds, clearBlacklist, getBlacklistedBarbers } from '@/utils/quickBookStorage';
 import { Alert } from 'react-native';
+import { useStore } from '@/store/useStore';
 
 export default function QuickBookScreen() {
+  const currentUser = useStore((state) => state.currentUser); // Get current user to prevent self-booking
   const [radius, setRadius] = useState<number>(5);
   const [maxPrice, setMaxPrice] = useState<number>(50);
   const [isSearching, setIsSearching] = useState(false);
@@ -62,10 +64,15 @@ export default function QuickBookScreen() {
         throw new Error(`No barbers available within RM ${data.maxPrice} budget. Cheapest service found: RM ${minPrice}`);
       }
       
-      // Filter out blacklisted barbers
+      // Filter out blacklisted barbers AND self (prevent self-booking)
       affordableBarbers = affordableBarbers.filter(barber => 
-        !blacklistedIds.includes(barber.id)
+        !blacklistedIds.includes(barber.id) &&
+        barber.userId !== currentUser?.id  // GRAB-STYLE: Don't match with own barber account
       );
+      
+      if (affordableBarbers.length > 0) {
+        console.log('[QuickBook] After filtering (blacklist + self):', affordableBarbers.length, 'barbers');
+      }
       
       if (affordableBarbers.length === 0) {
         throw new Error('All available barbers have been tried. Please adjust your search criteria.');

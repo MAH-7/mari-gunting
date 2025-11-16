@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +21,12 @@ export default function BookingsScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
+  // INFINITE SCROLL: Pagination state
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [allBookings, setAllBookings] = useState<any[]>([]);
+  
   // Applied filters
   const [filters, setFilters] = useState<BookingFilterOptions>({
     sortBy: 'date',
@@ -28,26 +34,66 @@ export default function BookingsScreen() {
   });
 
   const { data: bookingsResponse, isLoading, error, refetch } = useQuery({
-    queryKey: ['customer-bookings', currentUser?.id, selectedTab],
+    queryKey: ['customer-bookings', currentUser?.id, selectedTab, page],
     queryFn: async () => {
       if (!currentUser?.id) return { success: false, data: [] };
       
-      // Fetch based on tab selection for better performance
+      // INFINITE SCROLL: Load 20 at a time
       const statusFilter = selectedTab === 'active' 
-        ? null // Get all active statuses
-        : null; // Get all completed/cancelled
+        ? 'pending,accepted,confirmed,ready,on_the_way,arrived,in_progress'
+        : 'completed,cancelled,rejected,expired';
       
       return await bookingService.getCustomerBookings(
         currentUser.id,
         statusFilter,
-        100, // limit
-        0    // offset
+        20,  // Grab standard: 20 per page
+        page * 20  // Pagination offset
       );
     },
     enabled: !!currentUser?.id,
-    // Real-time subscription replaces polling
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Disabled for pagination
   });
+  
+  // Handle data updates when query succeeds
+  useEffect(() => {
+    if (bookingsResponse?.success && bookingsResponse.data) {
+      console.log(`📊 Received ${bookingsResponse.data.length} bookings for page ${page}`);
+      
+      if (page === 0) {
+        // First page: replace all
+        setAllBookings(bookingsResponse.data);
+        console.log(`✅ Set initial bookings: ${bookingsResponse.data.length}`);
+      } else {
+        // Next pages: append with deduplication
+        setAllBookings(prev => {
+          // Create a Set of existing IDs for fast lookup
+          const existingIds = new Set(prev.map(b => b.id));
+          // Only add bookings that don't exist yet
+          const newBookings = bookingsResponse.data.filter(b => !existingIds.has(b.id));
+          
+          if (newBookings.length === 0) {
+            console.log(`⚠️ All ${bookingsResponse.data.length} bookings already exist - skipping`);
+            return prev;
+          }
+          
+          const updated = [...prev, ...newBookings];
+          console.log(`✅ Added ${newBookings.length} new bookings: ${prev.length} → ${updated.length}`);
+          return updated;
+        });
+      }
+      
+      // Check if there are more bookings
+      const hasMoreData = bookingsResponse.data.length === 20;
+      setHasMore(hasMoreData);
+      setIsLoadingMore(false);
+      
+      console.log(`📄 Has more: ${hasMoreData}`);
+    } else if (bookingsResponse && !bookingsResponse.success) {
+      console.log('❌ Query returned no success');
+      setIsLoadingMore(false);
+      setHasMore(false);
+    }
+  }, [bookingsResponse, page]);
 
   // Real-time subscription for customer's bookings
   useEffect(() => {
@@ -75,6 +121,10 @@ export default function BookingsScreen() {
           // Debounce refetch to avoid multiple simultaneous calls
           clearTimeout(refetchTimeout);
           refetchTimeout = setTimeout(() => {
+            // Reset pagination and refetch from start
+            setPage(0);
+            setHasMore(true);
+            setAllBookings([]);
             refetch();
           }, 500); // Wait 500ms before refetching
           
@@ -108,6 +158,8 @@ export default function BookingsScreen() {
   // Handle pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(0); // Reset to first page
+    setHasMore(true);
     try {
       await refetch();
     } catch (error) {
@@ -116,20 +168,38 @@ export default function BookingsScreen() {
       setRefreshing(false);
     }
   };
+  
+  // INFINITE SCROLL: Load more when scrolling to bottom
+  const loadMore = () => {
+    if (!isLoadingMore && hasMore && !isLoading) {
+      console.log(`📄 Loading more bookings... (page ${page + 1})`);
+      setIsLoadingMore(true);
+      setPage(prev => prev + 1);
+    }
+  };
+  
+  // Reset pagination when switching tabs
+  useEffect(() => {
+    setPage(0);
+    setHasMore(true);
+    setAllBookings([]);
+  }, [selectedTab]);
 
-  // FIX: Only use data if response was successful
-  const bookings = (bookingsResponse?.success !== false) ? (bookingsResponse?.data || []) : [];
+  // INFINITE SCROLL: Use accumulated bookings
+  const bookings = allBookings;
 
-  const activeBookings = bookings.filter(
+  // PERFORMANCE FIX: No client-side filtering needed - database already filtered by tab!
+  // Count active vs completed for badges (from ALL bookings)
+  const activeCount = bookings.filter(
     (b: any) => ['pending', 'accepted', 'confirmed', 'ready', 'on_the_way', 'on-the-way', 'arrived', 'in_progress', 'in-progress'].includes(b.status)
-  );
+  ).length;
 
-  const completedBookings = bookings.filter(
+  const completedCount = bookings.filter(
     (b: any) => ['completed', 'cancelled', 'rejected', 'expired'].includes(b.status)
-  );
+  ).length;
 
-  // Apply filters
-  let filteredBookings = selectedTab === 'active' ? activeBookings : completedBookings;
+  // Apply additional filters (status, sort)
+  let filteredBookings = bookings; // Already filtered by database!
   
   // Filter by status
   if (filters.filterStatus !== 'all') {
@@ -189,7 +259,8 @@ export default function BookingsScreen() {
         onClose={() => setShowFilterModal(false)}
         onApply={(newFilters) => setFilters(newFilters)}
         currentFilters={filters}
-        showStatusFilter={selectedTab === 'active'}
+        showStatusFilter={true}
+        isHistoryTab={selectedTab === 'completed'}
       />
 
       {/* Tab Selector */}
@@ -208,9 +279,9 @@ export default function BookingsScreen() {
           <Text style={[styles.tabText, selectedTab === 'active' && styles.tabTextActive]}>
             Active
           </Text>
-          {activeBookings.length > 0 && (
+          {selectedTab === 'active' && bookings.length > 0 && (
             <View style={styles.tabBadge}>
-              <Text style={styles.tabBadgeText}>{activeBookings.length}</Text>
+              <Text style={styles.tabBadgeText}>{bookings.length}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -231,23 +302,28 @@ export default function BookingsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Bookings List */}
-      <ScrollView 
-        style={styles.scrollView} 
+      {/* Bookings List - FlatList for virtualization */}
+      <FlatList
+        data={displayBookings}
+        renderItem={({ item }) => <BookingCard booking={item} />}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.primary}             colors={[Colors.primary]}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
           />
         }
-      >
-        {isLoading ? (
-          // Skeleton Loading Cards
-          <>
-            {[1, 2, 3].map((item) => (
+        ListEmptyComponent={
+          isLoading ? (
+            // Skeleton Loading Cards
+            <View>
+              {[1, 2, 3].map((item) => (
               <View key={item} style={styles.bookingCard}>
                 {/* Status Bar Skeleton */}
                 <View style={[styles.statusBar, { backgroundColor: Colors.gray[100] }]}>
@@ -306,46 +382,56 @@ export default function BookingsScreen() {
                   </View>
                 </View>
               </View>
-            ))}
-          </>
-        ) : error ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
-            <Text style={styles.emptyTitle}>Failed to load bookings</Text>
-            <Text style={styles.emptySubtext}>
-              Please check your connection and try again
-            </Text>
-          </View>
-        ) : displayBookings.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons 
-              name={selectedTab === 'active' ? 'clipboard-outline' : 'checkmark-done-circle'} 
-              size={64} 
-              color={Colors.gray[300]}             />
-            <Text style={styles.emptyTitle}>
-              {selectedTab === 'active' ? 'No active bookings' : 'No booking history'}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {selectedTab === 'active' 
-                ? 'Book a barber to get started' 
-                : 'Completed bookings will appear here'}
-            </Text>
-            {selectedTab === 'active' && (
-              <TouchableOpacity
-                style={styles.emptyButton}
-                onPress={() => router.push('/(tabs)' as any)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.emptyButtonText}>Find Barber</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          displayBookings.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} />
-          ))
-        )}
-      </ScrollView>
+              ))}
+            </View>
+          ) : error ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
+              <Text style={styles.emptyTitle}>Failed to load bookings</Text>
+              <Text style={styles.emptySubtext}>
+                Please check your connection and try again
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons 
+                name={selectedTab === 'active' ? 'clipboard-outline' : 'checkmark-done-circle'} 
+                size={64} 
+                color={Colors.gray[300]}
+              />
+              <Text style={styles.emptyTitle}>
+                {selectedTab === 'active' ? 'No active bookings' : 'No booking history'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {selectedTab === 'active' 
+                  ? 'Book a barber to get started' 
+                  : 'Completed bookings will appear here'}
+              </Text>
+              {selectedTab === 'active' && (
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={() => router.push('/(tabs)' as any)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emptyButtonText}>Find Barber</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )
+        }
+        ListFooterComponent={
+          isLoadingMore && hasMore ? (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.loadingMoreText}>Loading more...</Text>
+            </View>
+          ) : !hasMore && displayBookings.length > 0 ? (
+            <View style={styles.endOfList}>
+              <Text style={styles.endOfListText}>No more bookings</Text>
+            </View>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -1222,5 +1308,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Colors.white,
+  },
+  // Infinite scroll styles
+  loadingMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 10,
+  },
+  loadingMoreText: {
+    fontSize: 14,
+    color: Colors.gray[500],
+    fontWeight: '500',
+  },
+  endOfList: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  endOfListText: {
+    fontSize: 13,
+    color: Colors.gray[400],
+    fontWeight: '500',
   },
 });

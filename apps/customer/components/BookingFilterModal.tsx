@@ -26,7 +26,8 @@ interface BookingFilterModalProps {
   onClose: () => void;
   onApply: (filters: BookingFilterOptions) => void;
   currentFilters: BookingFilterOptions;
-  showStatusFilter: boolean; // Only show for active bookings
+  showStatusFilter: boolean;
+  isHistoryTab?: boolean; // Show history-specific status filters
 }
 
 export default function BookingFilterModal({
@@ -35,6 +36,7 @@ export default function BookingFilterModal({
   onApply,
   currentFilters,
   showStatusFilter,
+  isHistoryTab = false,
 }: BookingFilterModalProps) {
   const [sortBy, setSortBy] = useState(currentFilters.sortBy);
   const [filterStatus, setFilterStatus] = useState(currentFilters.filterStatus);
@@ -213,7 +215,7 @@ export default function BookingFilterModal({
             </View>
           </View>
 
-          {/* Filter by Status (only for active bookings) */}
+          {/* Filter by Status */}
           {showStatusFilter && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -230,45 +232,93 @@ export default function BookingFilterModal({
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.chip, filterStatus === 'pending' && styles.chipActive]}
-                  onPress={() => setFilterStatus('pending')}
-                >
-                  <Ionicons name="time" size={14} color={filterStatus === 'pending' ? Colors.white : Colors.warning} />
-                  <Text style={[styles.chipText, filterStatus === 'pending' && styles.chipTextActive]}>
-                    Pending
-                  </Text>
-                </TouchableOpacity>
+                {isHistoryTab ? (
+                  // History tab filters
+                  <>
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'completed' && styles.chipActive]}
+                      onPress={() => setFilterStatus('completed')}
+                    >
+                      <Ionicons name="checkmark-done" size={14} color={filterStatus === 'completed' ? Colors.white : Colors.success} />
+                      <Text style={[styles.chipText, filterStatus === 'completed' && styles.chipTextActive]}>
+                        Completed
+                      </Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.chip, filterStatus === 'accepted' && styles.chipActive]}
-                  onPress={() => setFilterStatus('accepted')}
-                >
-                  <Ionicons name="checkmark-circle" size={14} color={filterStatus === 'accepted' ? Colors.white : Colors.info} />
-                  <Text style={[styles.chipText, filterStatus === 'accepted' && styles.chipTextActive]}>
-                    Accepted
-                  </Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'cancelled' && styles.chipActive]}
+                      onPress={() => setFilterStatus('cancelled')}
+                    >
+                      <Ionicons name="close-circle" size={14} color={filterStatus === 'cancelled' ? Colors.white : Colors.error} />
+                      <Text style={[styles.chipText, filterStatus === 'cancelled' && styles.chipTextActive]}>
+                        Cancelled
+                      </Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.chip, filterStatus === 'on-the-way' && styles.chipActive]}
-                  onPress={() => setFilterStatus('on-the-way')}
-                >
-                  <Ionicons name="car" size={14} color={filterStatus === 'on-the-way' ? Colors.white : Colors.status.ready} />
-                  <Text style={[styles.chipText, filterStatus === 'on-the-way' && styles.chipTextActive]}>
-                    On The Way
-                  </Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'rejected' && styles.chipActive]}
+                      onPress={() => setFilterStatus('rejected')}
+                    >
+                      <Ionicons name="ban" size={14} color={filterStatus === 'rejected' ? Colors.white : Colors.gray[500]} />
+                      <Text style={[styles.chipText, filterStatus === 'rejected' && styles.chipTextActive]}>
+                        Rejected
+                      </Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.chip, filterStatus === 'in-progress' && styles.chipActive]}
-                  onPress={() => setFilterStatus('in-progress')}
-                >
-                  <Ionicons name="cut" size={14} color={filterStatus === 'in-progress' ? Colors.white : Colors.primary} />
-                  <Text style={[styles.chipText, filterStatus === 'in-progress' && styles.chipTextActive]}>
-                    In Progress
-                  </Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'expired' && styles.chipActive]}
+                      onPress={() => setFilterStatus('expired')}
+                    >
+                      <Ionicons name="time-outline" size={14} color={filterStatus === 'expired' ? Colors.white : Colors.warning} />
+                      <Text style={[styles.chipText, filterStatus === 'expired' && styles.chipTextActive]}>
+                        Expired
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  // Active tab filters
+                  <>
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'pending' && styles.chipActive]}
+                      onPress={() => setFilterStatus('pending')}
+                    >
+                      <Ionicons name="time" size={14} color={filterStatus === 'pending' ? Colors.white : Colors.warning} />
+                      <Text style={[styles.chipText, filterStatus === 'pending' && styles.chipTextActive]}>
+                        Pending
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'accepted' && styles.chipActive]}
+                      onPress={() => setFilterStatus('accepted')}
+                    >
+                      <Ionicons name="checkmark-circle" size={14} color={filterStatus === 'accepted' ? Colors.white : Colors.info} />
+                      <Text style={[styles.chipText, filterStatus === 'accepted' && styles.chipTextActive]}>
+                        Accepted
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'on-the-way' && styles.chipActive]}
+                      onPress={() => setFilterStatus('on-the-way')}
+                    >
+                      <Ionicons name="car" size={14} color={filterStatus === 'on-the-way' ? Colors.white : Colors.status.ready} />
+                      <Text style={[styles.chipText, filterStatus === 'on-the-way' && styles.chipTextActive]}>
+                        On The Way
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.chip, filterStatus === 'in-progress' && styles.chipActive]}
+                      onPress={() => setFilterStatus('in-progress')}
+                    >
+                      <Ionicons name="cut" size={14} color={filterStatus === 'in-progress' ? Colors.white : Colors.primary} />
+                      <Text style={[styles.chipText, filterStatus === 'in-progress' && styles.chipTextActive]}>
+                        In Progress
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </View>
           )}
