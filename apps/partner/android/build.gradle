@@ -20,23 +20,8 @@ allprojects {
   }
 }
 
-subprojects {
-    afterEvaluate {
-        if (project.hasProperty('android')) {
-            android {
-                compileSdk = 35
-                if (project.hasProperty('buildToolsVersion')) {
-                    buildToolsVersion = "35.0.0"
-                }
-            }
-        }
-    }
-}
-
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
-
-// Workaround for compileSdk version issue
 // @generated begin @rnmapbox/maps-v2-maven - expo prebuild (DO NOT MODIFY) sync-32f1b7024bb5099f2805443b1960a3233ccde124
 
 allprojects {

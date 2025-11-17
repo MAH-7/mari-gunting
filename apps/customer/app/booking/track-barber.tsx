@@ -8,16 +8,19 @@ import {
   Platform,
   AppState,
   Vibration,
+  Image,
+  Animated,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapboxGL from '@rnmapbox/maps';
 // import * as Notifications from 'expo-notifications';
 // import { Audio } from 'expo-av';
 
 import { useRealtimeBarberLocation } from '../../hooks/useRealtimeBarberLocation';
 import { useLocation } from '../../hooks/useLocation';
-import { calculateETA } from '../../utils/eta';
+import { calculateETAFromCoords } from '../../utils/eta';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { Colors, theme } from '@mari-gunting/shared/theme';
 
@@ -50,6 +53,7 @@ export default function TrackBarberScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ bookingId: string }>();
   const { bookingId } = params;
+  const insets = useSafeAreaInsets();
 
   // State
   const [booking, setBooking] = useState<BookingDetails | null>(null);
@@ -62,6 +66,7 @@ export default function TrackBarberScreen() {
   const mapRef = useRef<MapboxGL.Camera>(null);
   // const soundRef = useRef<Audio.Sound | null>(null);
   const appState = useRef(AppState.currentState);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Hooks
   const { location: customerLocation } = useLocation();
@@ -72,9 +77,31 @@ export default function TrackBarberScreen() {
     lastUpdated,
   } = useRealtimeBarberLocation(booking?.barberId || null, !!booking);
 
+  // Pulsing animation for live tracking dot
+  useEffect(() => {
+    if (isConnected) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.3,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [isConnected, pulseAnim]);
+
   // Calculate ETA
   const eta = barberLocation && booking
-    ? calculateETA(
+    ? calculateETAFromCoords(
         { lat: barberLocation.latitude, lng: barberLocation.longitude },
         { lat: booking.customerLocation.latitude, lng: booking.customerLocation.longitude }
       )
@@ -95,12 +122,11 @@ export default function TrackBarberScreen() {
           .select(`
             id,
             barber_id,
-            customer_location_lat,
-            customer_location_lng,
             customer_address,
             scheduled_time,
             status,
             barber:barbers!bookings_barber_id_fkey(
+              user_id,
               profile:profiles!barbers_user_id_fkey(
                 full_name,
                 phone_number,
@@ -119,16 +145,26 @@ export default function TrackBarberScreen() {
           return;
         }
 
+        // Extract lat/lng from customer_address JSONB
+        const address = data.customer_address || {};
+        const fullAddress = [
+          address.line1,
+          address.line2,
+          address.city,
+          address.state,
+          address.postalCode
+        ].filter(Boolean).join(', ');
+
         const bookingData: BookingDetails = {
           id: data.id,
-          barberId: data.barber_id,
+          barberId: data.barber?.user_id || data.barber_id, // Use user_id for profiles query
           barberName: data.barber?.profile?.full_name || 'Unknown',
           barberPhone: data.barber?.profile?.phone_number || '',
           barberAvatar: data.barber?.profile?.avatar_url,
           customerLocation: {
-            latitude: parseFloat(data.customer_location_lat || '0'),
-            longitude: parseFloat(data.customer_location_lng || '0'),
-            address: data.customer_address || '',
+            latitude: parseFloat(address.lat || '0'),
+            longitude: parseFloat(address.lng || '0'),
+            address: fullAddress || 'Location not available',
           },
           scheduledTime: new Date(data.scheduled_time),
           status: data.status,
@@ -265,26 +301,6 @@ export default function TrackBarberScreen() {
     }
   };
 
-  // Handle call barber
-  const handleCallBarber = () => {
-    if (booking?.barberPhone) {
-      // Open phone dialer
-      Alert.alert(
-        'Call Barber',
-        `Call ${booking.barberName} at ${booking.barberPhone}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Call',
-            onPress: () => {
-              // TODO: Implement phone call using Linking
-              console.log('Calling:', booking.barberPhone);
-            },
-          },
-        ]
-      );
-    }
-  };
 
   // Render loading state
   if (loading) {
@@ -312,8 +328,23 @@ export default function TrackBarberScreen() {
     );
   }
 
+  // Calculate arrival time - prioritize database ETA over client calculation
+  const etaMinutes = trackingSession?.current_eta_minutes || eta?.durationMinutes;
+  const arrivalTime = etaMinutes
+    ? new Date(Date.now() + etaMinutes * 60000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : null;
+
   return (
     <View style={styles.container}>
+      {/* Header with back button */}
+      <View style={[styles.header, { height: 60 + insets.top, paddingTop: insets.top }]}>
+        <TouchableOpacity style={styles.backButtonHeader} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Track Barber</Text>
+        <View style={styles.headerRight} />
+      </View>
+
       {/* Map */}
       <MapboxGL.MapView style={styles.map}>
         <MapboxGL.Camera
@@ -326,41 +357,73 @@ export default function TrackBarberScreen() {
           }
         />
 
-        {/* Customer Location Pin */}
-        <MapboxGL.PointAnnotation
-          id="customer-location"
+        {/* Customer Location Marker - Grab style */}
+        <MapboxGL.MarkerView
+          id="customer-marker"
           coordinate={[booking.customerLocation.longitude, booking.customerLocation.latitude]}
         >
-          <View style={styles.customerPin}>
-            <Ionicons name="home" size={24} color="#fff" />
-          </View>
-        </MapboxGL.PointAnnotation>
-
-        {/* Barber Location Pin */}
-        {barberLocation && (
-          <MapboxGL.PointAnnotation
-            id="barber-location"
-            coordinate={[barberLocation.longitude, barberLocation.latitude]}
-          >
-            <View style={styles.barberPin}>
-              <Ionicons name="scissors" size={24} color="#fff" />
+          <View style={styles.customerMarker}>
+            <View style={styles.markerInner}>
+              <Ionicons name="home" size={20} color="#fff" />
             </View>
-          </MapboxGL.PointAnnotation>
+            <View style={styles.markerArrow} />
+          </View>
+        </MapboxGL.MarkerView>
+
+        {/* Route Line - Straight line from barber to customer */}
+        {barberLocation && (
+          <MapboxGL.ShapeSource
+            id="route-line-source"
+            shape={{
+              type: 'Feature',
+              geometry: {
+                type: 'LineString',
+                coordinates: [
+                  [barberLocation.longitude, barberLocation.latitude],
+                  [booking.customerLocation.longitude, booking.customerLocation.latitude],
+                ],
+              },
+            }}
+          >
+            <MapboxGL.LineLayer
+              id="route-line"
+              style={{
+                lineColor: '#10B981',
+                lineWidth: 3,
+                lineCap: 'round',
+                lineOpacity: 0.7,
+                lineDasharray: [2, 2],
+              }}
+            />
+          </MapboxGL.ShapeSource>
         )}
 
-        {/* Route Line (optional - can be added with directions API) */}
+        {/* Barber Location Marker - Grab style */}
+        {barberLocation && (
+          <MapboxGL.MarkerView
+            id="barber-marker"
+            coordinate={[barberLocation.longitude, barberLocation.latitude]}
+          >
+            <View style={styles.barberMarker}>
+              <View style={[styles.markerInner, { backgroundColor: '#10B981' }]}>
+                <Ionicons name="person" size={20} color="#fff" />
+              </View>
+              <View style={[styles.markerArrow, { borderTopColor: '#10B981' }]} />
+            </View>
+          </MapboxGL.MarkerView>
+        )}
       </MapboxGL.MapView>
 
       {/* Connection Status Badge */}
-      <View style={[styles.statusBadge, isConnected ? styles.connected : styles.disconnected]}>
-        <View style={[styles.statusDot, isConnected ? styles.connectedDot : styles.disconnectedDot]} />
+      <View style={[styles.statusBadge, isConnected ? styles.connected : styles.disconnected, { top: 70 + insets.top }]}>
+        <Animated.View style={[styles.statusDot, isConnected ? styles.connectedDot : styles.disconnectedDot, { opacity: isConnected ? pulseAnim : 1 }]} />
         <Text style={styles.statusText}>
           {isConnected ? 'Live Tracking' : 'Connecting...'}
         </Text>
       </View>
 
       {/* Map Controls */}
-      <View style={styles.mapControls}>
+      <View style={[styles.mapControls, { top: 70 + insets.top }]}>
         <TouchableOpacity style={styles.mapButton} onPress={centerMapOnBarber}>
           <Ionicons name="locate" size={24} color={Colors.gray[800]} />
         </TouchableOpacity>
@@ -370,64 +433,43 @@ export default function TrackBarberScreen() {
       </View>
 
       {/* Bottom Info Panel */}
-      <View style={styles.bottomPanel}>
+      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         {/* Barber Info */}
         <View style={styles.barberInfo}>
-          <View style={styles.barberAvatar}>
-            {booking.barberAvatar ? (
-              <Text>TODO: Image</Text>
-            ) : (
-              <Ionicons name="person" size={32} color={Colors.gray[500]} />
-            )}
-          </View>
+          <Image
+            source={{ uri: booking.barberAvatar || 'https://via.placeholder.com/48' }}
+            style={styles.barberAvatar}
+          />
           <View style={styles.barberDetails}>
             <Text style={styles.barberName}>{booking.barberName}</Text>
             <Text style={styles.barberStatus}>
-              {trackingSession?.current_eta_minutes 
-                ? `${trackingSession.current_eta_minutes} min away` 
-                : eta 
-                ? `${eta.durationMinutes} min away` 
-                : 'Calculating...'}
+              {arrivalTime ? `Arriving at ${arrivalTime}` : 'Calculating arrival time...'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.callButton} onPress={handleCallBarber}>
-            <Ionicons name="call" size={24} color="#fff" />
-          </TouchableOpacity>
         </View>
 
         {/* ETA Info */}
         {(eta || trackingSession) && (
           <View style={styles.etaInfo}>
             <View style={styles.etaItem}>
-              <Text style={styles.etaLabel}>Distance</Text>
-              <Text style={styles.etaValue}>
-                {trackingSession?.current_distance_km 
-                  ? `${trackingSession.current_distance_km.toFixed(1)} km`
-                  : eta 
-                  ? `${eta.distanceKm.toFixed(1)} km`
-                  : '--'}
-              </Text>
-            </View>
-            <View style={styles.etaDivider} />
-            <View style={styles.etaItem}>
-              <Text style={styles.etaLabel}>ETA</Text>
+              <Text style={styles.etaLabel}>Arriving in</Text>
               <Text style={styles.etaValue}>
                 {trackingSession?.current_eta_minutes 
                   ? `${trackingSession.current_eta_minutes} min`
-                  : eta 
+                  : eta?.durationMinutes 
                   ? `${eta.durationMinutes} min`
-                  : '--'}
+                  : 'Calculating...'}
               </Text>
             </View>
             <View style={styles.etaDivider} />
             <View style={styles.etaItem}>
-              <Text style={styles.etaLabel}>Updated</Text>
+              <Text style={styles.etaLabel}>Last Updated</Text>
               <Text style={styles.etaValue}>
                 {trackingSession?.minutes_since_last_update !== undefined
                   ? `${Math.floor(trackingSession.minutes_since_last_update)}m ago`
                   : lastUpdated 
                   ? `${Math.floor((Date.now() - lastUpdated.getTime()) / 1000)}s ago` 
-                  : 'Never'}
+                  : 'Just now'}
               </Text>
             </View>
           </View>
@@ -455,6 +497,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E5E5EA',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  backButtonHeader: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    textAlign: 'center',
+    letterSpacing: -0.4,
+  },
+  headerRight: {
+    width: 40,
   },
   map: {
     flex: 1,
@@ -494,7 +573,6 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     position: 'absolute',
-    top: 60,
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -535,7 +613,6 @@ const styles = StyleSheet.create({
   },
   mapControls: {
     position: 'absolute',
-    top: 60,
     right: 16,
     gap: 8,
   },
@@ -558,27 +635,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 10,
+    maxHeight: '35%',
   },
   barberInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   barberAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.gray[100],
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginRight: 12,
   },
   barberDetails: {
@@ -594,21 +671,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.gray[500],
   },
-  callButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   etaInfo: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 16,
+    paddingVertical: 12,
     backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   etaItem: {
     alignItems: 'center',
@@ -672,5 +741,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#fff',
+  },
+  // Grab-style markers
+  customerMarker: {
+    alignItems: 'center',
+  },
+  barberMarker: {
+    alignItems: 'center',
+  },
+  markerInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#0EA5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  markerArrow: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#0EA5E9',
+    marginTop: -3,
   },
 });

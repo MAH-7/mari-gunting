@@ -182,30 +182,6 @@ export default function QuickBookScreen() {
     }, 2000);
   };
   
-  // DEBUG: Reset blacklist (for testing)
-  const handleResetBlacklist = async () => {
-    const blacklist = await getBlacklistedBarbers();
-    if (blacklist.length === 0) {
-      Alert.alert('Debug', 'Blacklist is already empty');
-      return;
-    }
-    
-    Alert.alert(
-      'Reset Blacklist',
-      `Clear ${blacklist.length} blacklisted barber(s)?\n\n${blacklist.map(b => b.barberName).join('\n')}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            await clearBlacklist();
-            Alert.alert('✅ Done', 'Blacklist cleared successfully');
-          },
-        },
-      ]
-    );
-  };
   
   // Calculate estimated barbers in range
   const estimatedBarbers = Math.floor(radius * 2.5 + (maxPrice / 10));
@@ -221,12 +197,7 @@ export default function QuickBookScreen() {
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Quick Book</Text>
-        <TouchableOpacity
-          style={styles.debugButton}
-          onPress={handleResetBlacklist}
-        >
-          <Ionicons name="refresh" size={20} color={Colors.error} />
-        </TouchableOpacity>
+        <View style={styles.headerRight} />
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>

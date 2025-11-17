@@ -7,29 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		044F4C80D87742BE271E4FCC /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2282CD013892EFDA31D16B62 /* ExpoModulesProvider.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		280801C4967A53984BBC3D5D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7F391011BFB1C73BD22903D0 /* PrivacyInfo.xcprivacy */; };
-		35D44DC1ABCBA85DF27D6DA7 /* libPods-MariGuntingPartnerDev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7672C924A133464CBFD84BBA /* libPods-MariGuntingPartnerDev.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		91BC1C269863841898FAB091 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375EE4D64AA40940A1AB8A59 /* ExpoModulesProvider.swift */; };
+		96EC88CAD9ECC730FF21D2E3 /* libPods-MariGuntingPartnerDev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CDB15E03363B19AC75E0ECCD /* libPods-MariGuntingPartnerDev.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F2ECAC1C9738769BA6BB728C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 47544D65F784F1EC4DB872FB /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* MariGuntingPartnerDev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MariGuntingPartnerDev.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = MariGuntingPartnerDev/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = MariGuntingPartnerDev/Info.plist; sourceTree = "<group>"; };
-		375EE4D64AA40940A1AB8A59 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-MariGuntingPartnerDev/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		5DA5C01111FF853C77E9DECD /* Pods-MariGuntingPartnerDev.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.debug.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.debug.xcconfig"; sourceTree = "<group>"; };
-		7672C924A133464CBFD84BBA /* libPods-MariGuntingPartnerDev.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MariGuntingPartnerDev.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		7F391011BFB1C73BD22903D0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = MariGuntingPartnerDev/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2282CD013892EFDA31D16B62 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-MariGuntingPartnerDev/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		47544D65F784F1EC4DB872FB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = MariGuntingPartnerDev/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A34609A199C271011D5F7628 /* Pods-MariGuntingPartnerDev.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.release.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.release.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = MariGuntingPartnerDev/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		DA0F9BB2EF5AC3158020838E /* Pods-MariGuntingPartnerDev.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.release.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.release.xcconfig"; sourceTree = "<group>"; };
+		CDB15E03363B19AC75E0ECCD /* libPods-MariGuntingPartnerDev.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MariGuntingPartnerDev.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MariGuntingPartnerDev/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* MariGuntingPartnerDev-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "MariGuntingPartnerDev-Bridging-Header.h"; path = "MariGuntingPartnerDev/MariGuntingPartnerDev-Bridging-Header.h"; sourceTree = "<group>"; };
+		FE6F7CA71A3DF154B16503DA /* Pods-MariGuntingPartnerDev.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MariGuntingPartnerDev.debug.xcconfig"; path = "Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				35D44DC1ABCBA85DF27D6DA7 /* libPods-MariGuntingPartnerDev.a in Frameworks */,
+				96EC88CAD9ECC730FF21D2E3 /* libPods-MariGuntingPartnerDev.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,15 +53,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				7F391011BFB1C73BD22903D0 /* PrivacyInfo.xcprivacy */,
-			);
-			name = MariGuntingPartnerDev;
-			sourceTree = "<group>";
-		};
-		261974A6D6DB8B0373A99AF7 /* MariGuntingPartnerDev */ = {
-			isa = PBXGroup;
-			children = (
-				375EE4D64AA40940A1AB8A59 /* ExpoModulesProvider.swift */,
+				47544D65F784F1EC4DB872FB /* PrivacyInfo.xcprivacy */,
 			);
 			name = MariGuntingPartnerDev;
 			sourceTree = "<group>";
@@ -70,17 +62,17 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				7672C924A133464CBFD84BBA /* libPods-MariGuntingPartnerDev.a */,
+				CDB15E03363B19AC75E0ECCD /* libPods-MariGuntingPartnerDev.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		4E1EDD03DA515D824BED654B /* ExpoModulesProviders */ = {
+		33C646FD1D74660E3518FCBB /* MariGuntingPartnerDev */ = {
 			isa = PBXGroup;
 			children = (
-				261974A6D6DB8B0373A99AF7 /* MariGuntingPartnerDev */,
+				2282CD013892EFDA31D16B62 /* ExpoModulesProvider.swift */,
 			);
-			name = ExpoModulesProviders;
+			name = MariGuntingPartnerDev;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -97,8 +89,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				D6CE310D2E36A1C354D0CED7 /* Pods */,
-				4E1EDD03DA515D824BED654B /* ExpoModulesProviders */,
+				E2630AEFE6C6F13DD0E8DF9D /* Pods */,
+				ABEC085A03E2FE7205A21B17 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -113,6 +105,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		ABEC085A03E2FE7205A21B17 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				33C646FD1D74660E3518FCBB /* MariGuntingPartnerDev */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -122,11 +122,11 @@
 			path = MariGuntingPartnerDev/Supporting;
 			sourceTree = "<group>";
 		};
-		D6CE310D2E36A1C354D0CED7 /* Pods */ = {
+		E2630AEFE6C6F13DD0E8DF9D /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				5DA5C01111FF853C77E9DECD /* Pods-MariGuntingPartnerDev.debug.xcconfig */,
-				DA0F9BB2EF5AC3158020838E /* Pods-MariGuntingPartnerDev.release.xcconfig */,
+				FE6F7CA71A3DF154B16503DA /* Pods-MariGuntingPartnerDev.debug.xcconfig */,
+				A34609A199C271011D5F7628 /* Pods-MariGuntingPartnerDev.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -139,13 +139,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "MariGuntingPartnerDev" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				2CD33E57F170537D5C119F88 /* [Expo] Configure project */,
+				45C7D27CDAC1A5B8C34A6B43 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				D17183B654CA2EF168C88D8E /* [CP] Embed Pods Frameworks */,
+				3765426169116D1313960F75 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -166,7 +166,6 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
-						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -196,7 +195,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				280801C4967A53984BBC3D5D /* PrivacyInfo.xcprivacy in Resources */,
+				F2ECAC1C9738769BA6BB728C /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,7 +241,39 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		2CD33E57F170537D5C119F88 /* [Expo] Configure project */ = {
+		3765426169116D1313960F75 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/MapboxMaps/MapboxMaps.framework",
+				"${BUILT_PRODUCTS_DIR}/Turf/Turf.framework",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCommon/MapboxCommon.framework/MapboxCommon",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCoreMaps/MapboxCoreMaps.framework/MapboxCoreMaps",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxMobileEvents/MapboxMobileEvents.framework/MapboxMobileEvents",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMaps.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Turf.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCommon.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCoreMaps.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMobileEvents.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		45C7D27CDAC1A5B8C34A6B43 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -310,38 +341,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D17183B654CA2EF168C88D8E /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/MapboxMaps/MapboxMaps.framework",
-				"${BUILT_PRODUCTS_DIR}/Turf/Turf.framework",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCommon/MapboxCommon.framework/MapboxCommon",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxCoreMaps/MapboxCoreMaps.framework/MapboxCoreMaps",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/MapboxMobileEvents/MapboxMobileEvents.framework/MapboxMobileEvents",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMaps.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Turf.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCommon.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxCoreMaps.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/MapboxMobileEvents.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MariGuntingPartnerDev/Pods-MariGuntingPartnerDev-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -350,7 +349,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				91BC1C269863841898FAB091 /* ExpoModulesProvider.swift in Sources */,
+				044F4C80D87742BE271E4FCC /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -359,13 +358,11 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5DA5C01111FF853C77E9DECD /* Pods-MariGuntingPartnerDev.debug.xcconfig */;
+			baseConfigurationReference = FE6F7CA71A3DF154B16503DA /* Pods-MariGuntingPartnerDev.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MariGuntingPartnerDev/MariGuntingPartnerDev.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C45922S8T9;
 				ENABLE_BITCODE = NO;
@@ -387,7 +384,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.marigunting.partner.dev;
-				PRODUCT_NAME = MariGuntingPartnerDev;
+				PRODUCT_NAME = "MariGuntingPartnerDev";
 				SWIFT_OBJC_BRIDGING_HEADER = "MariGuntingPartnerDev/MariGuntingPartnerDev-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -398,13 +395,11 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DA0F9BB2EF5AC3158020838E /* Pods-MariGuntingPartnerDev.release.xcconfig */;
+			baseConfigurationReference = A34609A199C271011D5F7628 /* Pods-MariGuntingPartnerDev.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MariGuntingPartnerDev/MariGuntingPartnerDev.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C45922S8T9;
 				INFOPLIST_FILE = MariGuntingPartnerDev/Info.plist;
@@ -421,7 +416,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.marigunting.partner.dev;
-				PRODUCT_NAME = MariGuntingPartnerDev;
+				PRODUCT_NAME = "MariGuntingPartnerDev";
 				SWIFT_OBJC_BRIDGING_HEADER = "MariGuntingPartnerDev/MariGuntingPartnerDev-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

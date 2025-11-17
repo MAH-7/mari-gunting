@@ -32,6 +32,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSLocationAlwaysAndWhenInUseDescription: 'Mari Gunting Partner needs your location to track service delivery and provide real-time updates.',
         NSCameraUsageDescription: 'Mari Gunting Partner needs camera access to take photos for your portfolio and barbershop.',
         NSPhotoLibraryUsageDescription: 'Mari Gunting Partner needs photo library access to upload images.',
+        LSApplicationQueriesSchemes: ['comgooglemaps', 'waze'],
+        UIBackgroundModes: ['location'],
       },
       config: {
         // Note: Using Mapbox, but keeping legacy iOS config structure

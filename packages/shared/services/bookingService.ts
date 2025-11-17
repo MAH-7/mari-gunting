@@ -944,6 +944,16 @@ export const bookingService = {
         data.scheduledDate = data.scheduled_date;
         data.scheduledTime = data.scheduled_time;
         data.duration = data.estimated_duration_minutes;
+        data.travelCost = data.travel_fee;
+        data.distance = data.distance_km;
+        
+        // Timeline timestamps
+        data.acceptedAt = data.accepted_at;
+        data.onTheWayAt = data.on_the_way_at;
+        data.arrivedAt = data.arrived_at;
+        data.startedAt = data.started_at;
+        data.completedAt = data.completed_at;
+        data.cancelledAt = data.cancelled_at;
         
         // Transform address from JSON to object with fullAddress
         if (data.customer_address) {

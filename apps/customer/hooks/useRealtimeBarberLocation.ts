@@ -62,7 +62,6 @@ export function useRealtimeBarberLocation(
               
               try {
                 const newLocation = payload.new?.location;
-                const locationUpdatedAt = payload.new?.location_updated_at;
                 
                 if (newLocation) {
                   // Parse the PostGIS location data (WKB hex format)
@@ -72,7 +71,7 @@ export function useRealtimeBarberLocation(
                     const barberLocation: BarberLocation = {
                       latitude: parsed.latitude,
                       longitude: parsed.longitude,
-                      timestamp: locationUpdatedAt ? new Date(locationUpdatedAt) : new Date(),
+                      timestamp: new Date(),
                       // Note: GPS accuracy is not stored in profiles, could be added later
                     };
                     
@@ -113,7 +112,7 @@ export function useRealtimeBarberLocation(
         // Fetch initial location
         const { data, error: fetchError } = await supabase
           .from('profiles')
-          .select('location, location_updated_at')
+          .select('location')
           .eq('id', barberId)
           .single();
 
@@ -127,7 +126,7 @@ export function useRealtimeBarberLocation(
             const barberLocation: BarberLocation = {
               latitude: parsed.latitude,
               longitude: parsed.longitude,
-              timestamp: data.location_updated_at ? new Date(data.location_updated_at) : new Date(),
+              timestamp: new Date(),
             };
             
             setLocation(barberLocation);

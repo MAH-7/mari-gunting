@@ -695,21 +695,21 @@ const BookingCard = React.memo(function BookingCard({ booking }: { booking: any 
         <View style={styles.footer}>
           {/* Total Section - Full Width */}
           <View style={styles.totalSectionFull}>
-            <View style={styles.totalRow}>
+            <View style={styles.totalRowInline}>
               <Text style={styles.totalLabel}>Total</Text>
-              {/* Payment Method Badge */}
-              <View style={styles.paymentMethodBadgeSmall}>
-                <Ionicons 
-                  name={mappedBooking.paymentMethod === 'cash' ? 'cash-outline' : 'card-outline'} 
-                  size={12} 
-                  color={mappedBooking.paymentMethod === 'cash' ? Colors.warning : Colors.primary} 
-                />
-                <Text style={styles.paymentMethodTextSmall}>
-                  {getPaymentMethodDisplay(mappedBooking.paymentMethod || 'cash')}
-                </Text>
-              </View>
+              <Text style={styles.totalValue}>{formatPrice(mappedBooking.totalPrice || 0)}</Text>
             </View>
-            <Text style={styles.totalValue}>{formatPrice(mappedBooking.totalPrice || 0)}</Text>
+            {/* Payment Method Badge */}
+            <View style={styles.paymentMethodBadgeSmall}>
+              <Ionicons 
+                name={mappedBooking.paymentMethod === 'cash' ? 'cash-outline' : 'card-outline'} 
+                size={12} 
+                color={mappedBooking.paymentMethod === 'cash' ? Colors.warning : Colors.primary} 
+              />
+              <Text style={styles.paymentMethodTextSmall}>
+                {getPaymentMethodDisplay(mappedBooking.paymentMethod || 'cash')}
+              </Text>
+            </View>
           </View>
           
           {/* Track Button for On The Way */}
@@ -1025,7 +1025,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
   },
   loadingState: {
     paddingVertical: 60,
@@ -1068,7 +1068,7 @@ const styles = StyleSheet.create({
   bookingCard: {
     backgroundColor: Colors.white,
     borderRadius: 20,
-    marginBottom: 16,
+    marginBottom: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1081,7 +1081,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   statusLeft: {
     flexDirection: 'row',
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   progressTrack: {
     height: 4,
@@ -1115,12 +1115,12 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   cardContent: {
-    padding: 16,
+    padding: 12,
   },
   barberRow: {
     flexDirection: 'row',
-    marginBottom: 16,
-    paddingBottom: 16,
+    marginBottom: 0,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray[100],
   },
@@ -1196,7 +1196,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   servicesSection: {
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 12,
   },
   serviceRow: {
     flexDirection: 'row',
@@ -1227,7 +1228,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   detailsSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
@@ -1250,15 +1251,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   footer: {
-    paddingTop: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: Colors.gray[100],
-    gap: 12,
+    gap: 10,
   },
   totalSectionFull: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 0,
   },
   totalSection: {},
+  totalRowInline: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
   totalRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1266,12 +1275,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   totalLabel: {
-    fontSize: 12,
-    color: Colors.gray[400],
+    fontSize: 13,
+    color: Colors.gray[500],
     fontWeight: '600',
   },
   totalValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: Colors.primary,
   },

@@ -178,66 +178,67 @@ export default function PartnerDashboardScreen() {
     return () => clearInterval(timer);
   }, []);
   
+  // Extract fetchStats as reusable function (for auto-refresh + pull-to-refresh)
+  const fetchStats = useCallback(async () => {
+    if (!barberId) return;
+    
+    const now = new Date();
+    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const month = now.getMonth() + 1; // 1-12
+    const year = now.getFullYear();
+    
+    try {
+      // Fetch today's stats
+      const { data: todayData, error: todayError } = await supabase
+        .rpc('get_barber_daily_stats', {
+          p_barber_id: barberId,
+          p_date: today
+        });
+      
+      if (todayError) {
+        console.error('❌ Error fetching today stats:', todayError);
+      } else if (todayData && todayData.length > 0) {
+        setTodayStats(todayData[0]);
+      }
+      
+      // Fetch monthly stats
+      const { data: monthData, error: monthError } = await supabase
+        .rpc('get_barber_monthly_stats', {
+          p_barber_id: barberId,
+          p_month: month,
+          p_year: year
+        });
+      
+      if (monthError) {
+        console.error('❌ Error fetching month stats:', monthError);
+      } else if (monthData && monthData.length > 0) {
+        setMonthlyStats(monthData[0]);
+      }
+      
+      // Fetch all-time stats (total completed, acceptance rate)
+      const { data: allTimeData, error: allTimeError } = await supabase
+        .rpc('get_barber_all_time_stats', {
+          p_barber_id: barberId
+        });
+      
+      if (allTimeError) {
+        console.error('❌ Error fetching all-time stats:', allTimeError);
+      } else if (allTimeData && allTimeData.length > 0) {
+        setAllTimeStats(allTimeData[0]);
+      }
+    } catch (error) {
+      console.error('❌ Exception fetching stats:', error);
+    }
+  }, [barberId]);
+  
   // Fetch accurate stats from database RPC
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!barberId) return;
-      
-      const now = new Date();
-      const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
-      const month = now.getMonth() + 1; // 1-12
-      const year = now.getFullYear();
-      
-      try {
-        // Fetch today's stats
-        const { data: todayData, error: todayError } = await supabase
-          .rpc('get_barber_daily_stats', {
-            p_barber_id: barberId,
-            p_date: today
-          });
-        
-        if (todayError) {
-          console.error('❌ Error fetching today stats:', todayError);
-        } else if (todayData && todayData.length > 0) {
-          setTodayStats(todayData[0]);
-        }
-        
-        // Fetch monthly stats
-        const { data: monthData, error: monthError } = await supabase
-          .rpc('get_barber_monthly_stats', {
-            p_barber_id: barberId,
-            p_month: month,
-            p_year: year
-          });
-        
-        if (monthError) {
-          console.error('❌ Error fetching month stats:', monthError);
-        } else if (monthData && monthData.length > 0) {
-          setMonthlyStats(monthData[0]);
-        }
-        
-        // Fetch all-time stats (total completed, acceptance rate)
-        const { data: allTimeData, error: allTimeError } = await supabase
-          .rpc('get_barber_all_time_stats', {
-            p_barber_id: barberId
-          });
-        
-        if (allTimeError) {
-          console.error('❌ Error fetching all-time stats:', allTimeError);
-        } else if (allTimeData && allTimeData.length > 0) {
-          setAllTimeStats(allTimeData[0]);
-        }
-      } catch (error) {
-        console.error('❌ Exception fetching stats:', error);
-      }
-    };
-    
     fetchStats();
     
     // Refetch stats every 5 minutes
     const interval = setInterval(fetchStats, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [barberId]);
+  }, [fetchStats]);
 
   // Fetch real rating from reviews (on mount and account type change)
   useEffect(() => {
@@ -707,6 +708,7 @@ export default function PartnerDashboardScreen() {
     setRefreshing(true);
     await Promise.all([
       loadVerificationStatus(),
+      fetchStats(), // GRAB STANDARD: Instant stats refresh on pull-down
       queryClient.invalidateQueries({ queryKey: ['barber-bookings'] }),
       new Promise((resolve) => setTimeout(resolve, 1000)),
     ]);

@@ -36,6 +36,7 @@ export default function PartnerJobsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showNewBookingAlert, setShowNewBookingAlert] = useState(false);
   const [barberId, setBarberId] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false); // Loading state for status updates
   
   // Pagination handled by useInfiniteQuery cache
   
@@ -505,10 +506,21 @@ export default function PartnerJobsScreen() {
         {
           text: 'Accept',
           onPress: async () => {
+            setIsUpdatingStatus(true);
             try {
-              // Optimistic update
-              const updatedJob = { ...job, status: 'accepted' as BookingStatus };
-              setSelectedJob(updatedJob);
+              // SMART OPTIMISTIC UPDATE: Preserve ALL existing data
+              const optimisticJob = { 
+                ...job, 
+                status: 'accepted' as BookingStatus,
+                accepted_at: new Date().toISOString(),
+                // Preserve all critical fields
+                customer: job.customer,
+                services: job.services,
+                travelCost: job.travelCost,
+                distance: job.distance,
+                address: job.address
+              };
+              setSelectedJob(optimisticJob);
               
               // Update backend - this will also capture payment if Curlec
               await updateStatusMutation.mutateAsync({ 
@@ -516,9 +528,7 @@ export default function PartnerJobsScreen() {
                 newStatus: 'accepted' 
               });
               
-              // CRITICAL FIX: Fetch the updated booking data immediately
-              // This ensures selectedJob has the latest data (accepted_at, payment_status, etc.)
-              // Real-time subscription may be delayed, so we fetch directly
+              // Fetch complete data (loading overlay masks the transition)
               console.log('🔄 Fetching updated booking after accept...');
               const updatedBooking = await bookingService.getBookingById(job.id);
               if (updatedBooking.success && updatedBooking.data) {
@@ -526,12 +536,14 @@ export default function PartnerJobsScreen() {
                 setSelectedJob(updatedBooking.data);
               }
               
+              setIsUpdatingStatus(false);
               Alert.alert(
                 '✅ Job Accepted', 
                 'Great! You can now start heading to the customer location.',
                 [{ text: 'OK' }]
               );
             } catch (error: any) {
+              setIsUpdatingStatus(false);
               // Rollback on error
               setSelectedJob(job);
               Alert.alert('Error', error.message || 'Failed to accept job');
@@ -573,10 +585,21 @@ export default function PartnerJobsScreen() {
         {
           text: "I'm on the way",
           onPress: async () => {
+            setIsUpdatingStatus(true);
             try {
-              // Optimistic update
-              const updatedJob = { ...job, status: 'on_the_way' as BookingStatus };
-              setSelectedJob(updatedJob);
+              // Smart optimistic update
+              const optimisticJob = { 
+                ...job, 
+                status: 'on_the_way' as BookingStatus,
+                on_the_way_at: new Date().toISOString(),
+                // Preserve all critical fields
+                customer: job.customer,
+                services: job.services,
+                travelCost: job.travelCost,
+                distance: job.distance,
+                address: job.address
+              };
+              setSelectedJob(optimisticJob);
               
               await updateStatusMutation.mutateAsync({ 
                 bookingId: job.id, 
@@ -597,12 +620,14 @@ export default function PartnerJobsScreen() {
                 setSelectedJob(updatedBooking.data);
               }
               
+              setIsUpdatingStatus(false);
               Alert.alert(
                 '🚗 On The Way', 
                 'Customer notified! Location tracking active.\n\nTip: Use GPS for accurate navigation.',
                 [{ text: 'OK' }]
               );
             } catch (err) {
+              setIsUpdatingStatus(false);
               console.error('❌ Error:', err);
               setSelectedJob(job); // Rollback
               Alert.alert('Error', 'Failed to update status. Please try again.');
@@ -622,10 +647,21 @@ export default function PartnerJobsScreen() {
         {
           text: 'Confirm Arrival',
           onPress: async () => {
+            setIsUpdatingStatus(true);
             try {
-              // Optimistic update
-              const updatedJob = { ...job, status: 'arrived' as BookingStatus };
-              setSelectedJob(updatedJob);
+              // Smart optimistic update
+              const optimisticJob = { 
+                ...job, 
+                status: 'arrived' as BookingStatus,
+                arrived_at: new Date().toISOString(),
+                // Preserve all critical fields
+                customer: job.customer,
+                services: job.services,
+                travelCost: job.travelCost,
+                distance: job.distance,
+                address: job.address
+              };
+              setSelectedJob(optimisticJob);
               
               await updateStatusMutation.mutateAsync({ 
                 bookingId: job.id, 
@@ -646,12 +682,14 @@ export default function PartnerJobsScreen() {
                 setSelectedJob(updatedBooking.data);
               }
               
+              setIsUpdatingStatus(false);
               Alert.alert(
                 '📍 Arrival Confirmed', 
                 'Customer notified! Ready to start the service.',
                 [{ text: 'OK' }]
               );
             } catch (err) {
+              setIsUpdatingStatus(false);
               console.error('❌ Error:', err);
               setSelectedJob(job); // Rollback
               Alert.alert('Error', 'Failed to confirm arrival. Please try again.');
@@ -1152,38 +1190,83 @@ export default function PartnerJobsScreen() {
     // Future: router.push(`/chat/${customerId}`);
   };
 
-  const handleGetDirections = (address: string, latitude?: number, longitude?: number) => {
-    // Try to use coordinates if available, otherwise use address
-    let url = '';
+  const handleGetDirections = async (address: string, latitude?: number, longitude?: number) => {
+    const coords = latitude && longitude ? `${latitude},${longitude}` : encodeURIComponent(address);
     
-    if (latitude && longitude) {
-      // Use coordinates for more accurate navigation
-      if (Platform.OS === 'ios') {
-        url = `maps://app?daddr=${latitude},${longitude}`;
-      } else {
-        url = `geo:0,0?q=${latitude},${longitude}(${encodeURIComponent(address)})`;
+    // iOS: Show choice of navigation apps
+    if (Platform.OS === 'ios') {
+      const options: string[] = ['Apple Maps'];
+      const urls: string[] = [
+        latitude && longitude 
+          ? `maps://app?daddr=${coords}`
+          : `maps://app?daddr=${encodeURIComponent(address)}`
+      ];
+      
+      // Check if Google Maps is installed
+      const googleMapsUrl = latitude && longitude
+        ? `comgooglemaps://?daddr=${coords}`
+        : `comgooglemaps://?daddr=${encodeURIComponent(address)}`;
+      
+      try {
+        const hasGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
+        console.log('🗺️ Google Maps detection:', hasGoogleMaps);
+        if (hasGoogleMaps) {
+          options.push('Google Maps');
+          urls.push(googleMapsUrl);
+        }
+      } catch (e) {
+        console.log('❌ Google Maps check failed:', e);
       }
+      
+      // Check if Waze is installed
+      const wazeUrl = latitude && longitude
+        ? `waze://?ll=${coords}&navigate=yes`
+        : `waze://?q=${encodeURIComponent(address)}&navigate=yes`;
+      
+      try {
+        const hasWaze = await Linking.canOpenURL(wazeUrl);
+        console.log('🚗 Waze detection:', hasWaze);
+        if (hasWaze) {
+          options.push('Waze');
+          urls.push(wazeUrl);
+        }
+      } catch (e) {
+        console.log('❌ Waze check failed:', e);
+      }
+      
+      options.push('Cancel');
+      
+      // Show action sheet
+      Alert.alert(
+        'Open in Navigation App',
+        'Choose your preferred navigation app:',
+        [
+          ...options.slice(0, -1).map((option, index) => ({
+            text: option,
+            onPress: () => Linking.openURL(urls[index])
+          })),
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
     } else {
-      // Fallback to address-based navigation
-      const encodedAddress = encodeURIComponent(address);
-      if (Platform.OS === 'ios') {
-        url = `maps://app?daddr=${encodedAddress}`;
-      } else {
-        url = `geo:0,0?q=${encodedAddress}`;
+      // Android: Use geo: scheme (OS shows picker automatically)
+      const url = latitude && longitude
+        ? `geo:0,0?q=${coords}(${encodeURIComponent(address)})`
+        : `geo:0,0?q=${encodeURIComponent(address)}`;
+      
+      try {
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          // Fallback to Google Maps in browser
+          const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+          Linking.openURL(googleMapsUrl);
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Unable to open maps application');
       }
     }
-
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        // Fallback to Google Maps in browser
-        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-        Linking.openURL(googleMapsUrl);
-      }
-    }).catch(() => {
-      Alert.alert('Error', 'Unable to open maps application');
-    });
   };
 
   if (!currentUser) {
@@ -1687,8 +1770,8 @@ export default function PartnerJobsScreen() {
                     style={styles.directionsButton}
                     onPress={() => handleGetDirections(
                       selectedJob.address?.fullAddress || '',
-                      selectedJob.address?.latitude,
-                      selectedJob.address?.longitude
+                      selectedJob.address?.lat,
+                      selectedJob.address?.lng
                     )}
                   >
                     <Ionicons name="navigate" size={20} color={COLORS.background.primary} />
@@ -1817,6 +1900,16 @@ export default function PartnerJobsScreen() {
                     <Text style={styles.primaryButtonText}>Complete Job</Text>
                   </TouchableOpacity>
                 )}
+              </View>
+            )}
+            
+            {/* Loading Overlay - Prevents flash during status updates */}
+            {isUpdatingStatus && (
+              <View style={styles.loadingOverlay}>
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <Text style={styles.loadingText}>Updating...</Text>
+                </View>
               </View>
             )}
           </SafeAreaView>
@@ -3005,5 +3098,34 @@ const styles = StyleSheet.create({
     color: Colors.warning,
     fontWeight: '600',
     fontStyle: 'italic',
+  },
+  // Loading Overlay Styles (prevents flash during status updates)
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+  },
+  loadingContainer: {
+    backgroundColor: COLORS.background.primary,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  loadingText: {
+    ...TYPOGRAPHY.body.regular,
+    color: COLORS.text.primary,
+    fontWeight: '600',
   },
 });

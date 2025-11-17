@@ -243,7 +243,7 @@ export default function MapPickerScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Custom Header */}
       <View style={styles.header}>
         <TouchableOpacity

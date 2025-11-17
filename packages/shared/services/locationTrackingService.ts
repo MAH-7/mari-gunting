@@ -361,27 +361,38 @@ class LocationTrackingService {
     currentLocation: LocationUpdate
   ): Promise<void> {
     try {
-      // Find active bookings for this barber
+      // Find active bookings for this barber (userId is profile ID, need to match via barbers.user_id)
       const { data: bookings, error: fetchError } = await supabase
         .from('bookings')
-        .select('id, customer_location_lat, customer_location_lng')
-        .eq('barber_id', userId)
-        .in('status', ['accepted', 'confirmed', 'in_progress'])
-        .limit(1);
+        .select(`
+          id, 
+          customer_address,
+          barber:barbers!bookings_barber_id_fkey(
+            user_id
+          )
+        `)
+        .in('status', ['accepted', 'on_the_way', 'arrived', 'in_progress'])
+        .limit(10);
+
+      // Filter for bookings where barber.user_id matches userId (profile ID)
+      const activeBookings = bookings?.filter(b => b.barber?.user_id === userId) || [];
 
       if (fetchError) {
         console.warn('⚠️ Error fetching active bookings:', fetchError);
         return;
       }
 
-      if (!bookings || bookings.length === 0) {
+      console.log(`✅ Fetched ${activeBookings.length} booking(s) for barber`);
+
+      if (activeBookings.length === 0) {
         console.log('ℹ️ No active bookings to update');
         return;
       }
 
       // Update metrics for each active booking
-      for (const booking of bookings) {
-        if (!booking.customer_location_lat || !booking.customer_location_lng) {
+      for (const booking of activeBookings) {
+        const customerAddress = booking.customer_address;
+        if (!customerAddress?.lat || !customerAddress?.lng) {
           console.warn('⚠️ Booking missing customer location:', booking.id);
           continue;
         }
@@ -390,8 +401,8 @@ class LocationTrackingService {
         const distanceKm = calculateDistance(
           { latitude: currentLocation.latitude, longitude: currentLocation.longitude },
           { 
-            latitude: parseFloat(booking.customer_location_lat), 
-            longitude: parseFloat(booking.customer_location_lng) 
+            latitude: parseFloat(customerAddress.lat), 
+            longitude: parseFloat(customerAddress.lng) 
           }
         );
 

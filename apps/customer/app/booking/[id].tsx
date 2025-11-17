@@ -822,9 +822,11 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
-        {/* Progress Tracker - Grab Style */}
-        {!['completed', 'cancelled', 'rejected', 'expired'].includes(booking.status) && (
+        {/* Progress Tracker */}
+        {!['cancelled', 'rejected', 'expired'].includes(booking.status) && (
           <View style={styles.progressCard}>
+            <Text style={styles.progressTitle}>Progress</Text>
+            
             {/* Completed Steps */}
             {booking.status !== 'pending' && booking.status !== 'cancelled' && booking.status !== 'rejected' && booking.status !== 'expired' && (
               <View style={styles.completedSection}>
@@ -838,7 +840,21 @@ export default function BookingDetailScreen() {
                 {booking.onTheWayAt && (
                   <View style={styles.completedStep}>
                     <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
-                    <Text style={styles.completedStepText}>On The Way</Text>
+                    {booking.status === 'on_the_way' ? (
+                      <View style={styles.stepTextWithEta}>
+                        <Text style={styles.completedStepTextNoFlex}>On The Way</Text>
+                        {booking.current_eta_minutes && (
+                          <View style={styles.inlineEtaBadge}>
+                            <Ionicons name="time-outline" size={12} color={Colors.status.ready} />
+                            <Text style={styles.inlineEtaText}>
+                              ~{booking.current_eta_minutes} min
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <Text style={styles.completedStepText}>On The Way</Text>
+                    )}
                     <Text style={styles.completedStepTime}>{formatLocalTime(booking.onTheWayAt)}</Text>
                   </View>
                 )}
@@ -856,56 +872,18 @@ export default function BookingDetailScreen() {
                     <Text style={styles.completedStepTime}>{formatLocalTime(booking.startedAt)}</Text>
                   </View>
                 )}
+                {booking.completedAt && (
+                  <View style={styles.completedStep}>
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
+                    <Text style={styles.completedStepText}>Completed</Text>
+                    <Text style={styles.completedStepTime}>{formatLocalTime(booking.completedAt)}</Text>
+                  </View>
+                )}
               </View>
             )}
 
-            {/* Current Step - Only show if NOT completed */}
-            {booking.status !== 'completed' && (
-              <View style={styles.currentStepContainer}>
-                <View style={[styles.currentStepIcon, { backgroundColor: statusConfig.bg }]}>
-                  <Ionicons name={statusConfig.iconName} size={36} color={statusConfig.color} />
-                </View>
-                <View style={styles.currentStepInfo}>
-                  <Text style={[styles.currentStepLabel, { color: statusConfig.color }]}>
-                    {statusConfig.label.toUpperCase()}
-                  </Text>
-                  <Text style={styles.currentStepDescription}>{statusConfig.description}</Text>
-                
-                {/* ETA for on_the_way and arrived */}
-                {booking.status === 'on_the_way' && (
-                  <View style={styles.etaInfoContainer}>
-                    {booking.current_eta_minutes && (
-                      <View style={styles.etaContainer}>
-                        <Ionicons name="time-outline" size={14} color={Colors.status.ready} />
-                        <Text style={styles.etaText}>
-                          Arriving in ~{booking.current_eta_minutes} min
-                        </Text>
-                      </View>
-                    )}
-                    {booking.current_distance_km && (
-                      <View style={styles.etaContainer}>
-                        <Ionicons name="location-outline" size={14} color={Colors.status.ready} />
-                        <Text style={styles.etaText}>
-                          {booking.current_distance_km.toFixed(1)} km away
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-                {booking.status === 'arrived' && (
-                  <View style={styles.etaContainer}>
-                    <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
-                    <Text style={[styles.etaText, { color: Colors.primary }]}>
-                      Barber has arrived
-                    </Text>
-                  </View>
-                )}
-                </View>
-              </View>
-            )}
-
-            {/* Next Steps */}
-            {booking.status !== 'completed' && (
+            {/* Next Steps - only show for active bookings */}
+            {!['completed', 'cancelled', 'rejected', 'expired'].includes(booking.status) && (
               <View style={styles.nextStepsSection}>
                 <Text style={styles.nextStepsTitle}>Next Steps</Text>
                 <View style={styles.nextStepsList}>
@@ -1504,6 +1482,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: 16,
+  },
+  trackingInfoSection: {
+    gap: 8,
+    marginBottom: 12,
+  },
   card: {
     backgroundColor: Colors.white,
     padding: 20,
@@ -1531,10 +1519,7 @@ const styles = StyleSheet.create({
   },
   // Grab-style Timeline Styles
   completedSection: {
-    marginBottom: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.gray[100],
   },
   completedStep: {
     flexDirection: 'row',
@@ -1548,10 +1533,32 @@ const styles = StyleSheet.create({
     color: Colors.gray[500],
     flex: 1,
   },
+  completedStepTextNoFlex: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.gray[500],
+  },
+  stepTextWithEta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 4,
+  },
   completedStepTime: {
     fontSize: 12,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  inlineEtaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 4,
+  },
+  inlineEtaText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.status.ready,
   },
   currentStepContainer: {
     flexDirection: 'row',
