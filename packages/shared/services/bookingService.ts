@@ -868,6 +868,12 @@ export const bookingService = {
         .from('bookings')
         .select(`
           *,
+          customer:profiles!bookings_customer_id_fkey(
+            id,
+            full_name,
+            avatar_url,
+            phone_number
+          ),
           barber:barbers(
             id,
             business_name,
@@ -907,6 +913,17 @@ export const bookingService = {
       
       console.log('✅ Booking fetched successfully:', data?.id);
 
+      // Transform customer data structure for frontend
+      if (data && data.customer) {
+        data.customer = {
+          id: data.customer.id,
+          name: data.customer.full_name,
+          full_name: data.customer.full_name,
+          avatar: data.customer.avatar_url,
+          phone: data.customer.phone_number,
+        };
+      }
+      
       // Transform barber data structure for frontend
       if (data && data.barber && data.barber.barber_profile) {
         data.barber = {

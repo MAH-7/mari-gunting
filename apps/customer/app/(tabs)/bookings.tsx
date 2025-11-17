@@ -1,7 +1,7 @@
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@mari-gunting/shared/store/useStore';
@@ -22,90 +22,74 @@ export default function BookingsScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
-  // INFINITE SCROLL: Pagination state
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [allBookings, setAllBookings] = useState<any[]>([]);
-  
   // Applied filters
   const [filters, setFilters] = useState<BookingFilterOptions>({
     sortBy: 'date',
     filterStatus: 'all',
   });
 
-  const { data: bookingsResponse, isLoading, error, refetch } = useQuery({
-    queryKey: ['customer-bookings', currentUser?.id, selectedTab, page],
-    queryFn: async () => {
-      if (!currentUser?.id) return { success: false, data: [] };
+  // Fetch bookings with infinite query (Grab standard: 20 per page)
+  const { data, isLoading, error, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useInfiniteQuery({
+    queryKey: ['customer-bookings', currentUser?.id, selectedTab],
+    enabled: !!currentUser?.id,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!currentUser?.id) return { success: false, data: [], offset: 0 };
       
-      // INFINITE SCROLL: Load 20 at a time
+      // Map tab to database statuses
       const statusFilter = selectedTab === 'active' 
         ? 'pending,accepted,confirmed,ready,on_the_way,arrived,in_progress'
         : 'completed,cancelled,rejected,expired';
       
-      return await bookingService.getCustomerBookings(
+      // Load 20 at a time
+      const result = await bookingService.getCustomerBookings(
         currentUser.id,
         statusFilter,
-        20,  // Grab standard: 20 per page
-        page * 20  // Pagination offset
+        20,
+        pageParam
       );
+      return { ...result, offset: pageParam };
     },
-    enabled: !!currentUser?.id,
-    refetchOnWindowFocus: false, // Disabled for pagination
+    getNextPageParam: (lastPage) => {
+      if (lastPage?.success && Array.isArray(lastPage.data) && lastPage.data.length === 20) {
+        return (lastPage.offset || 0) + 20;
+      }
+      return undefined;
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: false,
   });
   
-  // Handle data updates when query succeeds
-  useEffect(() => {
-    if (bookingsResponse?.success && bookingsResponse.data) {
-      console.log(`📊 Received ${bookingsResponse.data.length} bookings for page ${page}`);
-      
-      if (page === 0) {
-        // First page: replace all
-        setAllBookings(bookingsResponse.data);
-        console.log(`✅ Set initial bookings: ${bookingsResponse.data.length}`);
-      } else {
-        // Next pages: append with deduplication
-        setAllBookings(prev => {
-          // Create a Set of existing IDs for fast lookup
-          const existingIds = new Set(prev.map(b => b.id));
-          // Only add bookings that don't exist yet
-          const newBookings = bookingsResponse.data.filter(b => !existingIds.has(b.id));
-          
-          if (newBookings.length === 0) {
-            console.log(`⚠️ All ${bookingsResponse.data.length} bookings already exist - skipping`);
-            return prev;
-          }
-          
-          const updated = [...prev, ...newBookings];
-          console.log(`✅ Added ${newBookings.length} new bookings: ${prev.length} → ${updated.length}`);
-          return updated;
-        });
+  // Flatten and dedupe pages
+  const bookings = useMemo(() => {
+    const pages = data?.pages ?? [];
+    const merged: any[] = [];
+    const seen = new Set<string>();
+    for (const page of pages) {
+      for (const booking of page?.data ?? []) {
+        if (!seen.has(booking.id)) {
+          seen.add(booking.id);
+          merged.push(booking);
+        }
       }
-      
-      // Check if there are more bookings
-      const hasMoreData = bookingsResponse.data.length === 20;
-      setHasMore(hasMoreData);
-      setIsLoadingMore(false);
-      
-      console.log(`📄 Has more: ${hasMoreData}`);
-    } else if (bookingsResponse && !bookingsResponse.success) {
-      console.log('❌ Query returned no success');
-      setIsLoadingMore(false);
-      setHasMore(false);
     }
-  }, [bookingsResponse, page]);
+    return merged;
+  }, [data]);
 
-  // Real-time subscription for customer's bookings
+  // Helper to check if status belongs to active tab
+  const isActiveStatus = (status: string) => {
+    const activeStatuses = ['pending', 'accepted', 'confirmed', 'ready', 'on_the_way', 'arrived', 'in_progress'];
+    return activeStatuses.includes(status);
+  };
+
+  // Real-time subscription for customer's bookings (SMART: only resets when needed)
   useEffect(() => {
     if (!currentUser?.id) return;
 
     console.log('🔌 Setting up real-time subscription for customer bookings');
 
-    // Debounce refetch to prevent race conditions
-    let refetchTimeout: NodeJS.Timeout;
-
-    // Subscribe to bookings table for this customer
     const channel = supabase
       .channel(`customer-bookings-${currentUser.id}`)
       .on(
@@ -119,29 +103,44 @@ export default function BookingsScreen() {
         (payload) => {
           console.log('🔔 Customer booking change:', payload);
           
-          // Debounce refetch to avoid multiple simultaneous calls
-          clearTimeout(refetchTimeout);
-          refetchTimeout = setTimeout(() => {
-            // Reset pagination and refetch both queries
-            setPage(0);
-            setHasMore(true);
-            setAllBookings([]);
-            refetch();
-            // Also invalidate counts when bookings change
-            queryClient.invalidateQueries({ queryKey: ['customer-booking-counts'] });
-          }, 500); // Wait 500ms before refetching
+          // Check if booking moved between tabs
+          const oldData = payload.old as any;
+          const newData = payload.new as any;
           
-          // Log events for debugging
+          let needsReset = false;
+          
           if (payload.eventType === 'INSERT') {
-            console.log('New booking created');
-          } else if (payload.eventType === 'UPDATE') {
-            const newData = payload.new as any;
-            const oldData = payload.old as any;
+            console.log('✨ New booking created');
+            // New booking: only reset if it belongs to current tab
+            needsReset = (selectedTab === 'active' && isActiveStatus(newData?.status)) ||
+                        (selectedTab === 'completed' && !isActiveStatus(newData?.status));
+          } else if (payload.eventType === 'UPDATE' && oldData?.status !== newData?.status) {
+            console.log(`🔄 Booking status changed: ${oldData?.status} → ${newData?.status}`);
             
-            if (oldData?.status !== newData?.status) {
-              console.log('Booking status changed:', newData?.id);
+            // Status changed: check if it crossed tab boundaries
+            const wasActive = isActiveStatus(oldData?.status);
+            const isActive = isActiveStatus(newData?.status);
+            
+            if (wasActive !== isActive) {
+              // Booking moved between tabs - reset both tabs
+              console.log('⚠️ Booking crossed tab boundary - resetting');
+              needsReset = true;
+            } else {
+              // Stayed in same tab - just invalidate cache
+              console.log('✅ Booking updated within same tab - invalidating cache');
             }
           }
+          
+          if (needsReset) {
+            // Reset pagination for affected tab
+            queryClient.resetQueries({ queryKey: ['customer-bookings', currentUser.id, selectedTab] });
+          } else {
+            // Just invalidate to refetch current pages
+            queryClient.invalidateQueries({ queryKey: ['customer-bookings', currentUser.id, selectedTab] });
+          }
+          
+          // Always invalidate counts
+          queryClient.invalidateQueries({ queryKey: ['customer-booking-counts'] });
         }
       )
       .subscribe((status) => {
@@ -153,18 +152,15 @@ export default function BookingsScreen() {
 
     return () => {
       console.log('🔌 Cleaning up customer bookings subscription');
-      clearTimeout(refetchTimeout);
       supabase.removeChannel(channel);
     };
-  }, [currentUser?.id, refetch]);
+  }, [currentUser?.id, selectedTab, queryClient]);
 
   // Handle pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    setPage(0); // Reset to first page
-    setHasMore(true);
     try {
-      await refetch();
+      await queryClient.resetQueries({ queryKey: ['customer-bookings', currentUser?.id, selectedTab] });
     } catch (error) {
       console.error('❌ Refresh failed:', error);
     } finally {
@@ -174,22 +170,11 @@ export default function BookingsScreen() {
   
   // INFINITE SCROLL: Load more when scrolling to bottom
   const loadMore = () => {
-    if (!isLoadingMore && hasMore && !isLoading) {
-      console.log(`📄 Loading more bookings... (page ${page + 1})`);
-      setIsLoadingMore(true);
-      setPage(prev => prev + 1);
+    if (hasNextPage && !isFetchingNextPage) {
+      console.log('📄 Loading more bookings...');
+      fetchNextPage();
     }
   };
-  
-  // Reset pagination when switching tabs
-  useEffect(() => {
-    setPage(0);
-    setHasMore(true);
-    setAllBookings([]);
-  }, [selectedTab]);
-
-  // INFINITE SCROLL: Use accumulated bookings
-  const bookings = allBookings;
 
   // GRAB STANDARD: Fetch counts for both tabs (lightweight, always accurate)
   const { data: countsData } = useQuery({
@@ -207,42 +192,51 @@ export default function BookingsScreen() {
   const activeCount = countsData?.active || 0;
   const completedCount = countsData?.completed || 0;
 
-  // Apply additional filters (status, sort)
-  let filteredBookings = bookings; // Already filtered by database!
-  
-  // Filter by status
-  if (filters.filterStatus !== 'all') {
-    filteredBookings = filteredBookings.filter((b: any) => b.status === filters.filterStatus);
-  }
-  
-  // Sort bookings
-  const sortedBookings = [...filteredBookings].sort((a: any, b: any) => {
-    if (filters.sortBy === 'date') {
-      // Sort by scheduled date/time
-      const aDate = new Date(`${a.scheduled_date}T${a.scheduled_time || '00:00'}`);
-      const bDate = new Date(`${b.scheduled_date}T${b.scheduled_time || '00:00'}`);
-      return bDate.getTime() - aDate.getTime();
-    } else if (filters.sortBy === 'price') {
-      return (b.total_price || 0) - (a.total_price || 0);
-    } else {
-      // Sort by status - logical progression order
-      const statusOrder: Record<BookingStatus, number> = {
-        'in-progress': 1,
-        'on-the-way': 2,
-        'ready': 3,
-        'confirmed': 4,
-        'accepted': 5,
-        'pending': 6,
-        'completed': 7,
-        'cancelled': 8,
-      };
-      return (statusOrder[a.status as BookingStatus] || 99) - (statusOrder[b.status as BookingStatus] || 99);
+  // Apply additional filters (status, sort) - MEMOIZED for performance
+  const displayBookings = useMemo(() => {
+    let filteredBookings = bookings; // Already filtered by database!
+    
+    // Filter by status
+    if (filters.filterStatus !== 'all') {
+      filteredBookings = filteredBookings.filter((b: any) => b.status === filters.filterStatus);
     }
-  });
-  
-  const displayBookings = sortedBookings;
+    
+    // Sort bookings
+    const sortedBookings = [...filteredBookings].sort((a: any, b: any) => {
+      if (filters.sortBy === 'date') {
+        // Sort by scheduled date/time
+        const aDate = new Date(`${a.scheduled_date}T${a.scheduled_time || '00:00'}`);
+        const bDate = new Date(`${b.scheduled_date}T${b.scheduled_time || '00:00'}`);
+        return bDate.getTime() - aDate.getTime();
+      } else if (filters.sortBy === 'price') {
+        return (b.total_price || 0) - (a.total_price || 0);
+      } else {
+        // Sort by status - logical progression order
+        const statusOrder: Record<BookingStatus, number> = {
+          'in-progress': 1,
+          'on-the-way': 2,
+          'ready': 3,
+          'confirmed': 4,
+          'accepted': 5,
+          'pending': 6,
+          'completed': 7,
+          'cancelled': 8,
+        };
+        return (statusOrder[a.status as BookingStatus] || 99) - (statusOrder[b.status as BookingStatus] || 99);
+      }
+    });
+    
+    return sortedBookings;
+  }, [bookings, filters.filterStatus, filters.sortBy]);
   
   const hasActiveFilters = filters.sortBy !== 'date' || filters.filterStatus !== 'all';
+
+  // Memoized callbacks for FlatList optimization
+  const renderItem = useCallback(({ item }: { item: any }) => (
+    <BookingCard booking={item} />
+  ), []);
+
+  const keyExtractor = useCallback((item: any) => item.id, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -314,8 +308,8 @@ export default function BookingsScreen() {
       {/* Bookings List - FlatList for virtualization */}
       <FlatList
         data={displayBookings}
-        renderItem={({ item }) => <BookingCard booking={item} />}
-        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         onEndReached={loadMore}
@@ -429,12 +423,12 @@ export default function BookingsScreen() {
           )
         }
         ListFooterComponent={
-          isLoadingMore && hasMore ? (
+          isFetchingNextPage && hasNextPage ? (
             <View style={styles.loadingMore}>
               <ActivityIndicator size="small" color={Colors.primary} />
               <Text style={styles.loadingMoreText}>Loading more...</Text>
             </View>
-          ) : !hasMore && displayBookings.length > 0 ? (
+          ) : !hasNextPage && displayBookings.length > 0 ? (
             <View style={styles.endOfList}>
               <Text style={styles.endOfListText}>No more bookings</Text>
             </View>
@@ -445,8 +439,9 @@ export default function BookingsScreen() {
   );
 }
 
-function BookingCard({ booking }: { booking: any }) {
+const BookingCard = React.memo(function BookingCard({ booking }: { booking: any }) {
   const currentUser = useStore((state) => state.currentUser);
+  const queryClient = useQueryClient();
   const [isCancelling, setIsCancelling] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
@@ -849,6 +844,22 @@ function BookingCard({ booking }: { booking: any }) {
                         if (!currentUser?.id) return;
                         
                         setIsCancelling(true);
+                        
+                        // OPTIMISTIC UPDATE: Remove booking immediately
+                        queryClient.setQueryData(
+                          ['customer-bookings', currentUser.id, 'active'],
+                          (oldData: any) => {
+                            if (!oldData?.pages) return oldData;
+                            return {
+                              ...oldData,
+                              pages: oldData.pages.map((page: any) => ({
+                                ...page,
+                                data: page.data?.filter((b: any) => b.id !== mappedBooking.id) || []
+                              }))
+                            };
+                          }
+                        );
+                        
                         try {
                           const result = await bookingService.cancelBooking(
                             mappedBooking.id,
@@ -858,12 +869,18 @@ function BookingCard({ booking }: { booking: any }) {
                           
                           if (result.success) {
                             Alert.alert('Cancelled', 'Booking cancelled successfully');
-                            // List will auto-update via real-time subscription
+                            // Invalidate to ensure data is fresh
+                            queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
+                            queryClient.invalidateQueries({ queryKey: ['customer-booking-counts'] });
                           } else {
+                            // Rollback on error
                             Alert.alert('Error', result.error || 'Failed to cancel booking');
+                            queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
                           }
                         } catch (error) {
                           Alert.alert('Error', 'Failed to cancel booking. Please try again.');
+                          // Rollback on error
+                          queryClient.invalidateQueries({ queryKey: ['customer-bookings'] });
                         } finally {
                           setIsCancelling(false);
                         }
@@ -912,7 +929,7 @@ function BookingCard({ booking }: { booking: any }) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
