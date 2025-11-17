@@ -26,6 +26,7 @@ const DAYS = [
 ];
 
 export default function OperatingHoursScreen() {
+  const insets = useSafeAreaInsets();
   const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [operatingHours, setOperatingHours] = useState<Record<string, { start: string; end: string; isOpen: boolean }>>({
@@ -227,7 +228,7 @@ export default function OperatingHoursScreen() {
       </ScrollView>
 
       {/* Continue Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[styles.continueButton, loading && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

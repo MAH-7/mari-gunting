@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, ActivityIndicator, Platform, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -46,6 +46,7 @@ const isShopOpenNow = (detailedHours: any) => {
 
 export default function BarbershopDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [imageHeight] = useState(280);
   
@@ -177,7 +178,7 @@ export default function BarbershopDetailScreen() {
 
         {/* Skeleton Bottom Bar */}
         <View style={styles.bottomBar}>
-          <View style={styles.bottomBarContent}>
+          <View style={[styles.bottomBarContent, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
             <View style={styles.priceWrapper}>
               <SkeletonText width={80} height={14} style={{ marginBottom: 4 }} />
               <SkeletonText width={100} height={24} />
@@ -622,7 +623,7 @@ export default function BarbershopDetailScreen() {
 
       {/* Fixed Bottom Button */}
       <View style={styles.bottomBar}>
-        <View style={styles.bottomBarContent}>
+        <View style={[styles.bottomBarContent, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
           <View style={styles.priceWrapper}>
             <Text style={styles.priceLabel}>Starting from</Text>
             <Text style={styles.priceValue}>{formatCurrency(lowestPrice)}</Text>
@@ -1356,7 +1357,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    paddingBottom: Platform.OS === 'android' ? 16 : 32, // Will be overridden inline with insets
   },
   priceWrapper: {
     gap: 2,

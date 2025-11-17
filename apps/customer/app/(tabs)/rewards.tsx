@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Animated, Alert, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Animated, Alert, ActivityIndicator, RefreshControl, FlatList, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: Platform.OS === 'android' ? 100 : 24, // Prevent Android tab bar overlap
     gap: 12,
   },
   loadingContainer: {

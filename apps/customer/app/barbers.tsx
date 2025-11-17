@@ -349,14 +349,7 @@ export default function BarbersScreen() {
       const ninetySecondsAgo = new Date(Date.now() - 90 * 1000); // 90 seconds (production standard)
       const userIds = realtimeBarbers.map((b) => b.userId).filter(Boolean);
 
-      const malaysiaTime = now.toLocaleString('en-MY', { 
-        timeZone: 'Asia/Kuala_Lumpur',
-        hour12: false 
-      });
-      console.log(`🔍 [CUSTOMER] ${malaysiaTime} Heartbeat check running`);
-      console.log(
-        `    Checking ${userIds.length} barbers for stale heartbeat (>90s)...`
-      );
+      // Heartbeat check running silently in background
 
       if (userIds.length === 0) {
         console.log("   ⚠️  No user IDs found in barbers");
@@ -379,20 +372,7 @@ export default function BarbersScreen() {
         return;
       }
 
-      // Log each barber's heartbeat status
-      profilesData.forEach((p) => {
-        const lastHeartbeat = p.last_heartbeat
-          ? new Date(p.last_heartbeat)
-          : null;
-        const secondsAgo = lastHeartbeat
-          ? (now.getTime() - lastHeartbeat.getTime()) / 1000
-          : null;
-        console.log(
-          `    👤 ${p.full_name || p.id}: ${
-            lastHeartbeat ? `${secondsAgo?.toFixed(0)}s ago` : "NO HEARTBEAT"
-          } ${secondsAgo && secondsAgo > 90 ? '❌ STALE' : '✅ FRESH'}`
-        );
-      });
+      // Silently check heartbeat status
 
       // Find stale barbers (no heartbeat or > 90 seconds old)
       const staleUserIds = new Set(
@@ -405,22 +385,10 @@ export default function BarbersScreen() {
       );
 
       if (staleUserIds.size > 0) {
-        console.log(
-          `🔴 Auto-removing ${
-            staleUserIds.size
-          } barbers with stale heartbeat (${Array.from(staleUserIds).join(
-            ", "
-          )})`
+        // Auto-remove stale barbers silently
+        setRealtimeBarbers((prev) =>
+          prev.filter((b) => !staleUserIds.has(b.userId))
         );
-        setRealtimeBarbers((prev) => {
-          const filtered = prev.filter((b) => !staleUserIds.has(b.userId));
-          console.log(
-            `👋 Removed stale barbers (${prev.length} → ${filtered.length})`
-          );
-          return filtered;
-        });
-      } else {
-        console.log("   ✅ All barbers have fresh heartbeat");
       }
     };
 
@@ -449,9 +417,7 @@ export default function BarbersScreen() {
       setCalculatingDistances(true);
 
       try {
-        console.log(
-          `🗺️ Calculating real driving distances for ${rawBarbers.length} barbers`
-        );
+        // Calculating driving distances in background
 
         // Calculate actual driving distances for ALL barbers (PostGIS already filtered by radius)
         const destinations = rawBarbers.map((b) => ({

@@ -335,6 +335,41 @@ export const bookingService = {
   },
 
   /**
+   * Get customer booking counts by tab (for filter badges)
+   * @param customerId - Customer's ID
+   */
+  async getCustomerBookingCounts(customerId: string): Promise<ApiResponse<{
+    active: number;
+    completed: number;
+  }>> {
+    try {
+      // Fetch counts in parallel
+      const [activeResult, completedResult] = await Promise.all([
+        supabase.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('customer_id', customerId)
+          .in('status', ['pending', 'accepted', 'confirmed', 'ready', 'on_the_way', 'arrived', 'in_progress']),
+        supabase.from('bookings').select('id', { count: 'exact', head: true })
+          .eq('customer_id', customerId)
+          .in('status', ['completed', 'cancelled', 'rejected', 'expired']),
+      ]);
+
+      return {
+        success: true,
+        data: {
+          active: activeResult.count || 0,
+          completed: completedResult.count || 0,
+        },
+      };
+    } catch (error: any) {
+      console.error('❌ Get customer booking counts error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch booking counts',
+      };
+    }
+  },
+
+  /**
    * Get customer bookings
    */
   async getCustomerBookings(
@@ -592,12 +627,54 @@ export const bookingService = {
   },
 
   /**
+   * Get barber booking counts by status (for filter badges)
+   * @param barberId - Barber's ID
+   */
+  async getBarberBookingCounts(barberId: string): Promise<ApiResponse<{
+    all: number;
+    pending: number;
+    active: number;
+    completed: number;
+  }>> {
+    try {
+      // Fetch all counts in parallel
+      const [allResult, pendingResult, activeResult, completedResult] = await Promise.all([
+        supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('barber_id', barberId),
+        supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('barber_id', barberId).eq('status', 'pending'),
+        supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('barber_id', barberId).in('status', ['accepted', 'on_the_way', 'arrived', 'in_progress']),
+        supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('barber_id', barberId).eq('status', 'completed'),
+      ]);
+
+      return {
+        success: true,
+        data: {
+          all: allResult.count || 0,
+          pending: pendingResult.count || 0,
+          active: activeResult.count || 0,
+          completed: completedResult.count || 0,
+        },
+      };
+    } catch (error: any) {
+      console.error('❌ Get barber booking counts error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch booking counts',
+      };
+    }
+  },
+
+  /**
    * Get barber bookings (for partner app)
+   * @param barberId - Barber's ID
+   * @param status - Filter by status (single or comma-separated: 'pending' or 'accepted,in_progress')
+   * @param limit - Number of bookings to fetch (default 20 for pagination)
+   * @param offset - Number of bookings to skip (for pagination)
    */
   async getBarberBookings(
     barberId: string,
     status?: string | null,
-    limit: number = 50
+    limit: number = 20,
+    offset: number = 0
   ): Promise<ApiResponse<any[]>> {
     try {
       let query = supabase
@@ -619,10 +696,16 @@ export const bookingService = {
         `)
         .eq('barber_id', barberId)
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .range(offset, offset + limit - 1); // Pagination support
 
+      // Support comma-separated status filter (e.g., "pending" or "accepted,on_the_way,in_progress")
       if (status) {
-        query = query.eq('status', status);
+        const statuses = status.split(',').map(s => s.trim());
+        if (statuses.length === 1) {
+          query = query.eq('status', statuses[0]);
+        } else {
+          query = query.in('status', statuses);
+        }
       }
 
       const { data, error } = await query;

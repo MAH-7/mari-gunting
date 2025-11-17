@@ -8,7 +8,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +38,7 @@ const MALAYSIAN_STATES = [
 ];
 
 export default function LocationScreen() {
+  const insets = useSafeAreaInsets();
   const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
@@ -348,7 +351,7 @@ export default function LocationScreen() {
       </ScrollView>
 
       {/* Continue Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[styles.continueButton, (loading || gettingLocation) && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -530,7 +533,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

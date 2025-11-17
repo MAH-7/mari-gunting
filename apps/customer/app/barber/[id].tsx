@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Platform, Modal, NativeScrollEvent, NativeSyntheticEvent, FlatList } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ const { width } = Dimensions.get('window');
 
 export default function BarberProfileScreen() {
   const { id, distance } = useLocalSearchParams<{ id: string; distance?: string }>();
+  const insets = useSafeAreaInsets();
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
@@ -266,7 +267,7 @@ export default function BarberProfileScreen() {
         </ScrollView>
 
         {/* Skeleton Bottom Bar */}
-        <View style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
           <View style={styles.bottomBarContent}>
             <View style={styles.priceInfo}>
               <SkeletonText width={80} height={14} style={{ marginBottom: 4 }} />
@@ -653,7 +654,7 @@ export default function BarberProfileScreen() {
       </Modal>
 
       {/* Fixed Bottom Book Button */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <View style={styles.priceContainer}>
           <Text style={styles.priceLabel}>Starting from</Text>
           <Text style={styles.price}>{formatCurrency(lowestPrice)}</Text>
@@ -1291,8 +1292,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    height: Platform.OS === 'ios' ? 95 : 75,
+    // paddingBottom handled inline with insets
     backgroundColor: Colors.white,
     borderTopWidth: 0,
     shadowColor: '#000',

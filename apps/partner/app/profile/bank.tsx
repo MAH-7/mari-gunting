@@ -9,7 +9,11 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
+  Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +41,7 @@ const MALAYSIAN_BANKS = [
 ];
 
 export default function BankPayoutSettingsScreen() {
+  const insets = useSafeAreaInsets();
   const currentUser = useStore((state) => state.currentUser);
   
   const [loading, setLoading] = useState(true);
@@ -44,7 +49,7 @@ export default function BankPayoutSettingsScreen() {
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
-  const [showBankPicker, setShowBankPicker] = useState(false);
+  const [showIOSPicker, setShowIOSPicker] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   
   // Original values to track changes
@@ -250,24 +255,13 @@ export default function BankPayoutSettingsScreen() {
           <Text style={styles.label}>
             Bank Name <Text style={styles.required}>*</Text>
           </Text>
-          <TouchableOpacity
-            style={styles.pickerButton}
-            onPress={() => setShowBankPicker(!showBankPicker)}
-          >
-            <Text style={[styles.pickerButtonText, !bankName && styles.pickerPlaceholder]}>
-              {bankName || 'Select your bank'}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color="#666" />
-          </TouchableOpacity>
-          
-          {showBankPicker && (
-            <View style={styles.pickerContainer}>
+          {Platform.OS === 'android' ? (
+            <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={bankName}
-                onValueChange={(value) => {
-                  setBankName(value);
-                  setShowBankPicker(false);
-                }}
+                onValueChange={(value) => setBankName(value)}
+                style={styles.picker}
+                mode="dropdown"
               >
                 <Picker.Item label="Select your bank" value="" />
                 {MALAYSIAN_BANKS.map((bank) => (
@@ -275,6 +269,16 @@ export default function BankPayoutSettingsScreen() {
                 ))}
               </Picker>
             </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.pickerButton}
+              onPress={() => setShowIOSPicker(true)}
+            >
+              <Text style={[styles.pickerButtonText, !bankName && styles.pickerPlaceholder]}>
+                {bankName || 'Select your bank'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           )}
         </View>
 
@@ -330,7 +334,7 @@ export default function BankPayoutSettingsScreen() {
 
       {/* Floating Action Buttons */}
       {hasChanges && (
-        <View style={styles.floatingButtonContainer}>
+        <View style={[styles.floatingButtonContainer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
           <TouchableOpacity
             style={styles.discardButton}
             onPress={handleDiscard}
@@ -355,6 +359,44 @@ export default function BankPayoutSettingsScreen() {
             )}
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* iOS Picker Modal - Dropdown Style */}
+      {Platform.OS === 'ios' && showIOSPicker && (
+        <Modal
+          visible={showIOSPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowIOSPicker(false)}
+        >
+          <TouchableOpacity 
+            style={styles.iosModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowIOSPicker(false)}
+          >
+            <View style={styles.iosDropdownContainer}>
+              <FlatList
+                data={MALAYSIAN_BANKS}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.iosDropdownItem}
+                    onPress={() => {
+                      setBankName(item);
+                      setShowIOSPicker(false);
+                    }}
+                  >
+                    <Text style={styles.iosDropdownItemText}>{item}</Text>
+                    {bankName === item && (
+                      <Ionicons name="checkmark" size={20} color={COLORS.primary} />
+                    )}
+                  </TouchableOpacity>
+                )}
+                style={styles.iosDropdownList}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
       )}
     </View>
   );
@@ -439,6 +481,16 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     backgroundColor: '#fafafa',
   },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    backgroundColor: '#fafafa',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 56,
+  },
   pickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -455,13 +507,6 @@ const styles = StyleSheet.create({
   },
   pickerPlaceholder: {
     color: '#999',
-  },
-  pickerContainer: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    overflow: 'hidden',
   },
   infoBox: {
     flexDirection: 'row',
@@ -511,7 +556,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    /* paddingBottom handled inline with insets */
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
@@ -555,5 +600,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  iosModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  iosDropdownContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    maxHeight: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  iosDropdownList: {
+    borderRadius: 12,
+  },
+  iosDropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  iosDropdownItemText: {
+    fontSize: 16,
+    color: '#1a1a1a',
   },
 });

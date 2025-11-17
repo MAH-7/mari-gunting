@@ -8,7 +8,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -35,6 +37,7 @@ const MALAYSIAN_BANKS = [
 ];
 
 export default function PayoutScreen() {
+  const insets = useSafeAreaInsets();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
@@ -250,7 +253,7 @@ export default function PayoutScreen() {
       </ScrollView>
 
       {/* Continue Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[styles.continueButton, loading && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -423,7 +426,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

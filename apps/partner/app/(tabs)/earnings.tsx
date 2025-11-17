@@ -39,6 +39,9 @@ export default function GrabEarningsScreen() {
   const [payoutAmount, setPayoutAmount] = useState('');
   const [availableBalance, setAvailableBalance] = useState(0);
   const [isSubmittingPayout, setIsSubmittingPayout] = useState(false);
+  
+  // RPC stats from database (accurate for all bookings)
+  const [rpcStats, setRpcStats] = useState({ earnings: 0, jobs_count: 0 });
 
   // Fetch barber ID from barbers table using user_id
   useEffect(() => {
@@ -62,11 +65,17 @@ export default function GrabEarningsScreen() {
     fetchBarberId();
   }, [currentUser?.id]);
 
-  // REAL SUPABASE QUERY - Fetch barber bookings
+  // REAL SUPABASE QUERY - Fetch barber bookings (for trip list display only)
   const { data: bookingsResponse, isLoading: loadingBookings, refetch } = useQuery({
     queryKey: ['earnings-bookings', barberId],
     queryFn: async () => {
-      const result = await bookingService.getBarberBookings(barberId || '');
+      // Fetch more bookings for trip list (200 should be enough for display)
+      const result = await bookingService.getBarberBookings(
+        barberId || '',
+        null, // All statuses
+        200,  // Enough for trip list
+        0
+      );
       return result;
     },
     enabled: !!barberId,
@@ -138,29 +147,95 @@ export default function GrabEarningsScreen() {
   useEffect(() => {
     setVisibleTrips(10);
   }, [selectedPeriod]);
+  
+  // Fetch accurate stats from database RPC
+  useEffect(() => {
+    const fetchPeriodStats = async () => {
+      if (!barberId) return;
+      
+      const now = new Date();
+      const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const month = now.getMonth() + 1; // 1-12
+      const year = now.getFullYear();
+      
+      try {
+        let data, error;
+        
+        switch (selectedPeriod) {
+          case 'today':
+            ({ data, error } = await supabase.rpc('get_barber_daily_stats', {
+              p_barber_id: barberId,
+              p_date: today
+            }));
+            break;
+            
+          case 'month':
+            ({ data, error } = await supabase.rpc('get_barber_monthly_stats', {
+              p_barber_id: barberId,
+              p_month: month,
+              p_year: year
+            }));
+            break;
+            
+          case 'week': {
+            const weekStart = startOfWeek(now).toISOString().split('T')[0];
+            const weekEnd = endOfWeek(now).toISOString().split('T')[0];
+            ({ data, error } = await supabase.rpc('get_barber_period_stats', {
+              p_barber_id: barberId,
+              p_start_date: weekStart,
+              p_end_date: weekEnd
+            }));
+            break;
+          }
+            
+          case 'all': {
+            // All time: from beginning to now
+            const allStart = '2020-01-01'; // App didn't exist before 2020
+            const allEnd = now.toISOString().split('T')[0];
+            ({ data, error } = await supabase.rpc('get_barber_period_stats', {
+              p_barber_id: barberId,
+              p_start_date: allStart,
+              p_end_date: allEnd
+            }));
+            break;
+          }
+        }
+        
+        if (error) {
+          console.error(`❌ Error fetching ${selectedPeriod} stats:`, error);
+        } else if (data && data.length > 0) {
+          setRpcStats(data[0]);
+        } else {
+          // No data for period
+          setRpcStats({ earnings: 0, jobs_count: 0 });
+        }
+      } catch (error) {
+        console.error('❌ Exception fetching stats:', error);
+      }
+    };
+    
+    fetchPeriodStats();
+  }, [barberId, selectedPeriod]);
 
-  // Calculate stats
+  // Calculate stats from RPC (accurate for all bookings)
   const stats = useMemo(() => {
-    const grossEarnings = filteredBookings.reduce((sum, b) => {
-      const serviceTotal = (b.services || []).reduce((s, service) => s + service.price, 0);
-      return sum + serviceTotal;
-    }, 0);
-
-    const travelEarnings = filteredBookings.reduce((sum, b) => sum + (b.travelCost || 0), 0);
-    const commission = grossEarnings * 0.15; // 15% commission (partner keeps 85%)
-    const netServiceEarnings = grossEarnings - commission;
-    const totalNet = netServiceEarnings + travelEarnings;
+    const earnings = Number(rpcStats.earnings) || 0;
+    const trips = rpcStats.jobs_count || 0;
+    const serviceTotal = Number(rpcStats.service_total || 0);
+    const travelTotal = Number(rpcStats.travel_total || 0);
+    const commission = Number(rpcStats.commission || 0);
+    const netServiceEarnings = serviceTotal - commission;
 
     return {
-      trips: filteredBookings.length,
-      grossEarnings,
-      travelEarnings,
+      trips,
+      grossEarnings: serviceTotal,
+      travelEarnings: travelTotal,
       commission,
       netServiceEarnings,
-      totalNet,
-      average: filteredBookings.length > 0 ? totalNet / filteredBookings.length : 0,
+      totalNet: earnings, // This is already (service * 0.85) + travel
+      average: trips > 0 ? earnings / trips : 0,
     };
-  }, [filteredBookings]);
+  }, [rpcStats]);
 
   const onRefresh = async () => {
     setRefreshing(true);

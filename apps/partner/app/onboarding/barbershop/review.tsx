@@ -16,6 +16,7 @@ import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function ReviewScreen() {
+  const insets = useSafeAreaInsets();
   const logout = useStore((state) => state.logout);
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -335,7 +336,7 @@ export default function ReviewScreen() {
       </ScrollView>
 
       {/* Submit Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[
             styles.submitButton,
@@ -626,7 +627,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

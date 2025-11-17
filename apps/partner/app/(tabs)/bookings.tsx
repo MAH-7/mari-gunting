@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useState } from 'react';
@@ -19,6 +19,7 @@ interface Appointment {
 }
 
 export default function BookingsScreen() {
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState('2024-01-15');
   const [selectedBarber, setSelectedBarber] = useState('all');
 
@@ -274,7 +275,7 @@ export default function BookingsScreen() {
       </ScrollView>
 
       {/* Floating Add Button */}
-      <TouchableOpacity style={styles.fabButton}>
+      <TouchableOpacity style={[styles.fabButton, { bottom: Platform.OS === 'android' ? insets.bottom + 20 : 20 }]}>
         <Ionicons name="add" size={32} color={COLORS.background.primary} />
       </TouchableOpacity>
     </SafeAreaView>
@@ -514,7 +515,7 @@ const styles = StyleSheet.create({
   fabButton: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    // bottom handled inline with insets
     width: 56,
     height: 56,
     borderRadius: 28,

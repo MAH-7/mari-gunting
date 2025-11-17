@@ -21,6 +21,7 @@ const ROLES = ['Senior Barber', 'Barber', 'Junior Barber', 'Stylist', 'Trainee']
 const SPECIALIZATIONS = ['Haircut', 'Fade', 'Beard Trim', 'Shaving', 'Hair Coloring', 'Perm', 'Kids Haircut'];
 
 export default function StaffServicesScreen() {
+  const insets = useSafeAreaInsets();
   const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   
@@ -336,7 +337,7 @@ export default function StaffServicesScreen() {
       </Modal>
 
       {/* Continue Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[styles.continueButton, loading && styles.continueButtonDisabled]}
           onPress={handleContinue}

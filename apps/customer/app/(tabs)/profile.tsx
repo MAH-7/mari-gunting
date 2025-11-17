@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator, AppState, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator, AppState, RefreshControl, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@mari-gunting/shared/store/useStore';
@@ -30,6 +30,7 @@ export default function ProfileScreen() {
   const { stats, isLoadingStats, refreshProfile } = useProfile();
   const appState = useRef(AppState.currentState);
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // Pull to refresh handler
   const onRefresh = useCallback(async () => {
@@ -351,8 +352,8 @@ export default function ProfileScreen() {
           <Text style={styles.versionText}>Version 1.0.0</Text>
         </View>
 
-        {/* Bottom Spacing */}
-        <View style={{ height: 32 }} />
+        {/* Bottom Spacing - Safe area for Android tab bar */}
+        <View style={{ height: Platform.OS === 'android' ? insets.bottom + 80 : 32 }} />
       </ScrollView>
     </SafeAreaView>
   );

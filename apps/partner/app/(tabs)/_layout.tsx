@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/shared/constants';
 import { useState, useEffect } from 'react';
@@ -21,6 +22,7 @@ function TabBarIcon({ name, focused }: { name: IconName; focused: boolean }) {
 }
 
 export default function PartnerTabLayout() {
+  const insets = useSafeAreaInsets();
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,8 +59,8 @@ export default function PartnerTabLayout() {
       },
       shadowOpacity: 0.1,
       shadowRadius: 8,
-      height: Platform.OS === 'ios' ? 95 : 75,
-      paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+      height: Platform.OS === 'ios' ? 95 : 70 + insets.bottom,
+      paddingBottom: Platform.OS === 'ios' ? 32 : insets.bottom + 8,
       paddingTop: 12,
     },
   };

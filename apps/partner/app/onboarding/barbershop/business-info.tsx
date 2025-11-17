@@ -8,7 +8,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +18,7 @@ import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboa
 import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function BusinessInfoScreen() {
+  const insets = useSafeAreaInsets();
   const logout = useStore((state) => state.logout);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
@@ -237,7 +240,7 @@ export default function BusinessInfoScreen() {
       </ScrollView>
 
       {/* Continue Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[styles.continueButton, loading && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -358,7 +361,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

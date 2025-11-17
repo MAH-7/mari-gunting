@@ -120,6 +120,11 @@ export default function PartnerDashboardScreen() {
   const [isOnline, setIsOnline] = useState(false); // Default to offline
   const [refreshing, setRefreshing] = useState(false);
   const [dailyGoal] = useState(200);
+  
+  // RPC stats from database
+  const [todayStats, setTodayStats] = useState({ earnings: 0, jobs_count: 0 });
+  const [monthlyStats, setMonthlyStats] = useState({ earnings: 0, jobs_count: 0 });
+  const [allTimeStats, setAllTimeStats] = useState({ total_completed: 0, acceptance_rate: 100 });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({ message: '', type: 'success', visible: false });
   const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
   const [loadingVerification, setLoadingVerification] = useState(true);
@@ -172,6 +177,67 @@ export default function PartnerDashboardScreen() {
 
     return () => clearInterval(timer);
   }, []);
+  
+  // Fetch accurate stats from database RPC
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!barberId) return;
+      
+      const now = new Date();
+      const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const month = now.getMonth() + 1; // 1-12
+      const year = now.getFullYear();
+      
+      try {
+        // Fetch today's stats
+        const { data: todayData, error: todayError } = await supabase
+          .rpc('get_barber_daily_stats', {
+            p_barber_id: barberId,
+            p_date: today
+          });
+        
+        if (todayError) {
+          console.error('❌ Error fetching today stats:', todayError);
+        } else if (todayData && todayData.length > 0) {
+          setTodayStats(todayData[0]);
+        }
+        
+        // Fetch monthly stats
+        const { data: monthData, error: monthError } = await supabase
+          .rpc('get_barber_monthly_stats', {
+            p_barber_id: barberId,
+            p_month: month,
+            p_year: year
+          });
+        
+        if (monthError) {
+          console.error('❌ Error fetching month stats:', monthError);
+        } else if (monthData && monthData.length > 0) {
+          setMonthlyStats(monthData[0]);
+        }
+        
+        // Fetch all-time stats (total completed, acceptance rate)
+        const { data: allTimeData, error: allTimeError } = await supabase
+          .rpc('get_barber_all_time_stats', {
+            p_barber_id: barberId
+          });
+        
+        if (allTimeError) {
+          console.error('❌ Error fetching all-time stats:', allTimeError);
+        } else if (allTimeData && allTimeData.length > 0) {
+          setAllTimeStats(allTimeData[0]);
+        }
+      } catch (error) {
+        console.error('❌ Exception fetching stats:', error);
+      }
+    };
+    
+    fetchStats();
+    
+    // Refetch stats every 5 minutes
+    const interval = setInterval(fetchStats, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [barberId]);
 
   // Fetch real rating from reviews (on mount and account type change)
   useEffect(() => {
@@ -577,67 +643,25 @@ export default function PartnerDashboardScreen() {
         acceptance: 95,
       };
 
-    const now = new Date();
-    // Get local date without UTC conversion
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const today = `${year}-${month}-${day}`; // YYYY-MM-DD in local time
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    // Use RPC stats from database (accurate for all bookings)
+    const todayEarnings = Number(todayStats.earnings) || 0;
+    const monthlyEarnings = Number(monthlyStats.earnings) || 0;
+    const monthlyJobs = monthlyStats.jobs_count || 0;
+    const completedToday = todayStats.jobs_count || 0;
 
-    // Today's stats (use scheduled_datetime, fallback to scheduledDate)
-    const todayBookings = partnerBookings.filter((b) => {
-      const bookingDate = b.scheduled_datetime 
-        ? extractDateFromISO(b.scheduled_datetime)
-        : b.scheduledDate;
-      return bookingDate === today;
-    });
-    const completed = todayBookings.filter((b) => b.status === 'completed');
-    const todayEarnings = completed.reduce((sum, b) => {
-      const servicesTotal = b.services?.reduce((s, svc) => s + svc.price, 0) || 0;
-      const earnings = (servicesTotal * 0.85) + (b.travelCost || 0);
-      return sum + earnings;
-    }, 0);
+    // All-time stats from RPC (accurate for all bookings)
+    const totalCompleted = allTimeStats.total_completed || 0;
+    const acceptanceRate = allTimeStats.acceptance_rate || 100;
 
-    // This month's stats (actual earnings after commission)
-    const monthlyCompleted = partnerBookings.filter((b) => {
-      if (b.status !== 'completed') return false;
-      const datetime = b.scheduled_datetime || `${b.scheduledDate}T00:00:00Z`;
-      const bookingDate = new Date(datetime);
-      return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
-    });
-    
-    const monthlyEarnings = monthlyCompleted.reduce((sum, b) => {
-      const servicesTotal = b.services?.reduce((s, svc) => s + svc.price, 0) || 0;
-      const earnings = (servicesTotal * 0.85) + (b.travelCost || 0);
-      return sum + earnings;
-    }, 0);
-
-    // Total completed jobs (all time)
-    const totalCompleted = partnerBookings.filter((b) => b.status === 'completed').length;
-
+    // Recent pending/active counts from cached bookings (these are always recent)
     const activeCount = partnerBookings.filter((b) => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(b.status)).length;
     const pendingCount = partnerBookings.filter((b) => b.status === 'pending').length;
-
-    // Calculate real acceptance rate (Grab standard)
-    const acceptedCount = partnerBookings.filter((b) => 
-      ['accepted', 'on_the_way', 'arrived', 'in_progress', 'completed'].includes(b.status)
-    ).length;
-    
-    const rejectedCount = partnerBookings.filter((b) => b.status === 'rejected').length;
-    const expiredCount = partnerBookings.filter((b) => b.status === 'expired').length;
-    
-    const totalRequests = acceptedCount + rejectedCount + expiredCount;
-    const acceptanceRate = totalRequests > 0 
-      ? Math.round((acceptedCount / totalRequests) * 100) 
-      : 100; // Default 100% if no requests yet
 
     return {
       todayEarnings,
       monthlyEarnings,
-      monthlyJobs: monthlyCompleted.length,
-      completedToday: completed.length,
+      monthlyJobs,
+      completedToday,
       totalCompleted,
       pendingCount,
       activeCount,
@@ -645,7 +669,7 @@ export default function PartnerDashboardScreen() {
       avgRating: realRating || 0,
       acceptance: acceptanceRate,
     };
-  }, [currentUser, barberId, partnerBookings, dailyGoal, realRating]);
+  }, [currentUser, barberId, partnerBookings, dailyGoal, realRating, todayStats, monthlyStats, allTimeStats]);
 
   const nextJob = useMemo(() => {
     if (!currentUser || !barberId) return null;

@@ -1,7 +1,7 @@
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@mari-gunting/shared/store/useStore';
@@ -17,6 +17,7 @@ import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-guntin
 
 export default function BookingsScreen() {
   const currentUser = useStore((state) => state.currentUser);
+  const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed'>('active');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,11 +122,13 @@ export default function BookingsScreen() {
           // Debounce refetch to avoid multiple simultaneous calls
           clearTimeout(refetchTimeout);
           refetchTimeout = setTimeout(() => {
-            // Reset pagination and refetch from start
+            // Reset pagination and refetch both queries
             setPage(0);
             setHasMore(true);
             setAllBookings([]);
             refetch();
+            // Also invalidate counts when bookings change
+            queryClient.invalidateQueries({ queryKey: ['customer-booking-counts'] });
           }, 500); // Wait 500ms before refetching
           
           // Log events for debugging
@@ -188,15 +191,21 @@ export default function BookingsScreen() {
   // INFINITE SCROLL: Use accumulated bookings
   const bookings = allBookings;
 
-  // PERFORMANCE FIX: No client-side filtering needed - database already filtered by tab!
-  // Count active vs completed for badges (from ALL bookings)
-  const activeCount = bookings.filter(
-    (b: any) => ['pending', 'accepted', 'confirmed', 'ready', 'on_the_way', 'on-the-way', 'arrived', 'in_progress', 'in-progress'].includes(b.status)
-  ).length;
+  // GRAB STANDARD: Fetch counts for both tabs (lightweight, always accurate)
+  const { data: countsData } = useQuery({
+    queryKey: ['customer-booking-counts', currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser?.id) return { active: 0, completed: 0 };
+      const result = await bookingService.getCustomerBookingCounts(currentUser.id);
+      return result.success ? result.data : { active: 0, completed: 0 };
+    },
+    enabled: !!currentUser?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnMount: true,
+  });
 
-  const completedCount = bookings.filter(
-    (b: any) => ['completed', 'cancelled', 'rejected', 'expired'].includes(b.status)
-  ).length;
+  const activeCount = countsData?.active || 0;
+  const completedCount = countsData?.completed || 0;
 
   // Apply additional filters (status, sort)
   let filteredBookings = bookings; // Already filtered by database!
@@ -279,9 +288,9 @@ export default function BookingsScreen() {
           <Text style={[styles.tabText, selectedTab === 'active' && styles.tabTextActive]}>
             Active
           </Text>
-          {selectedTab === 'active' && bookings.length > 0 && (
+          {selectedTab === 'active' && activeCount > 0 && (
             <View style={styles.tabBadge}>
-              <Text style={styles.tabBadgeText}>{bookings.length}</Text>
+              <Text style={styles.tabBadgeText}>{activeCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -453,8 +462,6 @@ function BookingCard({ booking }: { booking: any }) {
     return methods[method] || method;
   };
   
-  // Debug: Check what booking data looks like
-  console.log('📋 Booking data:', { id: booking.id, booking_number: booking.booking_number, keys: Object.keys(booking) });
   
   // Map database booking to UI format
   const mappedBooking: Booking = {

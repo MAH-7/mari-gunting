@@ -8,7 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function DocumentsScreen() {
+  const insets = useSafeAreaInsets();
   const logout = useStore((state) => state.logout);
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -379,7 +382,7 @@ export default function DocumentsScreen() {
       </ScrollView>
 
       {/* Continue Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[styles.continueButton, (loading || uploading) && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -606,7 +609,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

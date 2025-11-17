@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import { useStore } from '@/store/useStore';
 
 export default function QuickBookScreen() {
   const currentUser = useStore((state) => state.currentUser); // Get current user to prevent self-booking
+  const insets = useSafeAreaInsets();
   const [radius, setRadius] = useState<number>(5);
   const [maxPrice, setMaxPrice] = useState<number>(50);
   const [isSearching, setIsSearching] = useState(false);
@@ -360,7 +361,7 @@ export default function QuickBookScreen() {
       </ScrollView>
 
       {/* Bottom Button */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[
             styles.bookButton,
@@ -692,7 +693,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     backgroundColor: Colors.white,
     borderTopWidth: 1,
     borderTopColor: Colors.gray[100],

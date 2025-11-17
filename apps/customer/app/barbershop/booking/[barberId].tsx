@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Alert, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function BarbershopBookingScreen() {
   const { barberId, shopId } = useLocalSearchParams<{ barberId: string; shopId: string }>();
+  const insets = useSafeAreaInsets();
   
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -536,7 +537,7 @@ export default function BarbershopBookingScreen() {
       </ScrollView>
 
       {/* Fixed Bottom Button */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity 
           style={[
             styles.bookButton,
@@ -1024,8 +1025,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    height: Platform.OS === 'ios' ? 95 : 75,
+    // paddingBottom handled inline with insets
     backgroundColor: Colors.white,
     borderTopWidth: 0,
     shadowColor: '#000',

@@ -11,6 +11,7 @@ import {
   Image,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -22,6 +23,7 @@ import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Colors, theme } from '@mari-gunting/shared/theme';
 
 export default function EKYCScreen() {
+  const insets = useSafeAreaInsets();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { user } = useAuth();
   const logout = useStore((state) => state.logout);
@@ -574,7 +576,7 @@ export default function EKYCScreen() {
       </ScrollView>
 
       {/* Continue Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
           style={[styles.continueButton, (loading || uploading) && styles.continueButtonDisabled]}
           onPress={handleContinue}
@@ -837,7 +839,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingBottom: 32,
+    // paddingBottom handled inline with insets
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     backgroundColor: '#fff',

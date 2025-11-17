@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
 import { useStore } from '@mari-gunting/shared/store/useStore';
@@ -37,6 +37,8 @@ export default function PartnerJobsScreen() {
   const [showNewBookingAlert, setShowNewBookingAlert] = useState(false);
   const [barberId, setBarberId] = useState<string | null>(null);
   
+  // Pagination handled by useInfiniteQuery cache
+  
   // Completion flow state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [completionChecklist, setCompletionChecklist] = useState<ChecklistItem[]>([]);
@@ -68,22 +70,72 @@ export default function PartnerJobsScreen() {
     fetchBarberId();
   }, [currentUser?.id]);
 
-  // REAL SUPABASE QUERY - Fetch barber bookings
-  const { data: bookingsResponse, isLoading } = useQuery({
-    queryKey: ['barber-bookings', barberId],
-    queryFn: async () => {
-      const result = await bookingService.getBarberBookings(barberId || '');
-      return result;
-    },
+  // Fetch barber bookings with infinite query (best practice)
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useInfiniteQuery({
+    queryKey: ['barber-bookings', barberId, filterStatus],
     enabled: !!barberId,
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!barberId) return { success: false, data: [], offset: 0 };
+
+      // Map filter to database statuses
+      let statusFilter: string | null = null;
+      if (filterStatus === 'pending') statusFilter = 'pending';
+      else if (filterStatus === 'active') statusFilter = 'accepted,on_the_way,arrived,in_progress';
+      else if (filterStatus === 'completed') statusFilter = 'completed';
+
+      // Load 20 at a time, filtered by status
+      const result = await bookingService.getBarberBookings(
+        barberId,
+        statusFilter,
+        20,
+        pageParam
+      );
+      return { ...result, offset: pageParam };
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage?.success && Array.isArray(lastPage.data) && lastPage.data.length === 20) {
+        return (lastPage.offset || 0) + 20;
+      }
+      return undefined;
+    },
     refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: false,
   });
 
-  const partnerJobs = bookingsResponse?.data || [];
+  // Flatten and dedupe pages
+  const partnerJobs = useMemo(() => {
+    const pages = data?.pages ?? [];
+    const merged: any[] = [];
+    const seen = new Set<string>();
+    for (const page of pages) {
+      for (const j of page?.data ?? []) {
+        if (!seen.has(j.id)) {
+          seen.add(j.id);
+          merged.push(j);
+        }
+      }
+    }
+    return merged;
+  }, [data]);
 
-  // GRAB STANDARD: Set filter AND open modal on EVERY screen focus when navigating with jobId
+  // INFINITE SCROLL: Load more when scrolling to bottom
+  const loadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  // GRAB STANDARD: Refetch data AND handle jobId navigation on screen focus
   useFocusEffect(
     useCallback(() => {
+      console.log('👀 Jobs screen focused');
+
+      // ALWAYS refetch when screen is focused (fixes tab switching bug)
+      refetch();
+
+      // Handle jobId navigation from Dashboard
       if (params.jobId && partnerJobs.length > 0 && processedJobId.current !== params.jobId) {
         console.log('🔄 Screen focused with jobId:', params.jobId);
         
@@ -120,7 +172,7 @@ export default function PartnerJobsScreen() {
           }, 100);
         }
       }
-    }, [params.jobId, partnerJobs])
+    }, [params.jobId, partnerJobs, refetch])
   );
 
   // CRITICAL: Auto-update selectedJob when data refreshes from backend
@@ -196,6 +248,7 @@ export default function PartnerJobsScreen() {
                 text: 'View Now', 
                 onPress: () => {
                   queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+                  queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
                   setFilterStatus('pending');
                 }
               }
@@ -203,6 +256,72 @@ export default function PartnerJobsScreen() {
           );
           
           queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+          queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [barberId, queryClient]);
+
+  // Real-time subscription for ALL barber booking updates (for instant count updates)
+  useEffect(() => {
+    if (!barberId) return;
+
+    console.log('🔊 Setting up real-time updates for all barber bookings');
+
+    const channel = supabase
+      .channel('all-barber-booking-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bookings',
+          filter: `barber_id=eq.${barberId}`,
+        },
+        async (payload) => {
+          console.log('🔄 Booking updated in real-time:', payload.new);
+          
+          const newJob = payload.new as Booking;
+          
+          // Check if this is the currently selected job
+          setSelectedJob((current) => {
+            if (current && current.id === newJob.id) {
+              console.log('✅ Updating selected job via all-bookings subscription:', newJob.status);
+              
+              // For important status changes, fetch full booking data asynchronously
+              const importantStatuses = ['cancelled', 'rejected', 'accepted', 'completed', 'expired'];
+              const statusChanged = newJob.status !== current.status;
+              
+              if (statusChanged && importantStatuses.includes(newJob.status)) {
+                console.log(`🔄 Fetching full booking data for status change: ${current.status} → ${newJob.status}`);
+                
+                // Fetch full booking data in background
+                bookingService.getBookingById(newJob.id).then((fullBooking) => {
+                  if (fullBooking.success && fullBooking.data) {
+                    console.log('✅ Full booking data fetched via all-bookings subscription');
+                    setSelectedJob(fullBooking.data);
+                  }
+                }).catch((error) => {
+                  console.error('❌ Error fetching full booking:', error);
+                });
+              }
+              
+              // Immediately update with payload data (preserving customer)
+              return {
+                ...newJob,
+                customer: newJob.customer?.avatar ? newJob.customer : current.customer
+              };
+            }
+            return current;
+          });
+          
+          // Immediately refresh list and counts
+          queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+          queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
         }
       )
       .subscribe();
@@ -228,25 +347,53 @@ export default function PartnerJobsScreen() {
           table: 'bookings',
           filter: `id=eq.${selectedJob.id}`,
         },
-        (payload) => {
+        async (payload) => {
           console.log('🔄 Job status updated in real-time:', payload.new);
           
-          // PRODUCTION FIX: Preserve customer data if missing in real-time update
-          if (selectedJob) {
-            const newJob = payload.new as Booking;
-            const mergedJob = {
-              ...newJob,
-              customer: newJob.customer?.avatar 
-                ? newJob.customer 
-                : selectedJob.customer // Keep existing customer data
-            };
-            setSelectedJob(mergedJob);
+          const newJob = payload.new as Booking;
+          
+          // CRITICAL FIX: Fetch complete booking data for important status changes
+          // Real-time payload doesn't include joined data (customer, services, etc.)
+          const importantStatuses = ['cancelled', 'rejected', 'accepted', 'completed', 'expired'];
+          const statusChanged = newJob.status !== selectedJob.status;
+          
+          if (statusChanged && importantStatuses.includes(newJob.status)) {
+            console.log(`🔄 Important status change detected (${selectedJob.status} → ${newJob.status}), fetching full booking data...`);
+            
+            try {
+              const fullBooking = await bookingService.getBookingById(selectedJob.id);
+              if (fullBooking.success && fullBooking.data) {
+                console.log('✅ Full booking data fetched via real-time subscription');
+                setSelectedJob(fullBooking.data);
+              } else {
+                // Fallback to payload with preserved customer data
+                setSelectedJob((current) => ({
+                  ...newJob,
+                  customer: newJob.customer?.avatar ? newJob.customer : current?.customer
+                }));
+              }
+            } catch (error) {
+              console.error('❌ Error fetching full booking:', error);
+              // Fallback to payload with preserved customer data
+              setSelectedJob((current) => ({
+                ...newJob,
+                customer: newJob.customer?.avatar ? newJob.customer : current?.customer
+              }));
+            }
           } else {
-            setSelectedJob(payload.new as Booking);
+            // For minor updates, use payload with preserved customer data
+            setSelectedJob((current) => {
+              if (!current) return newJob;
+              return {
+                ...newJob,
+                customer: newJob.customer?.avatar ? newJob.customer : current.customer
+              };
+            });
           }
           
-          // Also refresh full list
+          // Also refresh full list and counts
           queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+          queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
         }
       )
       .subscribe();
@@ -254,7 +401,7 @@ export default function PartnerJobsScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedJob?.id, queryClient]);
+  }, [selectedJob?.id, selectedJob?.status, queryClient]);
 
   // Mutation for updating booking status
   const updateStatusMutation = useMutation({
@@ -262,6 +409,7 @@ export default function PartnerJobsScreen() {
       bookingService.updateBookingStatus(bookingId, newStatus),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
     },
     onError: (error: any) => {
       Alert.alert('Error', error.message || 'Failed to update status');
@@ -274,6 +422,7 @@ export default function PartnerJobsScreen() {
       bookingService.confirmCashPayment(bookingId, barberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
       Alert.alert('✅ Payment Confirmed', 'Cash payment has been recorded.');
     },
     onError: (error: any) => {
@@ -281,20 +430,24 @@ export default function PartnerJobsScreen() {
     },
   });
 
-  // Apply filters and search
+  // GRAB STANDARD: Fetch counts for all filters (lightweight, always visible)
+  const { data: countsData } = useQuery({
+    queryKey: ['barber-booking-counts', barberId],
+    queryFn: async () => {
+      if (!barberId) return { all: 0, pending: 0, active: 0, completed: 0 };
+      const result = await bookingService.getBarberBookingCounts(barberId);
+      return result.success ? result.data : { all: 0, pending: 0, active: 0, completed: 0 };
+    },
+    enabled: !!barberId,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnMount: true,
+  });
+
+  // Apply search filter (status already filtered by database)
   const filteredJobs = useMemo(() => {
-    let jobs = partnerJobs;
+    let jobs = partnerJobs; // Already filtered by status in database query
 
-    // Filter by status
-    if (filterStatus === 'pending') {
-      jobs = jobs.filter(j => j.status === 'pending');
-    } else if (filterStatus === 'active') {
-      jobs = jobs.filter(j => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(j.status));
-    } else if (filterStatus === 'completed') {
-      jobs = jobs.filter(j => ['completed', 'cancelled', 'rejected', 'expired'].includes(j.status));
-    }
-
-    // Apply search
+    // Apply search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       jobs = jobs.filter(j => 
@@ -303,17 +456,12 @@ export default function PartnerJobsScreen() {
       );
     }
 
-    // Sort by date (newest first)
+    // Sort by date (newest first) - database already sorts, but keep for consistency
     return jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [partnerJobs, filterStatus, searchQuery]);
+  }, [partnerJobs, searchQuery]);
 
-  // Calculate filter counts
-  const filterCounts = useMemo(() => ({
-    all: partnerJobs.length,
-    pending: partnerJobs.filter(j => j.status === 'pending').length,
-    active: partnerJobs.filter(j => ['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(j.status)).length,
-    completed: partnerJobs.filter(j => ['completed', 'cancelled', 'rejected', 'expired'].includes(j.status)).length,
-  }), [partnerJobs]);
+  // GRAB STANDARD: Show actual counts for all filters (from separate lightweight query)
+  const filterCounts = countsData || { all: 0, pending: 0, active: 0, completed: 0 };
 
   // Calculate analytics for completed jobs
   const completedJobsAnalytics = useMemo(() => {
@@ -344,8 +492,7 @@ export default function PartnerJobsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await refetch();
     setRefreshing(false);
   };
 
@@ -359,7 +506,7 @@ export default function PartnerJobsScreen() {
           text: 'Accept',
           onPress: async () => {
             try {
-              // Optimistic update - Update UI immediately for smooth UX
+              // Optimistic update
               const updatedJob = { ...job, status: 'accepted' as BookingStatus };
               setSelectedJob(updatedJob);
               
@@ -369,7 +516,16 @@ export default function PartnerJobsScreen() {
                 newStatus: 'accepted' 
               });
               
-              // Keep modal open - show success and next action
+              // CRITICAL FIX: Fetch the updated booking data immediately
+              // This ensures selectedJob has the latest data (accepted_at, payment_status, etc.)
+              // Real-time subscription may be delayed, so we fetch directly
+              console.log('🔄 Fetching updated booking after accept...');
+              const updatedBooking = await bookingService.getBookingById(job.id);
+              if (updatedBooking.success && updatedBooking.data) {
+                console.log('✅ Updated booking fetched:', updatedBooking.data.status);
+                setSelectedJob(updatedBooking.data);
+              }
+              
               Alert.alert(
                 '✅ Job Accepted', 
                 'Great! You can now start heading to the customer location.',
@@ -433,6 +589,14 @@ export default function PartnerJobsScreen() {
                 console.log('📍 Switched to on-the-way tracking mode');
               }
               
+              // Fetch updated booking data
+              console.log('🔄 Fetching updated booking after on_the_way...');
+              const updatedBooking = await bookingService.getBookingById(job.id);
+              if (updatedBooking.success && updatedBooking.data) {
+                console.log('✅ Updated booking fetched:', updatedBooking.data.status);
+                setSelectedJob(updatedBooking.data);
+              }
+              
               Alert.alert(
                 '🚗 On The Way', 
                 'Customer notified! Location tracking active.\n\nTip: Use GPS for accurate navigation.',
@@ -472,6 +636,14 @@ export default function PartnerJobsScreen() {
               if (currentUser?.id && locationTrackingService.isCurrentlyTracking()) {
                 await locationTrackingService.switchMode(currentUser.id, 'idle');
                 console.log('📍 Switched back to idle tracking mode');
+              }
+              
+              // Fetch updated booking data
+              console.log('🔄 Fetching updated booking after arrived...');
+              const updatedBooking = await bookingService.getBookingById(job.id);
+              if (updatedBooking.success && updatedBooking.data) {
+                console.log('✅ Updated booking fetched:', updatedBooking.data.status);
+                setSelectedJob(updatedBooking.data);
               }
               
               Alert.alert(
@@ -602,13 +774,26 @@ export default function PartnerJobsScreen() {
         }
       }
 
-      // Optimistic update with before photo
-      const updatedJob = { 
-        ...job, 
-        status: 'in_progress' as BookingStatus,
-        evidence_photos: beforePhotoUrl ? { before: [beforePhotoUrl], after: [] } : undefined
-      };
-      setSelectedJob(updatedJob);
+      // Fetch updated booking data
+      console.log('🔄 Fetching updated booking after in_progress...');
+      const updatedBooking = await bookingService.getBookingById(job.id);
+      if (updatedBooking.success && updatedBooking.data) {
+        console.log('✅ Updated booking fetched:', updatedBooking.data.status);
+        // Merge with before photo
+        const finalJob = {
+          ...updatedBooking.data,
+          evidence_photos: beforePhotoUrl ? { before: [beforePhotoUrl], after: [] } : updatedBooking.data.evidence_photos
+        };
+        setSelectedJob(finalJob);
+      } else {
+        // Fallback to optimistic update
+        const updatedJob = { 
+          ...job, 
+          status: 'in_progress' as BookingStatus,
+          evidence_photos: beforePhotoUrl ? { before: [beforePhotoUrl], after: [] } : undefined
+        };
+        setSelectedJob(updatedJob);
+      }
 
       // Update local state for completion modal
       if (beforePhotoUrl) {
@@ -1096,33 +1281,11 @@ export default function PartnerJobsScreen() {
         ))}
       </ScrollView>
 
-      {/* Jobs List */}
-      <ScrollView
-        style={styles.jobsList}
-        contentContainerStyle={styles.jobsListContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
-        }
-      >
-        {filteredJobs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons 
-              name={searchQuery ? 'search' : 'briefcase-outline'} 
-              size={64} 
-              color={COLORS.text.tertiary} 
-            />
-            <Text style={styles.emptyStateTitle}>
-              {searchQuery ? 'No Results Found' : 'No Jobs Yet'}
-            </Text>
-            <Text style={styles.emptyStateText}>
-              {searchQuery 
-                ? 'Try adjusting your search or filters'
-                : 'Your bookings will appear here'}
-            </Text>
-          </View>
-        ) : (
-          filteredJobs.map((job) => (
+      {/* Jobs List - FlatList for virtualization */}
+      <FlatList
+        data={filteredJobs}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: job }) => (
             <TouchableOpacity
               key={job.id}
               style={styles.jobCard}
@@ -1204,11 +1367,47 @@ export default function PartnerJobsScreen() {
                 <Ionicons name="chevron-forward" size={20} color={COLORS.text.tertiary} />
               </View>
             </TouchableOpacity>
-          ))
         )}
-
-        <View style={{ height: 20 }} />
-      </ScrollView>
+        style={styles.jobsList}
+        contentContainerStyle={styles.jobsListContent}
+        showsVerticalScrollIndicator={false}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons 
+              name={searchQuery ? 'search' : 'briefcase-outline'} 
+              size={64} 
+              color={COLORS.text.tertiary} 
+            />
+            <Text style={styles.emptyStateTitle}>
+              {searchQuery ? 'No Results Found' : 'No Jobs Yet'}
+            </Text>
+            <Text style={styles.emptyStateText}>
+              {searchQuery 
+                ? 'Try adjusting your search or filters'
+                : 'Your bookings will appear here'}
+            </Text>
+          </View>
+        }
+        ListFooterComponent={
+          isFetchingNextPage && hasNextPage ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={{ marginTop: 8, color: COLORS.text.tertiary, fontSize: 12 }}>Loading more...</Text>
+            </View>
+          ) : !hasNextPage && filteredJobs.length > 0 ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <Text style={{ color: COLORS.text.tertiary, fontSize: 12 }}>No more jobs</Text>
+            </View>
+          ) : (
+            <View style={{ height: 20 }} />
+          )
+        }
+      />
 
       {/* Job Details Modal */}
       <Modal
