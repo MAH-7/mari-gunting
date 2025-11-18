@@ -221,188 +221,101 @@ export default function PartnerJobsScreen() {
     }
   }, [partnerJobs, selectedJob?.id, selectedJob?.status, selectedJob?.payment_status, selectedJob?.distance, selectedJob?.customer_address, selectedJob?.address, selectedJob?.accepted_at, selectedJob?.on_the_way_at, selectedJob?.arrived_at, selectedJob?.started_at]);
 
-  // Real-time subscription for new bookings
+  // OPTIMIZED: Single real-time subscription for all booking changes (3→1 connection)
+  // Handles both INSERT (new bookings) and UPDATE (status changes)
+  // Reduces realtime connections from 3 per barber to 1 per barber
   useEffect(() => {
     if (!barberId) return;
 
-    console.log('🔊 Setting up realtime subscription for barber:', barberId);
+    console.log('🔊 Setting up optimized realtime subscription for barber:', barberId);
 
     const channel = supabase
-      .channel('new-bookings')
+      .channel(`barber-bookings-${barberId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'bookings',
-          filter: `barber_id=eq.${barberId}`,
-        },
-        (payload) => {
-          console.log('🔔 New booking received!', payload);
-          
-          Alert.alert(
-            '🔔 New Booking Request!',
-            'You have a new booking request. Tap to view.',
-            [
-              { text: 'Later', style: 'cancel' },
-              { 
-                text: 'View Now', 
-                onPress: () => {
-                  queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
-                  queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
-                  setFilterStatus('pending');
-                }
-              }
-            ]
-          );
-          
-          queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
-          queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [barberId, queryClient]);
-
-  // Real-time subscription for ALL barber booking updates (for instant count updates)
-  useEffect(() => {
-    if (!barberId) return;
-
-    console.log('🔊 Setting up real-time updates for all barber bookings');
-
-    const channel = supabase
-      .channel('all-barber-booking-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
+          event: '*', // Listen to all events (INSERT + UPDATE)
           schema: 'public',
           table: 'bookings',
           filter: `barber_id=eq.${barberId}`,
         },
         async (payload) => {
-          console.log('🔄 Booking updated in real-time:', payload.new);
+          console.log(`📡 Booking ${payload.eventType}:`, payload);
           
-          const newJob = payload.new as Booking;
-          
-          // Check if this is the currently selected job
-          setSelectedJob((current) => {
-            if (current && current.id === newJob.id) {
-              console.log('✅ Updating selected job via all-bookings subscription:', newJob.status);
-              
-              // For important status changes, fetch full booking data asynchronously
-              const importantStatuses = ['cancelled', 'rejected', 'accepted', 'completed', 'expired'];
-              const statusChanged = newJob.status !== current.status;
-              
-              if (statusChanged && importantStatuses.includes(newJob.status)) {
-                console.log(`🔄 Fetching full booking data for status change: ${current.status} → ${newJob.status}`);
-                
-                // Fetch full booking data in background
-                bookingService.getBookingById(newJob.id).then((fullBooking) => {
-                  if (fullBooking.success && fullBooking.data) {
-                    console.log('✅ Full booking data fetched via all-bookings subscription');
-                    setSelectedJob(fullBooking.data);
-                  }
-                }).catch((error) => {
-                  console.error('❌ Error fetching full booking:', error);
-                });
-              }
-              
-              // Immediately update with payload data (preserving customer)
-              return {
-                ...newJob,
-                customer: newJob.customer?.avatar ? newJob.customer : current.customer
-              };
-            }
-            return current;
-          });
-          
-          // Immediately refresh list and counts
-          queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
-          queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [barberId, queryClient]);
-
-  // Real-time subscription for booking status updates (Grab pattern: instant timeline updates)
-  useEffect(() => {
-    if (!selectedJob?.id) return;
-
-    console.log('🔊 Setting up real-time status updates for job:', selectedJob.id);
-
-    const channel = supabase
-      .channel(`booking-status-${selectedJob.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bookings',
-          filter: `id=eq.${selectedJob.id}`,
-        },
-        async (payload) => {
-          console.log('🔄 Job status updated in real-time:', payload.new);
-          
-          const newJob = payload.new as Booking;
-          
-          // CRITICAL FIX: Fetch complete booking data for important status changes
-          // Real-time payload doesn't include joined data (customer, services, etc.)
-          const importantStatuses = ['cancelled', 'rejected', 'accepted', 'completed', 'expired'];
-          const statusChanged = newJob.status !== selectedJob.status;
-          
-          if (statusChanged && importantStatuses.includes(newJob.status)) {
-            console.log(`🔄 Important status change detected (${selectedJob.status} → ${newJob.status}), fetching full booking data...`);
+          // Handle INSERT - New booking
+          if (payload.eventType === 'INSERT') {
+            console.log('🔔 New booking received!', payload);
             
-            try {
-              const fullBooking = await bookingService.getBookingById(selectedJob.id);
-              if (fullBooking.success && fullBooking.data) {
-                console.log('✅ Full booking data fetched via real-time subscription');
-                setSelectedJob(fullBooking.data);
-              } else {
-                // Fallback to payload with preserved customer data
-                setSelectedJob((current) => ({
-                  ...newJob,
-                  customer: newJob.customer?.avatar ? newJob.customer : current?.customer
-                }));
-              }
-            } catch (error) {
-              console.error('❌ Error fetching full booking:', error);
-              // Fallback to payload with preserved customer data
-              setSelectedJob((current) => ({
-                ...newJob,
-                customer: newJob.customer?.avatar ? newJob.customer : current?.customer
-              }));
-            }
-          } else {
-            // For minor updates, use payload with preserved customer data
+            Alert.alert(
+              '🔔 New Booking Request!',
+              'You have a new booking request. Tap to view.',
+              [
+                { text: 'Later', style: 'cancel' },
+                { 
+                  text: 'View Now', 
+                  onPress: () => {
+                    queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+                    queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
+                    setFilterStatus('pending');
+                  }
+                }
+              ]
+            );
+          }
+          
+          // Handle UPDATE - Booking status/data changed
+          if (payload.eventType === 'UPDATE') {
+            console.log('🔄 Booking updated in real-time:', payload.new);
+            
+            const newJob = payload.new as Booking;
+            
+            // Check if this is the currently selected job
             setSelectedJob((current) => {
-              if (!current) return newJob;
-              return {
-                ...newJob,
-                customer: newJob.customer?.avatar ? newJob.customer : current.customer
-              };
+              if (current && current.id === newJob.id) {
+                console.log('✅ Updating selected job:', newJob.status);
+                
+                // For important status changes, fetch full booking data asynchronously
+                const importantStatuses = ['cancelled', 'rejected', 'accepted', 'completed', 'expired'];
+                const statusChanged = newJob.status !== current.status;
+                
+                if (statusChanged && importantStatuses.includes(newJob.status)) {
+                  console.log(`🔄 Fetching full booking data for status change: ${current.status} → ${newJob.status}`);
+                  
+                  // Fetch full booking data in background
+                  bookingService.getBookingById(newJob.id).then((fullBooking) => {
+                    if (fullBooking.success && fullBooking.data) {
+                      console.log('✅ Full booking data fetched');
+                      setSelectedJob(fullBooking.data);
+                    }
+                  }).catch((error) => {
+                    console.error('❌ Error fetching full booking:', error);
+                  });
+                }
+                
+                // Immediately update with payload data (preserving customer)
+                return {
+                  ...newJob,
+                  customer: newJob.customer?.avatar ? newJob.customer : current.customer
+                };
+              }
+              return current;
             });
           }
           
-          // Also refresh full list and counts
+          // Refresh list and counts for both INSERT and UPDATE
           queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
           queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Realtime connection status:', status);
+      });
 
     return () => {
+      console.log('🔌 Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [selectedJob?.id, selectedJob?.status, queryClient]);
+  }, [barberId, queryClient]);
 
   // Mutation for updating booking status
   const updateStatusMutation = useMutation({
@@ -528,6 +441,13 @@ export default function PartnerJobsScreen() {
                 newStatus: 'accepted' 
               });
               
+              // SAFETY BACKUP: Ensure location service is running (in case Dashboard didn't start it)
+              if (currentUser?.id && !locationTrackingService.isCurrentlyTracking()) {
+                console.log('🔄 Location service not running, starting in idle mode...');
+                await locationTrackingService.startTracking(currentUser.id, 'idle');
+                console.log('✅ Location service started as backup');
+              }
+              
               // Fetch complete data (loading overlay masks the transition)
               console.log('🔄 Fetching updated booking after accept...');
               const updatedBooking = await bookingService.getBookingById(job.id);
@@ -606,10 +526,16 @@ export default function PartnerJobsScreen() {
                 newStatus: 'on_the_way' 
               });
               
-              // Switch location tracking to on-the-way mode (frequent updates)
+              // SAFETY BACKUP: Ensure location service is running before switching mode
               if (currentUser?.id) {
-                await locationTrackingService.switchMode(currentUser.id, 'on-the-way');
-                console.log('📍 Switched to on-the-way tracking mode');
+                if (!locationTrackingService.isCurrentlyTracking()) {
+                  console.log('⚠️ Location service not running, starting now...');
+                  await locationTrackingService.startTracking(currentUser.id, 'on-the-way');
+                  console.log('✅ Location service started in on-the-way mode');
+                } else {
+                  await locationTrackingService.switchMode(currentUser.id, 'on-the-way');
+                  console.log('📍 Switched to on-the-way tracking mode');
+                }
               }
               
               // Fetch updated booking data
