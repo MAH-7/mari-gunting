@@ -18,6 +18,7 @@ import { supabase } from '@mari-gunting/shared/config/supabase';
 import VerificationProgressWidget from '@/components/VerificationProgressWidget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationTrackingService } from '@/services/locationTrackingService';
+import { OnlineStatus } from '@/utils/native/onlineStatus';
 import { heartbeatService } from '@/services/heartbeatService';
 import { connectionMonitor } from '@mari-gunting/shared/services/connectionMonitor';
 import * as Location from 'expo-location';
@@ -560,6 +561,7 @@ export default function PartnerDashboardScreen() {
       await locationTrackingService.stopTracking();
       await heartbeatService.stopHeartbeat();
       await connectionMonitor.stopMonitoring();
+      await OnlineStatus.stop(); // Ensure native service is stopped on startup
       console.log('✅ All tracking services stopped');
       
       // Keep local state as offline
@@ -832,6 +834,9 @@ export default function PartnerDashboardScreen() {
             // The retry logic in locationTrackingService will handle it
           }
         }
+
+        // 4. Start native Android service for instant force-close offline
+        await OnlineStatus.start(currentUser.id);
       } else {
         // PRODUCTION: Stop all tracking services
         // 1. Stop connection monitor
@@ -847,6 +852,9 @@ export default function PartnerDashboardScreen() {
           await locationTrackingService.stopTracking();
           console.log('🛑 Location tracking stopped');
         }
+
+        // 4. Stop native Android service
+        await OnlineStatus.stop();
       }
       
       // Use server-side function to update status with server time

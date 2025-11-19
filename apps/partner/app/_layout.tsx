@@ -81,6 +81,28 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
           console.log('🛑 Stopped location tracking (marked for stop)');
           return;
         }
+        
+        // CRITICAL: Check if app was force closed (Android native detection)
+        const forceCloseDetected = await AsyncStorage.getItem('forceCloseDetected');
+        console.log(`🔍 [BACKGROUND] Checking forceCloseDetected flag: ${forceCloseDetected}`);
+        if (forceCloseDetected === 'true') {
+          console.warn('⚠️ Force close detected - setting offline and stopping ALL tracking');
+          
+          // Set user offline in database
+          await supabase
+            .from('profiles')
+            .update({ is_online: false, updated_at: new Date().toISOString() })
+            .eq('id', user.id);
+          
+          // Stop background location tracking
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          
+          // Clear flag
+          await AsyncStorage.removeItem('forceCloseDetected');
+          
+          console.log('✅ User set offline and all location tracking stopped (force close)');
+          return;
+        }
 
         // CHECK IF USER IS STILL ONLINE - Critical for battery!
         const { data: profile, error: profileError } = await supabase

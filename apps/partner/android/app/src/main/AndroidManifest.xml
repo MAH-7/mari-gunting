@@ -40,6 +40,11 @@
       </intent-filter>
     </activity>
     <service android:name="expo.modules.location.LocationTaskService" android:foregroundServiceType="location" android:exported="false"/>
+    <!-- Online status service for force close detection -->
+    <service 
+      android:name=".OnlineStatusService" 
+      android:foregroundServiceType="location" 
+      android:exported="false"/>
     <uses-library android:name="org.apache.http.legacy" android:required="false"/>
   </application>
 </manifest>
