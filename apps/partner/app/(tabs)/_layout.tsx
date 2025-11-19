@@ -1,11 +1,14 @@
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, Alert, Vibration } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/shared/constants';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
+import { supabase } from '@mari-gunting/shared/config/supabase';
+import { useStore } from '@mari-gunting/shared/store/useStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Global notification sound ref - accessible across all tabs
 export const notificationSound = { current: null as Audio.Sound | null };
@@ -27,8 +30,11 @@ function TabBarIcon({ name, focused }: { name: IconName; focused: boolean }) {
 
 export default function PartnerTabLayout() {
   const insets = useSafeAreaInsets();
+  const currentUser = useStore((state) => state.currentUser);
+  const queryClient = useQueryClient();
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
   const [isLoading, setIsLoading] = useState(true);
+  const [barberId, setBarberId] = useState<string | null>(null);
 
   // Load account type
   useEffect(() => {
@@ -39,6 +45,29 @@ export default function PartnerTabLayout() {
       setIsLoading(false);
     });
   }, []);
+
+  // Fetch barber ID for global alerts
+  useEffect(() => {
+    const fetchBarberId = async () => {
+      if (!currentUser?.id) return;
+      
+      const { data, error } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .single();
+      
+      if (error) {
+        console.error('❌ Error fetching barber ID (global):', error);
+        return;
+      }
+      
+      console.log('✅ Barber ID found for global alerts:', data.id);
+      setBarberId(data.id);
+    };
+    
+    fetchBarberId();
+  }, [currentUser?.id]);
 
   // Setup notification sound globally (runs once on tabs mount)
   useEffect(() => {
@@ -72,6 +101,75 @@ export default function PartnerTabLayout() {
       }
     };
   }, []);
+
+  // GLOBAL: Realtime subscription for NEW booking alerts only
+  // This runs on app startup, separate from Jobs screen subscription
+  useEffect(() => {
+    if (!barberId) return;
+
+    console.log('🔔 Setting up GLOBAL new booking alerts for barber:', barberId);
+
+    const channel = supabase
+      .channel(`global-booking-alerts-${barberId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT', // Only NEW bookings for alerts
+          schema: 'public',
+          table: 'bookings',
+          filter: `barber_id=eq.${barberId}`,
+        },
+        async (payload) => {
+          console.log('🔔 NEW BOOKING (global alert)!', payload);
+          
+          // Play notification sound
+          if (notificationSound.current) {
+            try {
+              await notificationSound.current.replayAsync();
+              console.log('✅ Sound played!');
+            } catch (error: any) {
+              if (error?.message?.includes('background') || error?.message?.includes('AudioFocusNotAcquiredException')) {
+                console.log('⚠️ App in background - sound skipped');
+              } else {
+                console.error('❌ Sound error:', error?.message);
+              }
+            }
+          }
+          
+          // Vibrate device
+          if (Platform.OS === 'ios') {
+            Vibration.vibrate([0, 400, 200, 400]);
+          } else {
+            Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+          }
+          
+          // Show alert
+          Alert.alert(
+            '🔔 New Booking Request!',
+            'You have a new booking request. Tap to view.',
+            [
+              { text: 'Later', style: 'cancel' },
+              { 
+                text: 'View Now', 
+                onPress: () => {
+                  // Refresh data when user taps "View Now"
+                  queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+                  queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
+                }
+              }
+            ]
+          );
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔔 Global alerts status:', status);
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up global booking alerts');
+      supabase.removeChannel(channel);
+    };
+  }, [barberId, queryClient]);
 
   if (isLoading) {
     return null; // Or a loading indicator
