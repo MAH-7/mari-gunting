@@ -465,10 +465,10 @@ export default function TrackBarberScreen() {
             <View style={styles.etaItem}>
               <Text style={styles.etaLabel}>Last Updated</Text>
               <Text style={styles.etaValue}>
-                {trackingSession?.minutes_since_last_update !== undefined
-                  ? `${Math.floor(trackingSession.minutes_since_last_update)}m ago`
-                  : lastUpdated 
+                {lastUpdated 
                   ? `${Math.floor((Date.now() - lastUpdated.getTime()) / 1000)}s ago` 
+                  : trackingSession?.minutes_since_last_update !== undefined
+                  ? `${Math.floor(trackingSession.minutes_since_last_update)}m ago`
                   : 'Just now'}
               </Text>
             </View>

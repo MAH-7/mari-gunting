@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, TextInput, Modal, Alert, RefreshControl, Linking, Platform, Image, StatusBar, ActivityIndicator, Vibration } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
+import { Audio } from 'expo-av';
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
@@ -17,6 +18,8 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { formatTime, formatLocalDate, formatLocalTime } from '@/utils/format';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, theme } from '@mari-gunting/shared/theme';
+import { useUnreadCount } from '@mari-gunting/shared/hooks/useUnreadCount';
+import { notificationSound } from './_layout';
 
 type FilterStatus = 'all' | 'pending' | 'active' | 'completed';
 
@@ -26,7 +29,53 @@ type ChecklistItem = {
   checked: boolean;
 };
 
+// Chat Button with Unread Badge Component
+function ChatButtonWithBadge({ 
+  bookingId, 
+  userId, 
+  onPress 
+}: { 
+  bookingId: string;
+  userId: string | null;
+  onPress: () => void;
+}) {
+  const unreadCount = useUnreadCount(bookingId, userId);
+  
+  return (
+    <TouchableOpacity 
+      onPress={onPress}
+      style={{ padding: 4, position: 'relative' }}
+    >
+      <Ionicons name="chatbubble-ellipses" size={24} color={COLORS.primary} />
+      {unreadCount > 0 && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          backgroundColor: '#FF3B30',
+          borderRadius: 10,
+          minWidth: 20,
+          height: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 4,
+        }}>
+          <Text style={{
+            color: '#FFF',
+            fontSize: 11,
+            fontWeight: '700',
+          }}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function PartnerJobsScreen() {
+  console.log('🎬 PartnerJobsScreen mounted');
+  
   const currentUser = useStore((state) => state.currentUser);
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ jobId?: string }>();
@@ -245,6 +294,36 @@ export default function PartnerJobsScreen() {
           // Handle INSERT - New booking
           if (payload.eventType === 'INSERT') {
             console.log('🔔 New booking received!', payload);
+            
+            // Play notification sound (only works when app is in foreground)
+            console.log('🔊 Attempting to play notification sound...');
+            console.log('🔊 notificationSound.current:', notificationSound.current ? 'exists' : 'null');
+            
+            if (notificationSound.current) {
+              try {
+                await notificationSound.current.replayAsync();
+                console.log('✅ Notification sound played successfully!');
+              } catch (error: any) {
+                // Expected error when app is in background - audio focus not available
+                if (error?.message?.includes('background') || error?.message?.includes('AudioFocusNotAcquiredException')) {
+                  console.log('⚠️ App in background - sound skipped (vibration still works)');
+                } else {
+                  console.error('❌ Failed to play notification sound:', error);
+                  console.error('Error details:', error?.message);
+                }
+              }
+            } else {
+              console.warn('⚠️ Sound not loaded yet - skipping sound playback');
+            }
+            
+            // Vibrate device to alert partner (Grab/Uber style)
+            if (Platform.OS === 'ios') {
+              // iOS: Double vibration pattern
+              Vibration.vibrate([0, 400, 200, 400]);
+            } else {
+              // Android: Triple vibration pattern (more urgent)
+              Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+            }
             
             Alert.alert(
               '🔔 New Booking Request!',
@@ -1458,7 +1537,16 @@ export default function PartnerJobsScreen() {
                 <Ionicons name="close" size={28} color={COLORS.text.primary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>Job Details</Text>
-              <View style={{ width: 28 }} />
+              {/* Chat Button - Show after accepting */}
+              {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) ? (
+                <ChatButtonWithBadge 
+                  bookingId={selectedJob.id}
+                  userId={currentUser?.id || null}
+                  onPress={() => handleChatCustomer(selectedJob.id)}
+                />
+              ) : (
+                <View style={{ width: 28 }} />
+              )}
             </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
@@ -1622,19 +1710,6 @@ export default function PartnerJobsScreen() {
                     <Text style={styles.customerName}>{selectedJob.customer?.name}</Text>
                   </View>
                 </View>
-                
-                {/* Contact Actions - Chat Only (show after accepting) */}
-                {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(selectedJob.status) && (
-                  <View style={styles.contactActions}>
-                    <TouchableOpacity 
-                      style={[styles.contactActionButton, { flex: 1 }]}
-                      onPress={() => handleChatCustomer(selectedJob.id)}
-                    >
-                      <Ionicons name="chatbubble-ellipses" size={20} color={COLORS.info} />
-                      <Text style={styles.contactActionText}>Chat with Customer</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
               </View>
 
               {/* Services */}

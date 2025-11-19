@@ -3,8 +3,12 @@ import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/shared/constants';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Audio } from 'expo-av';
+
+// Global notification sound ref - accessible across all tabs
+export const notificationSound = { current: null as Audio.Sound | null };
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -26,6 +30,7 @@ export default function PartnerTabLayout() {
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load account type
   useEffect(() => {
     AsyncStorage.getItem('partnerAccountType').then(type => {
       if (type) {
@@ -33,6 +38,39 @@ export default function PartnerTabLayout() {
       }
       setIsLoading(false);
     });
+  }, []);
+
+  // Setup notification sound globally (runs once on tabs mount)
+  useEffect(() => {
+    const setupAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        });
+        
+        // Load notification sound from local assets
+        const { sound } = await Audio.Sound.createAsync(
+          require('../../assets/sounds/notification.wav'),
+          { shouldPlay: false, volume: 1.0 }
+        );
+        notificationSound.current = sound;
+        console.log('🔊 Notification sound loaded globally');
+      } catch (error) {
+        console.error('❌ Failed to load notification sound:', error);
+      }
+    };
+    
+    setupAudio();
+    
+    // Cleanup sound on unmount
+    return () => {
+      if (notificationSound.current) {
+        notificationSound.current.unloadAsync();
+        console.log('🔊 Notification sound unloaded');
+      }
+    };
   }, []);
 
   if (isLoading) {

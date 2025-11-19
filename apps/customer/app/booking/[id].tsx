@@ -14,6 +14,58 @@ import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleto
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
+import { useUnreadCount } from '@mari-gunting/shared/hooks/useUnreadCount';
+
+// Chat Button with Unread Badge Component
+function ChatButtonWithBadge({ 
+  bookingId, 
+  userId, 
+  onPress 
+}: { 
+  bookingId: string;
+  userId: string | null;
+  onPress: () => void;
+}) {
+  const unreadCount = useUnreadCount(bookingId, userId);
+  
+  return (
+    <TouchableOpacity
+      style={styles.chatButton}
+      onPress={onPress}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ position: 'relative' }}>
+          <Ionicons name="chatbubbles" size={20} color={Colors.white} />
+          {unreadCount > 0 && (
+            <View style={{
+              position: 'absolute',
+              top: -6,
+              right: -6,
+              backgroundColor: '#FFD60A',
+              borderRadius: 10,
+              minWidth: 18,
+              height: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: 4,
+              borderWidth: 2,
+              borderColor: Colors.primary,
+            }}>
+              <Text style={{
+                color: '#000',
+                fontSize: 10,
+                fontWeight: '700',
+              }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.chatButtonText}>Chat with Barber</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function BookingDetailScreen() {
   const { id, quickBook } = useLocalSearchParams<{ id: string; quickBook?: string }>();
@@ -1214,13 +1266,11 @@ export default function BookingDetailScreen() {
       <View style={styles.bottomActions}>
         {/* Chat Button - Show for active bookings */}
         {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(booking.status) && (
-          <TouchableOpacity
-            style={styles.chatButton}
+          <ChatButtonWithBadge 
+            bookingId={booking.id}
+            userId={currentUser?.id || null}
             onPress={handleChatBarber}
-          >
-            <Ionicons name="chatbubbles" size={20} color={Colors.white} />
-            <Text style={styles.chatButtonText}>Chat with Barber</Text>
-          </TouchableOpacity>
+          />
         )}
 
         {/* Track Barber Button - Show when barber is on the way or arrived */}
