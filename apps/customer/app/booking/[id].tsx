@@ -358,7 +358,7 @@ export default function BookingDetailScreen() {
   };
 
   const handleChatBarber = () => {
-    Alert.alert('Coming Soon', 'Chat feature will be available soon');
+    router.push(`/booking/chat/${id}` as any);
   };
 
   const handleRateBarber = async () => {
@@ -941,18 +941,6 @@ export default function BookingDetailScreen() {
                 </View>
               </View>
             </View>
-
-            {canChat && (
-              <View style={styles.contactButtons}>
-                <TouchableOpacity
-                  style={[styles.contactButton, styles.contactButtonFull]}
-                  onPress={handleChatBarber}
-                >
-                  <Ionicons name="chatbubble" size={20} color={Colors.primary} />
-                  <Text style={styles.contactButtonText}>Chat with Barber</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
         ) : (
           <View style={styles.card}>
@@ -1224,6 +1212,17 @@ export default function BookingDetailScreen() {
 
       {/* Bottom Action Buttons */}
       <View style={styles.bottomActions}>
+        {/* Chat Button - Show for active bookings */}
+        {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(booking.status) && (
+          <TouchableOpacity
+            style={styles.chatButton}
+            onPress={handleChatBarber}
+          >
+            <Ionicons name="chatbubbles" size={20} color={Colors.white} />
+            <Text style={styles.chatButtonText}>Chat with Barber</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Track Barber Button - Show when barber is on the way or arrived */}
         {(booking.status === 'on_the_way' || booking.status === 'arrived') && (
           <TouchableOpacity
@@ -1918,6 +1917,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   rateButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    gap: 8,
+    marginBottom: 12,
+  },
+  chatButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: Colors.white,

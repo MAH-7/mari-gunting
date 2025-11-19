@@ -11,7 +11,7 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +33,7 @@ interface PortfolioImage {
 
 export default function PortfolioManagementScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const currentUser = useStore((state) => state.currentUser);
   const [images, setImages] = useState<PortfolioImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -642,7 +643,7 @@ export default function PortfolioManagementScreen() {
       {/* FAB */}
       {!isSelectionMode && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: 24 + insets.bottom }]}
           onPress={handleAddPhoto}
           activeOpacity={0.8}
         >
@@ -1033,7 +1034,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
     right: 24,
     width: 56,
     height: 56,

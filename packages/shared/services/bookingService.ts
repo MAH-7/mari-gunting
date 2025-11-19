@@ -876,6 +876,7 @@ export const bookingService = {
           ),
           barber:barbers(
             id,
+            user_id,
             business_name,
             rating,
             completed_bookings,
@@ -928,6 +929,7 @@ export const bookingService = {
       if (data && data.barber && data.barber.barber_profile) {
         data.barber = {
           id: data.barber.id,
+          user_id: data.barber.user_id, // For chat
           name: data.barber.barber_profile.full_name,
           avatar: data.barber.barber_profile.avatar_url,
           phone: data.barber.barber_profile.phone_number,

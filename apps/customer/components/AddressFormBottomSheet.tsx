@@ -8,6 +8,9 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -189,7 +192,16 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.scrim} activeOpacity={1} onPress={onClose} />
-        <View style={styles.sheet}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.sheetContainer}
+        >
+          <View style={styles.sheet}>
+            <ScrollView 
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
           {/* Grab handle */}
           <View style={styles.handleContainer}>
             <View style={styles.handle} />
@@ -295,7 +307,9 @@ export default function AddressFormBottomSheet(props: AddressFormBottomSheetProp
               )}
             </TouchableOpacity>
           </View>
-        </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -310,10 +324,15 @@ const styles = StyleSheet.create({
   scrim: {
     flex: 1,
   },
+  sheetContainer: {
+    maxHeight: '80%',
+  },
   sheet: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+  },
+  sheetContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 20,

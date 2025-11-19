@@ -1103,21 +1103,21 @@ export default function PartnerJobsScreen() {
     Linking.openURL(`tel:${phone}`);
   };
 
-  const handleChatCustomer = (customerId: string, customerName: string) => {
-    // TODO: Navigate to in-app chat screen when implemented
-    Alert.alert(
-      'Chat with Customer',
-      `Start a chat with ${customerName}?\n\nIn-app messaging coming soon!\n\nFor now, you can call the customer.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Call Instead', onPress: () => handleCallCustomer(selectedJob?.customer?.phone || '') }
-      ]
-    );
-    // Future: router.push(`/chat/${customerId}`);
+  const handleChatCustomer = (bookingId: string) => {
+    // Close modal first
+    setSelectedJob(null);
+    // Navigate to chat
+    setTimeout(() => {
+      router.push(`/jobs/chat/${bookingId}` as any);
+    }, 300);
   };
 
-  const handleGetDirections = async (address: string, latitude?: number, longitude?: number) => {
-    const coords = latitude && longitude ? `${latitude},${longitude}` : encodeURIComponent(address);
+  const handleGetDirections = async (address: string, latitude?: number | string, longitude?: number | string) => {
+    // Coerce possible string coords to numbers
+    const latF = latitude !== undefined && latitude !== null ? Number(latitude) : NaN;
+    const lngF = longitude !== undefined && longitude !== null ? Number(longitude) : NaN;
+    const hasCoords = Number.isFinite(latF) && Number.isFinite(lngF);
+    const coords = hasCoords ? `${latF},${lngF}` : encodeURIComponent(address);
     
     // iOS: Show choice of navigation apps
     if (Platform.OS === 'ios') {
@@ -1175,18 +1175,36 @@ export default function PartnerJobsScreen() {
         ]
       );
     } else {
-      // Android: Use geo: scheme (OS shows picker automatically)
-      const url = latitude && longitude
-        ? `geo:0,0?q=${coords}(${encodeURIComponent(address)})`
-        : `geo:0,0?q=${encodeURIComponent(address)}`;
-      
+      // Android: Prefer Google Navigation intent with pure coordinates, then fall back progressively.
+      const candidates: string[] = [];
+      if (hasCoords) {
+        // 1) Google turn-by-turn navigation (best for exact coordinates)
+        candidates.push(`google.navigation:q=${latF},${lngF}&mode=d`);
+        // 2) Geo URI centered on exact coords (no search query/label)
+        candidates.push(`geo:${latF},${lngF}`);
+        // 3) Geo URI with query = coords (still pure coords, no label)
+        candidates.push(`geo:0,0?q=${latF},${lngF}`);
+      } else {
+        // No coords, fall back to searching the address
+        candidates.push(`geo:0,0?q=${encodeURIComponent(address)}`);
+      }
+
       try {
-        const supported = await Linking.canOpenURL(url);
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          // Fallback to Google Maps in browser
-          const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+        let opened = false;
+        for (const candidate of candidates) {
+          // eslint-disable-next-line no-await-in-loop
+          const supported = await Linking.canOpenURL(candidate);
+          if (supported) {
+            Linking.openURL(candidate);
+            opened = true;
+            break;
+          }
+        }
+        if (!opened) {
+          // Final fallback: Google Maps via browser with coordinates if available
+          const googleMapsUrl = hasCoords
+            ? `https://www.google.com/maps/dir/?api=1&destination=${latF},${lngF}&travelmode=driving`
+            : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
           Linking.openURL(googleMapsUrl);
         }
       } catch (error) {
@@ -1429,7 +1447,7 @@ export default function PartnerJobsScreen() {
         }}
       >
         {selectedJob && !showCompletionModal && (
-          <SafeAreaView style={styles.modalContainer} edges={['top']}>
+          <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => {
@@ -1610,10 +1628,7 @@ export default function PartnerJobsScreen() {
                   <View style={styles.contactActions}>
                     <TouchableOpacity 
                       style={[styles.contactActionButton, { flex: 1 }]}
-                      onPress={() => handleChatCustomer(
-                        selectedJob.customer?.id || '',
-                        selectedJob.customer?.name || 'Customer'
-                      )}
+                      onPress={() => handleChatCustomer(selectedJob.id)}
                     >
                       <Ionicons name="chatbubble-ellipses" size={20} color={COLORS.info} />
                       <Text style={styles.contactActionText}>Chat with Customer</Text>
@@ -1850,7 +1865,7 @@ export default function PartnerJobsScreen() {
         onRequestClose={() => setShowCompletionModal(false)}
       >
         {showCompletionModal && selectedJob && (
-          <SafeAreaView style={styles.modalContainer} edges={['top']}>
+          <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setShowCompletionModal(false)}>

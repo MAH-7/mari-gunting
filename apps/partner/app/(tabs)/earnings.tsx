@@ -7,7 +7,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, isT
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { Booking } from '@/types';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { router, useFocusEffect } from 'expo-router';
@@ -32,7 +32,6 @@ export default function GrabEarningsScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('today');
   const [refreshing, setRefreshing] = useState(false);
   const [barberId, setBarberId] = useState<string | null>(null);
-  const [visibleTrips, setVisibleTrips] = useState(10); // Pagination
   
   // Payout modal state
   const [showPayoutModal, setShowPayoutModal] = useState(false);
@@ -65,24 +64,47 @@ export default function GrabEarningsScreen() {
     fetchBarberId();
   }, [currentUser?.id]);
 
-  // REAL SUPABASE QUERY - Fetch barber bookings (for trip list display only)
-  const { data: bookingsResponse, isLoading: loadingBookings, refetch } = useQuery({
+  // OPTIMIZED: Use infinite query to load completed bookings only (Grab standard)
+  const { data, isLoading: loadingBookings, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useInfiniteQuery({
     queryKey: ['earnings-bookings', barberId],
-    queryFn: async () => {
-      // Fetch more bookings for trip list (200 should be enough for display)
-      const result = await bookingService.getBarberBookings(
-        barberId || '',
-        null, // All statuses
-        200,  // Enough for trip list
-        0
-      );
-      return result;
-    },
     enabled: !!barberId,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!barberId) return { success: false, data: [], offset: 0 };
+      
+      // Load completed bookings only (no need for pending/cancelled in earnings)
+      const result = await bookingService.getBarberBookings(
+        barberId,
+        'completed', // Only completed bookings = actual earnings
+        20,  // Load 20 at a time
+        pageParam
+      );
+      return { ...result, offset: pageParam };
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage?.success && Array.isArray(lastPage.data) && lastPage.data.length === 20) {
+        return (lastPage.offset || 0) + 20;
+      }
+      return undefined;
+    },
     staleTime: 5 * 60 * 1000,
   });
 
-  const allBookings = bookingsResponse?.data || [];
+  // Flatten pages and dedupe
+  const allBookings = useMemo(() => {
+    const pages = data?.pages ?? [];
+    const merged: any[] = [];
+    const seen = new Set<string>();
+    for (const page of pages) {
+      for (const booking of page?.data ?? []) {
+        if (!seen.has(booking.id)) {
+          seen.add(booking.id);
+          merged.push(booking);
+        }
+      }
+    }
+    return merged;
+  }, [data]);
 
   // Auto-refresh when tab is focused
   useFocusEffect(
@@ -94,10 +116,8 @@ export default function GrabEarningsScreen() {
     }, [barberId, refetch])
   );
 
-  // Get completed bookings
-  const completedBookings = useMemo(() => {
-    return allBookings.filter((b) => b.status === 'completed');
-  }, [allBookings]);
+  // All bookings are already completed (filtered in query)
+  const completedBookings = allBookings;
 
   // Filter by period (using scheduled_datetime with timezone)
   const filteredBookings = useMemo(() => {
@@ -132,21 +152,15 @@ export default function GrabEarningsScreen() {
     });
   }, [completedBookings, selectedPeriod]);
 
-  // Paginated trips (show 10 at a time)
-  const displayedTrips = useMemo(() => {
-    return filteredBookings.slice(0, visibleTrips);
-  }, [filteredBookings, visibleTrips]);
-
-  const hasMoreTrips = filteredBookings.length > visibleTrips;
+  // Display all filtered trips (no client-side pagination needed)
+  const displayedTrips = filteredBookings;
 
   const loadMoreTrips = () => {
-    setVisibleTrips(prev => prev + 10);
+    if (hasNextPage && !isFetchingNextPage) {
+      console.log('📄 Loading more completed bookings from database...');
+      fetchNextPage();
+    }
   };
-
-  // Reset pagination when period changes
-  useEffect(() => {
-    setVisibleTrips(10);
-  }, [selectedPeriod]);
   
   // Fetch accurate stats from database RPC
   useEffect(() => {
@@ -595,16 +609,21 @@ export default function GrabEarningsScreen() {
                 />
               ))}
               
-              {/* Load More Button */}
-              {hasMoreTrips && (
+              {/* Load More Button - Database Pagination */}
+              {isFetchingNextPage && (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.loadingMoreText}>Loading more trips...</Text>
+                </View>
+              )}
+              
+              {hasNextPage && !isFetchingNextPage && (
                 <TouchableOpacity 
                   style={styles.loadMoreButton}
                   onPress={loadMoreTrips}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.loadMoreText}>
-                    Load More ({filteredBookings.length - visibleTrips} remaining)
-                  </Text>
+                  <Text style={styles.loadMoreText}>Load More Trips</Text>
                   <Ionicons name="chevron-down" size={20} color={Colors.primary} />
                 </TouchableOpacity>
               )}
@@ -1140,6 +1159,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary,
     marginRight: 8,
+  },
+  loadingMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 10,
+  },
+  loadingMoreText: {
+    fontSize: 14,
+    color: '#757575',
+    fontWeight: '500',
   },
 
   // Empty State

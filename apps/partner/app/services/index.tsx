@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ interface Service {
 
 export default function ServicesManagementScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const currentUser = useStore((state) => state.currentUser);
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -493,7 +494,7 @@ export default function ServicesManagementScreen() {
       {/* Floating Action Button */}
       {services.length > 0 && (
         <TouchableOpacity 
-          style={styles.fab}
+          style={[styles.fab, { bottom: 24 + insets.bottom }]}
           onPress={handleAddService}
           activeOpacity={0.8}
         >
@@ -911,7 +912,6 @@ const styles = StyleSheet.create({
   // Floating Action Button
   fab: {
     position: 'absolute',
-    bottom: 24,
     right: 24,
     width: 56,
     height: 56,

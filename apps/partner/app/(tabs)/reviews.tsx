@@ -510,7 +510,8 @@ export default function ReviewsScreen() {
           style={styles.modalOverlay}
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setShowReplyModal(false)}>
-            <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
+            <SafeAreaView edges={['bottom']} style={{ backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+              <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Reply to Review</Text>
                 <TouchableOpacity onPress={() => setShowReplyModal(false)}>
@@ -576,7 +577,8 @@ export default function ReviewsScreen() {
                   )}
                 </TouchableOpacity>
               </View>
-            </Pressable>
+              </Pressable>
+            </SafeAreaView>
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>

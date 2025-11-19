@@ -24,3 +24,6 @@ export * from './LoadingSpinner';
 
 // Utility Components
 export * from './ErrorBoundary';
+
+// Chat Components
+export { default as ChatScreen } from './ChatScreen';

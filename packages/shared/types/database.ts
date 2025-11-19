@@ -394,16 +394,14 @@ export interface Message {
   booking_id: string | null;
   
   // Message content
-  message_type: MessageType;
-  content: string;
-  image_url: string | null;
-  location_data: Record<string, any> | null;
+  message: string | null; // Text content (nullable for image-only messages)
+  image_url: string | null; // Image URL (nullable for text-only messages)
   
   // Status
-  is_read: boolean;
-  read_at: string | null;
+  read_at: string | null; // Timestamp when read (null = unread)
   
   created_at: string;
+  updated_at: string;
 }
 
 export interface PromoCode {

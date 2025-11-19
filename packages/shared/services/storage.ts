@@ -18,7 +18,9 @@ export type BucketName =
   | 'services'
   | 'reviews'
   | 'documents'
-  | 'barber-portfolios';
+  | 'barber-portfolios'
+  | 'chat-images'
+  | 'evidence-photos';
 
 export interface UploadResult {
   success: boolean;
@@ -189,6 +191,7 @@ export const uploadReviewImage = async (
 /**
  * Upload evidence photo for job completion (before/after)
  * Used for service verification and dispute resolution
+ * Stores in barber-portfolios bucket under evidence/{bookingId}/ folder
  */
 export const uploadEvidencePhoto = async (
   bookingId: string,
@@ -197,7 +200,7 @@ export const uploadEvidencePhoto = async (
 ): Promise<UploadResult> => {
   const timestamp = Date.now();
   const fileName = `${type}-${timestamp}.jpg`;
-
+  
   return uploadFile({
     bucket: 'barber-portfolios',
     folder: `evidence/${bookingId}`,
@@ -205,6 +208,39 @@ export const uploadEvidencePhoto = async (
     fileUri,
     contentType: 'image/jpeg',
   });
+};
+
+/**
+ * Upload chat image for in-app messaging
+ * Optimized and converted to JPG before upload
+ */
+export const uploadChatImage = async (
+  userId: string,
+  bookingId: string,
+  fileUri: string
+): Promise<UploadResult> => {
+  try {
+    // Optimize image first (resize + compress + convert to JPG)
+    const optimizedUri = await convertToJpg(fileUri, 0.7, 1080); // Lower quality for chat (1080px max, 70% quality)
+    
+    const timestamp = Date.now();
+    const fileName = `chat-${timestamp}.jpg`;
+    
+    // Upload to chat-images bucket: {userId}/{bookingId}/{filename}
+    return uploadFile({
+      bucket: 'chat-images',
+      folder: `${userId}/${bookingId}`,
+      fileName,
+      fileUri: optimizedUri,
+      contentType: 'image/jpeg',
+    });
+  } catch (error: any) {
+    console.error('❌ Chat image upload failed:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to upload chat image',
+    };
+  }
 };
 
 /**

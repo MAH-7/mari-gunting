@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -194,7 +194,11 @@ export default function SelectAccountTypeScreen() {
       </View>
 
       {/* Options */}
-      <View style={styles.optionsContainer}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.optionsContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Freelance Barber */}
         <TouchableOpacity
           style={[
@@ -298,7 +302,7 @@ export default function SelectAccountTypeScreen() {
             </View>
           </View>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Continue Button */}
       <View style={styles.footer}>
@@ -381,20 +385,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
-    padding: 24,
-    paddingTop: 32,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   title: {
-    ...TYPOGRAPHY.heading.h1,
+    fontSize: 24,
+    fontWeight: '700',
     color: COLORS.text.primary,
     marginBottom: 8,
+    lineHeight: 32,
   },
   subtitle: {
     ...TYPOGRAPHY.body.large,
     color: COLORS.text.secondary,
   },
-  optionsContainer: {
+  scrollView: {
     flex: 1,
+  },
+  optionsContainer: {
     padding: 20,
     gap: 16,
   },
