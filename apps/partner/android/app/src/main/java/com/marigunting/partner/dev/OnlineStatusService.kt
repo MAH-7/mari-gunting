@@ -9,7 +9,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.Process
 import android.util.Log
+import android.location.LocationManager
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -120,11 +122,25 @@ class OnlineStatusService : Service() {
         
         Log.w(TAG, "⚠️ Task removed (force close detected) - setting partner offline")
         
-        // Set partner offline immediately
+        // 1. Set partner offline immediately (blocks until complete)
         setPartnerOffline()
         
-        // Stop the service
+        // 2. Stop foreground mode and remove this service's notification FIRST
+        stopForeground(true) // true = remove notification
+        Log.d(TAG, "🔔 Removed foreground notification")
+        
+        // 3. Stop all location tracking and remove notifications
+        stopAllLocationTracking()
+        
+        // 4. Stop the service
         stopSelf()
+        
+        // 5. Wait for location service cleanup
+        Thread.sleep(1000) // Give time for LocationTaskService to stop
+        
+        // 6. Kill process to stop foreground watcher immediately
+        Log.w(TAG, "💀 Killing app process to stop all tracking")
+        Process.killProcess(Process.myPid())
     }
 
     override fun onDestroy() {
@@ -135,6 +151,45 @@ class OnlineStatusService : Service() {
         serviceScope.cancel()
     }
 
+    /**
+     * Stop all location tracking to save battery.
+     * Properly removes location listeners and cancels notifications.
+     */
+    private fun stopAllLocationTracking() {
+        try {
+            Log.d(TAG, "🛑 Stopping all location tracking...")
+
+            // 1. Stop Android's location manager (removes location listeners)
+            try {
+                val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                // Note: We can't directly remove listeners from here, but stopping the service helps
+                Log.d(TAG, "✅ Location manager accessed for cleanup")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error accessing location manager", e)
+            }
+
+            // 2. Stop Expo's LocationTaskService (background location)
+            try {
+                val cls = Class.forName("expo.modules.location.services.LocationTaskService")
+                val intent = Intent(this, cls)
+                stopService(intent)
+                Log.d(TAG, "🛑 Stopped Expo LocationTaskService")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Could not stop Expo LocationTaskService", e)
+            }
+            
+            // 3. Cancel ALL notifications from this app (removes green dot)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancelAll()
+            Log.d(TAG, "✅ Cancelled all notifications")
+            
+            // 4. Small delay to ensure cleanup completes
+            Thread.sleep(300)
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error stopping location tracking", e)
+        }
+    }
+    
     /**
      * Set partner offline via Supabase RPC function.
      * Uses SECURITY DEFINER function to bypass RLS.

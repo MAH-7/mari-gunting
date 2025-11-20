@@ -17,12 +17,14 @@ const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
 
 class LocationTrackingService {
   private trackingInterval: NodeJS.Timeout | null = null;
+  private forceCloseCheckInterval: NodeJS.Timeout | null = null; // Dedicated interval for force-close detection
   private foregroundWatcher: Location.LocationSubscription | null = null;
   private isTracking = false;
   private currentMode: TrackingMode = 'idle';
   private currentUserId: string | null = null;
   private backgroundTaskRegistered = false;
   private lastLocationUpdate: number = 0;
+  private trackingStartTime: number = 0; // Track when tracking started (for race condition protection)
   // PRODUCTION SETTINGS (Grab/Foodpanda standard)
   private updateIntervalMs = {
     idle: 30 * 1000, // 30 seconds when idle (frequent for customer visibility)
@@ -59,6 +61,31 @@ class LocationTrackingService {
     }
 
     this.isTracking = true;
+    this.trackingStartTime = Date.now(); // Record when tracking started
+
+    // FORCE CLOSE PROTECTION: Start dedicated interval to check online status
+    // This runs independently of location updates to catch force-close faster
+    this.forceCloseCheckInterval = setInterval(async () => {
+      // Skip first 5 seconds to avoid race condition with toggle
+      const timeSinceStart = Date.now() - this.trackingStartTime;
+      if (timeSinceStart <= 5000) return;
+
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_online')
+          .eq('id', userId)
+          .single();
+        
+        if (!profile?.is_online) {
+          console.warn('⚠️ [FORCE CLOSE CHECK] User offline detected, stopping all tracking');
+          await this.stopTracking();
+        }
+      } catch (error) {
+        console.error('❌ Error in force-close check:', error);
+      }
+    }, 5000); // Check every 5 seconds
+    console.log('✅ Force-close detection interval started (5s)');
 
     // Update location immediately
     await this.updateLocation(userId);
@@ -120,6 +147,13 @@ class LocationTrackingService {
 
     console.log('🛑 Stopping location tracking');
 
+    // Stop force-close detection interval
+    if (this.forceCloseCheckInterval) {
+      clearInterval(this.forceCloseCheckInterval);
+      this.forceCloseCheckInterval = null;
+      console.log('🛑 Force-close detection stopped');
+    }
+
     // Stop foreground watcher
     if (this.foregroundWatcher) {
       this.foregroundWatcher.remove();
@@ -139,6 +173,7 @@ class LocationTrackingService {
     this.currentMode = 'idle'; // Reset to idle mode
     this.currentUserId = null;
     this.lastLocationUpdate = 0;
+    this.trackingStartTime = 0; // Reset start time
     console.log('✅ Location tracking stopped');
   }
 
