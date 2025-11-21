@@ -300,7 +300,9 @@ export default function PartnerJobsScreen() {
             
             if (notificationSound.current) {
               try {
-                await notificationSound.current.replayAsync();
+                // Restart from beginning and play (expo-audio API)
+                notificationSound.current.seekTo(0);
+                notificationSound.current.play();
                 console.log('✅ Notification sound played successfully!');
               } catch (error: any) {
                 // Expected error when app is in background - audio focus not available
