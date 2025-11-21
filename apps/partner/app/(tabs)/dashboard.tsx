@@ -897,6 +897,25 @@ export default function PartnerDashboardScreen() {
           type: newStatus ? 'success' : 'error', 
           visible: true 
         });
+        
+        // Show one-time educational popup when going online (first time only)
+        if (newStatus) {
+          const hasSeenReminder = await AsyncStorage.getItem('hasSeenOfflineReminder');
+          if (!hasSeenReminder) {
+            setTimeout(() => {
+              Alert.alert(
+                '💡 Battery Saving Tip',
+                'When you\'re done working, remember to toggle offline to save battery and stop location tracking.\n\nYou\'ll see this reminder in the toggle button and notifications.',
+                [
+                  { 
+                    text: 'Got it!', 
+                    onPress: () => AsyncStorage.setItem('hasSeenOfflineReminder', 'true')
+                  }
+                ]
+              );
+            }, 1500); // Show after success toast
+          }
+        }
       }
     } catch (error) {
       console.error('Exception toggling online status:', error);
@@ -1061,6 +1080,11 @@ export default function PartnerDashboardScreen() {
                 ? 'Please wait...' 
                 : (isOnline ? 'Tap to go offline and stop receiving orders' : 'Tap to go online and start receiving orders')}
             </Text>
+            {isOnline && !isTogglingStatus && (
+              <Text style={[styles.toggleReminder, { color: 'rgba(255,255,255,0.7)' }]}>
+                💡 Toggle offline when done to save battery and stop tracking
+              </Text>
+            )}
           </TouchableOpacity>
         </Animated.View>
 
@@ -1559,6 +1583,12 @@ const styles = StyleSheet.create({
   toggleSubtext: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  toggleReminder: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 8,
+    fontWeight: '500',
   },
 
   // Stats Grid

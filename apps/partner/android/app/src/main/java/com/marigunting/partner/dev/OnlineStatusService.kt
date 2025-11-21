@@ -276,7 +276,7 @@ class OnlineStatusService : Service() {
         
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("You're Online")
-            .setContentText("Ready to accept bookings")
+            .setContentText("Toggle offline when done to save battery")
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Use app icon in production
             .setContentIntent(pendingIntent)
             .setOngoing(true) // Cannot be dismissed by user

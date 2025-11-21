@@ -5,13 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/shared/constants';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 import { supabase } from '@mari-gunting/shared/config/supabase';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { useQueryClient } from '@tanstack/react-query';
 
 // Global notification sound ref - accessible across all tabs
-export const notificationSound = { current: null as Audio.Sound | null };
+export const notificationSound = { current: null as any | null };
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -70,37 +70,18 @@ export default function PartnerTabLayout() {
   }, [currentUser?.id]);
 
   // Setup notification sound globally (runs once on tabs mount)
+  const player = useAudioPlayer(require('../../assets/sounds/notification.wav'));
+  
   useEffect(() => {
-    const setupAudio = async () => {
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-        });
-        
-        // Load notification sound from local assets
-        const { sound } = await Audio.Sound.createAsync(
-          require('../../assets/sounds/notification.wav'),
-          { shouldPlay: false, volume: 1.0 }
-        );
-        notificationSound.current = sound;
-        console.log('🔊 Notification sound loaded globally');
-      } catch (error) {
-        console.error('❌ Failed to load notification sound:', error);
-      }
-    };
+    // Store player globally for access across tabs
+    notificationSound.current = player;
+    console.log('🔊 Notification sound loaded globally');
+    console.log('🔍 Available methods:', Object.keys(player));
     
-    setupAudio();
-    
-    // Cleanup sound on unmount
     return () => {
-      if (notificationSound.current) {
-        notificationSound.current.unloadAsync();
-        console.log('🔊 Notification sound unloaded');
-      }
+      console.log('🔊 Notification sound will be cleaned up');
     };
-  }, []);
+  }, [player]);
 
   // GLOBAL: Realtime subscription for NEW booking alerts only
   // This runs on app startup, separate from Jobs screen subscription
@@ -125,14 +106,12 @@ export default function PartnerTabLayout() {
           // Play notification sound
           if (notificationSound.current) {
             try {
-              await notificationSound.current.replayAsync();
+              // Restart from beginning
+              notificationSound.current.seekTo(0);
+              notificationSound.current.play();
               console.log('✅ Sound played!');
             } catch (error: any) {
-              if (error?.message?.includes('background') || error?.message?.includes('AudioFocusNotAcquiredException')) {
-                console.log('⚠️ App in background - sound skipped');
-              } else {
-                console.error('❌ Sound error:', error?.message);
-              }
+              console.error('❌ Sound error:', error?.message || error);
             }
           }
           

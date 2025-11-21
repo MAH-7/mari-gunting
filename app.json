@@ -41,7 +41,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Mari Gunting needs your location to find nearby barbers, calculate accurate travel costs, and provide the best service experience."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "scheme": "marigunting",
     "experiments": {

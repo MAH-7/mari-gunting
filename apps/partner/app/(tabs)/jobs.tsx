@@ -2,7 +2,6 @@ import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, TextInp
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
-import { Audio } from 'expo-av';
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';

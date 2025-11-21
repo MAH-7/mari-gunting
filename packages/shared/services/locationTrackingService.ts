@@ -536,7 +536,7 @@ class LocationTrackingService {
           notificationTitle: 'Mari Gunting - You\'re Online',
           notificationBody: mode === 'on-the-way' 
             ? 'Tracking your route to customer' 
-            : 'Customers can see you',
+            : 'Toggle offline when done to save battery',
           notificationColor: '#00B87C',
         },
       });

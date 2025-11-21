@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapboxGL from '@rnmapbox/maps';
 // import * as Notifications from 'expo-notifications';
-// import { Audio } from 'expo-av';
+// import { AudioModule } from 'expo-audio';
 
 import { useRealtimeBarberLocation } from '../../hooks/useRealtimeBarberLocation';
 import { useLocation } from '../../hooks/useLocation';
@@ -64,7 +64,7 @@ export default function TrackBarberScreen() {
   
   // Refs
   const mapRef = useRef<MapboxGL.Camera>(null);
-  // const soundRef = useRef<Audio.Sound | null>(null);
+  // const soundRef = useRef<AudioPlayer | null>(null);
   const appState = useRef(AppState.currentState);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 

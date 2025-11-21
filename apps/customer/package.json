@@ -18,7 +18,7 @@
     "axios": "^1.12.2",
     "date-fns": "^4.1.0",
     "expo": "54.0.13",
-    "expo-av": "^16.0.7",
+    "expo-audio": "^1.0.15",
     "expo-blur": "~15.0.7",
     "expo-calendar": "~15.0.7",
     "expo-device": "~8.0.9",
