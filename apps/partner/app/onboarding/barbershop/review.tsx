@@ -97,7 +97,7 @@ export default function ReviewScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Loading your data...</Text>
       </View>
     );
@@ -271,7 +271,7 @@ export default function ReviewScreen() {
               <View style={styles.amenitiesList}>
                 {data.amenities.map((amenity, index) => (
                   <View key={index} style={styles.amenityItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
                     <Text style={styles.amenityText}>{amenity}</Text>
                   </View>
                 ))}
@@ -369,7 +369,7 @@ const InfoRow = ({ label, value, multiline = false }: { label: string; value: st
 
 const DocumentItem = ({ icon, text }: { icon: string; text: string }) => (
   <View style={styles.documentItem}>
-    <Ionicons name={icon as any} size={16} color="#4CAF50" />
+    <Ionicons name={icon as any} size={16} color={Colors.primary} />
     <Text style={styles.documentText}>{text}</Text>
   </View>
 );
@@ -422,10 +422,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 24,
   },
   content: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   editButton: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   card: {
     backgroundColor: '#fafafa',
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   },
   documentText: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   hoursRow: {
     flexDirection: 'row',
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   },
   hoursValue: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: Colors.primary,
     fontWeight: '500',
   },
   closedValue: {
@@ -588,8 +588,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   termsText: {
     flex: 1,
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   link: {
-    color: '#4CAF50',
+    color: Colors.primary,
     fontWeight: '600',
   },
   infoBox: {
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,

@@ -272,7 +272,7 @@ export default function DocumentsScreen() {
               onPress={() => pickImage('logo')}
               disabled={uploading}
             >
-              <Ionicons name="images" size={24} color="#4CAF50" />
+              <Ionicons name="images" size={24} color={Colors.primary} />
               <Text style={styles.uploadButtonText}>Upload Logo</Text>
             </TouchableOpacity>
           )}
@@ -305,10 +305,10 @@ export default function DocumentsScreen() {
                 disabled={uploading}
               >
                 {uploading ? (
-                  <ActivityIndicator size="small" color="#4CAF50" />
+                  <ActivityIndicator size="small" color={Colors.primary} />
                 ) : (
                   <>
-                    <Ionicons name="add-circle" size={32} color="#4CAF50" />
+                    <Ionicons name="add-circle" size={32} color={Colors.primary} />
                     <Text style={styles.addCoverText}>Add Photo</Text>
                   </>
                 )}
@@ -323,7 +323,7 @@ export default function DocumentsScreen() {
           <Text style={styles.hint}>If you have SSM registration</Text>
           {ssmDocUri ? (
             <View style={styles.documentCard}>
-              <Ionicons name="document-text" size={32} color="#4CAF50" />
+              <Ionicons name="document-text" size={32} color={Colors.primary} />
               <View style={styles.documentInfo}>
                 <Text style={styles.documentName}>SSM Document</Text>
                 <Text style={styles.documentStatus}>✓ Uploaded</Text>
@@ -338,7 +338,7 @@ export default function DocumentsScreen() {
               onPress={() => pickImage('ssm')}
               disabled={uploading}
             >
-              <Ionicons name="document-attach" size={24} color="#4CAF50" />
+              <Ionicons name="document-attach" size={24} color={Colors.primary} />
               <Text style={styles.uploadButtonText}>Upload SSM Document</Text>
             </TouchableOpacity>
           )}
@@ -350,7 +350,7 @@ export default function DocumentsScreen() {
           <Text style={styles.hint}>Any other business permits or licenses</Text>
           {businessLicenseUri ? (
             <View style={styles.documentCard}>
-              <Ionicons name="document-text" size={32} color="#4CAF50" />
+              <Ionicons name="document-text" size={32} color={Colors.primary} />
               <View style={styles.documentInfo}>
                 <Text style={styles.documentName}>Business License</Text>
                 <Text style={styles.documentStatus}>✓ Uploaded</Text>
@@ -365,7 +365,7 @@ export default function DocumentsScreen() {
               onPress={() => pickImage('license')}
               disabled={uploading}
             >
-              <Ionicons name="document-attach" size={24} color="#4CAF50" />
+              <Ionicons name="document-attach" size={24} color={Colors.primary} />
               <Text style={styles.uploadButtonText}>Upload License</Text>
             </TouchableOpacity>
           )}
@@ -373,7 +373,7 @@ export default function DocumentsScreen() {
 
         {uploading && (
           <View style={styles.uploadingIndicator}>
-            <ActivityIndicator size="small" color="#4CAF50" />
+            <ActivityIndicator size="small" color={Colors.primary} />
             <Text style={styles.uploadingText}>Uploading...</Text>
           </View>
         )}
@@ -441,10 +441,10 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 20,
   },
   content: {
@@ -489,14 +489,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
     backgroundColor: '#f0f9f4',
   },
   uploadButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   imagePreview: {
     position: 'relative',
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   changePhotoText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   coverGrid: {
     flexDirection: 'row',
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
     backgroundColor: '#f0f9f4',
     alignItems: 'center',
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   addCoverText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
     marginTop: 4,
   },
   documentCard: {
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#f0f9f4',
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
   },
   documentInfo: {
     flex: 1,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   },
   documentStatus: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: Colors.primary,
     marginTop: 2,
   },
   uploadingIndicator: {
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,

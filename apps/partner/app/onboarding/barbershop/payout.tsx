@@ -159,7 +159,7 @@ export default function PayoutScreen() {
 
         {/* Info Box */}
         <View style={styles.infoBox}>
-          <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
+          <Ionicons name="shield-checkmark" size={20} color={Colors.primary} />
           <Text style={styles.infoText}>
             Your banking details are encrypted and secure. We use them only for payout purposes.
           </Text>
@@ -308,10 +308,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 24,
   },
   content: {
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#4CAF50',
+    color: Colors.primary,
     lineHeight: 20,
   },
   noticeBox: {
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,

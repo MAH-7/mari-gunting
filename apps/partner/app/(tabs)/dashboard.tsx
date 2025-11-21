@@ -874,14 +874,27 @@ export default function PartnerDashboardScreen() {
         await heartbeatService.stopHeartbeat();
         console.log('🛑 Heartbeat stopped');
         
-        // 3. Stop location tracking
+        // 3. Stop location tracking FIRST (for freelance)
         if (accountType === 'freelance') {
-          await locationTrackingService.stopTracking();
-          console.log('🛑 Location tracking stopped');
+          try {
+            await locationTrackingService.stopTracking();
+            console.log('🛑 Location tracking service stopped');
+          } catch (error) {
+            console.error('❌ Error stopping location tracking:', error);
+          }
+          // Wait for Expo location service to fully cleanup
+          await new Promise(resolve => setTimeout(resolve, 800));
         }
 
-        // 4. Stop native Android service
-        await OnlineStatus.stop();
+        // 4. Stop native Android service LAST (it cancels all remaining notifications)
+        try {
+          await OnlineStatus.stop();
+          console.log('🛑 Native OnlineStatus service stopped');
+          // Extra delay to ensure native service cleanup completes
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error) {
+          console.error('❌ Error stopping native service:', error);
+        }
       }
       
       // Use server-side function to update status with server time

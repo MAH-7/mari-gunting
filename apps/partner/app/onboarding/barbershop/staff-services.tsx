@@ -197,7 +197,7 @@ export default function StaffServicesScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Staff Members ({staff.length})</Text>
             <TouchableOpacity style={styles.addButton} onPress={() => setShowStaffModal(true)}>
-              <Ionicons name="add-circle" size={24} color="#4CAF50" />
+              <Ionicons name="add-circle" size={24} color={Colors.primary} />
               <Text style={styles.addButtonText}>Add Staff</Text>
             </TouchableOpacity>
           </View>
@@ -223,7 +223,7 @@ export default function StaffServicesScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Services ({services.length})</Text>
             <TouchableOpacity style={styles.addButton} onPress={() => setShowServiceModal(true)}>
-              <Ionicons name="add-circle" size={24} color="#4CAF50" />
+              <Ionicons name="add-circle" size={24} color={Colors.primary} />
               <Text style={styles.addButtonText}>Add Service</Text>
             </TouchableOpacity>
           </View>
@@ -376,8 +376,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.errorLight, height: 40, alignItems: 'center', justifyContent: 'center' },
   progressContainer: { flexDirection: 'row', gap: 6 },
   progressDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#e0e0e0' },
-  progressDotCompleted: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4CAF50' },
-  progressActive: { backgroundColor: '#4CAF50', width: 20 },
+  progressDotCompleted: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.primary },
+  progressActive: { backgroundColor: Colors.primary, width: 20 },
   content: { flex: 1, paddingHorizontal: 20 },
   title: { fontSize: 28, fontWeight: 'bold', color: '#1a1a1a', marginTop: 24, marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#666', lineHeight: 24, marginBottom: 32 },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1a1a1a' },
   addButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  addButtonText: { fontSize: 14, fontWeight: '600', color: '#4CAF50' },
+  addButtonText: { fontSize: 14, fontWeight: '600', color: Colors.primary },
   card: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -410,18 +410,18 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', marginBottom: 12 },
   roleButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   roleButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: '#e0e0e0', backgroundColor: '#fafafa' },
-  roleButtonActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  roleButtonActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   roleButtonText: { fontSize: 14, fontWeight: '500', color: '#666' },
   roleButtonTextActive: { color: '#fff' },
   specsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   specChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, borderWidth: 1, borderColor: '#e0e0e0', backgroundColor: '#fafafa' },
-  specChipActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  specChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   specChipText: { fontSize: 13, fontWeight: '500', color: '#666' },
   specChipTextActive: { color: '#fff' },
-  modalButton: { backgroundColor: '#4CAF50', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+  modalButton: { backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
   modalButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   footer: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 32, borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff' },
-  continueButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4CAF50', paddingVertical: 16, borderRadius: 12, gap: 8 },
+  continueButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: 12, gap: 8 },
   continueButtonDisabled: { opacity: 0.6 },
   continueButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
 });

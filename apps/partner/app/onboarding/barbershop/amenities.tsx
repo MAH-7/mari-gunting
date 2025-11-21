@@ -150,7 +150,7 @@ export default function AmenitiesScreen() {
 
         {selectedAmenities.length > 0 && (
           <View style={styles.selectedCount}>
-            <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+            <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
             <Text style={styles.selectedCountText}>
               {selectedAmenities.length} {selectedAmenities.length === 1 ? 'amenity' : 'amenities'} selected
             </Text>
@@ -219,10 +219,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 24,
   },
   content: {
@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   amenityChipActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   amenityChipText: {
     fontSize: 14,
@@ -279,15 +279,15 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 24,
     padding: 12,
-    backgroundColor: '#f1f8f4',
+    backgroundColor: '#FFF7ED',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#c8e6c9',
+    borderColor: Colors.primaryBorder,
   },
   selectedCountText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2e7d32',
+    color: Colors.primary,
   },
   footer: {
     paddingHorizontal: 20,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,

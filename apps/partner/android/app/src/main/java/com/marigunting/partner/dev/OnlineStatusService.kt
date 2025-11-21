@@ -145,7 +145,10 @@ class OnlineStatusService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "Service destroyed")
+        Log.d(TAG, "Service destroyed - cleaning up")
+        
+        // Force stop Expo's location service and cancel notifications
+        stopAllLocationTracking()
         
         // Cancel all coroutines
         serviceScope.cancel()

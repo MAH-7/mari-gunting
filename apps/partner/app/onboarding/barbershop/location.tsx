@@ -232,10 +232,10 @@ export default function LocationScreen() {
           onPress={getCurrentLocation}
           disabled={gettingLocation}
         >
-          {gettingLocation ? (
-            <ActivityIndicator size="small" color="#4CAF50" />
+        {gettingLocation ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
           ) : (
-            <Ionicons name="location" size={20} color="#4CAF50" />
+            <Ionicons name="location" size={20} color={Colors.primary} />
           )}
           <Text style={styles.locationButtonText}>
             {gettingLocation ? 'Getting location...' : 'Use Current Location'}
@@ -313,7 +313,7 @@ export default function LocationScreen() {
                     }}
                   >
                     <Text style={styles.pickerItemText}>{s}</Text>
-                    {state === s && <Ionicons name="checkmark" size={20} color="#4CAF50" />}
+                    {state === s && <Ionicons name="checkmark" size={20} color={Colors.primary} />}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -340,7 +340,7 @@ export default function LocationScreen() {
         {/* Coordinates Display */}
         {latitude && longitude && (
           <View style={styles.infoBox}>
-            <Ionicons name="location-outline" size={16} color="#4CAF50" />
+            <Ionicons name="location-outline" size={16} color={Colors.primary} />
             <Text style={styles.infoText}>
               Coordinates: {latitude.toFixed(4)}, {longitude.toFixed(4)}
             </Text>
@@ -410,10 +410,10 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   progressActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     width: 20,
   },
   content: {
@@ -441,14 +441,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: Colors.primary,
     backgroundColor: '#f0f9f4',
     marginBottom: 32,
   },
   locationButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   section: {
     marginBottom: 20,
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: '#4CAF50',
+    color: Colors.primary,
   },
   footer: {
     paddingHorizontal: 20,
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
