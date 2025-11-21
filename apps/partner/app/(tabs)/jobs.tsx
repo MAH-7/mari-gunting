@@ -8,6 +8,7 @@ import { getStatusColor, getStatusBackground } from '@/shared/constants/colors';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Booking, BookingStatus } from '@/types';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Device from 'expo-device';
 import { locationTrackingService } from '@mari-gunting/shared/services/locationTrackingService';
 import { bookingService } from '@mari-gunting/shared/services/bookingService';
@@ -322,8 +323,9 @@ export default function PartnerJobsScreen() {
               // iOS: Double vibration pattern
               Vibration.vibrate([0, 400, 200, 400]);
             } else {
-              // Android: Triple vibration pattern (more urgent)
-              Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+              // Android: Use longer single vibration for compatibility
+              // Some devices ignore patterns and only vibrate once
+              Vibration.vibrate(800); // Single 800ms vibration (more noticeable)
             }
             
             Alert.alert(
@@ -735,8 +737,6 @@ export default function PartnerJobsScreen() {
         }
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [4, 3],
           quality: 0.7,
         });
       } else {
@@ -748,8 +748,6 @@ export default function PartnerJobsScreen() {
         }
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [4, 3],
           quality: 0.7,
         });
       }
@@ -768,8 +766,20 @@ export default function PartnerJobsScreen() {
 
       const photoUri = result.assets[0].uri;
       
+      // Compress image before upload
+      const compressedImage = await ImageManipulator.manipulateAsync(
+        photoUri,
+        [
+          { resize: { width: 1200 } }, // Resize to max 1200px width
+        ],
+        {
+          compress: 0.7,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      
       // Upload to Supabase (no alert, just upload silently)
-      const uploadResult = await uploadEvidencePhoto(job.id, photoUri, 'before');
+      const uploadResult = await uploadEvidencePhoto(job.id, compressedImage.uri, 'before');
       
       if (!uploadResult.success || !uploadResult.url) {
         throw new Error(uploadResult.error || 'Upload failed');
@@ -1082,18 +1092,29 @@ export default function PartnerJobsScreen() {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [4, 3],
         quality: 0.8,
         allowsMultipleSelection: false,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const photoUri = result.assets[0].uri;
+        
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          photoUri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+        
         if (type === 'before') {
-          setBeforePhotos(prev => [...prev, photoUri]);
+          setBeforePhotos(prev => [...prev, compressedImage.uri]);
         } else {
-          setAfterPhotos(prev => [...prev, photoUri]);
+          setAfterPhotos(prev => [...prev, compressedImage.uri]);
         }
       }
     } catch (error) {
@@ -1130,8 +1151,6 @@ export default function PartnerJobsScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
         quality: 0.8,
       });
 
@@ -1143,10 +1162,22 @@ export default function PartnerJobsScreen() {
           return;
         }
         
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          photoUri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+        
         if (type === 'before') {
-          setBeforePhotos(prev => [...prev, photoUri]);
+          setBeforePhotos(prev => [...prev, compressedImage.uri]);
         } else {
-          setAfterPhotos(prev => [...prev, photoUri]);
+          setAfterPhotos(prev => [...prev, compressedImage.uri]);
         }
       }
     } catch (error: any) {
@@ -1309,18 +1340,6 @@ export default function PartnerJobsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Jobs</Text>
-        <TouchableOpacity 
-          style={styles.filterButton}
-          onPress={() => {
-            Alert.alert(
-              'Sort & Filter Options',
-              'Advanced sorting and filtering options coming soon!\n\n• Sort by date\n• Sort by price\n• Filter by distance\n• Filter by service type',
-              [{ text: 'OK' }]
-            );
-          }}
-        >
-          <Ionicons name="options-outline" size={24} color={COLORS.text.primary} />
-        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}

@@ -9,6 +9,9 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  BackHandler,
+  Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -93,6 +96,29 @@ export default function HomeScreen() {
         refetchPoints();
       }
     }, [currentUser?.id, refetchPoints])
+  );
+
+  // Handle Android back button
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return;
+
+      const onBackPress = () => {
+        Alert.alert(
+          'Exit App',
+          'Are you sure you want to exit?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
+          ],
+          { cancelable: true }
+        );
+        return true; // Prevent default back action
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [])
   );
 
   // Fetch promotional banners from Supabase

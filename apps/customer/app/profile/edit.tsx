@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useProfile } from '@/hooks/useProfile';
 import { formatPhoneNumber } from '@mari-gunting/shared/utils/format';
 import { supabase } from '@mari-gunting/shared/config/supabase';
@@ -71,8 +72,25 @@ export default function EditProfileScreen() {
     });
 
     if (!result.canceled) {
-      setAvatarUri(result.assets[0].uri);
-      setHasChanges(true);
+      try {
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [
+            { resize: { width: 800 } }, // Avatar size
+          ],
+          {
+            compress: 0.8,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+        
+        setAvatarUri(compressedImage.uri);
+        setHasChanges(true);
+      } catch (error) {
+        console.error('Image compression failed:', error);
+        Alert.alert('Error', 'Failed to process image. Please try again.');
+      }
     }
   };
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
@@ -110,10 +111,22 @@ export default function EKYCScreen() {
           return;
         }
 
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+
         // Store locally only (staged upload)
         setDocuments(prev => ({
           ...prev,
-          [type]: uri,
+          [type]: compressedImage.uri,
         }));
         // Clear error for this field
         setErrors(prev => {
@@ -161,10 +174,22 @@ export default function EKYCScreen() {
           return;
         }
 
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+
         // Store locally only (staged upload)
         setDocuments(prev => ({
           ...prev,
-          [type]: uri,
+          [type]: compressedImage.uri,
         }));
         // Clear error for this field
         setErrors(prev => {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import VerificationStatusBanner from '@/components/VerificationStatusBanner';
@@ -118,10 +119,22 @@ export default function BusinessScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+
         // Store locally only (staged upload)
         setDocuments(prev => ({
           ...prev,
-          [type]: result.assets[0].uri,
+          [type]: compressedImage.uri,
         }));
         if (errors[type]) {
           setErrors(prev => {

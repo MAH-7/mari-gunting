@@ -16,10 +16,13 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import {
   sendMessage,
@@ -51,6 +54,7 @@ export default function ChatScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
 
@@ -140,24 +144,22 @@ export default function ChatScreen({
   };
 
   // =====================================================
-  // IMAGE PICKER
+  // CAMERA
   // =====================================================
 
-  const handlePickImage = async () => {
+  const handleTakePhoto = async () => {
     try {
-      // Request permissions
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Request camera permissions
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow access to your photo library');
+        Alert.alert('Permission needed', 'Please allow access to your camera');
         return;
       }
 
-      // Pick image
-      const result = await ImagePicker.launchImageLibraryAsync({
+      // Take photo
+      const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
         quality: 0.8,
       });
 
@@ -165,28 +167,43 @@ export default function ChatScreen({
         await handleSendImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      console.error('Camera error:', error);
+      Alert.alert('Error', 'Failed to take photo');
     }
   };
 
   const handleSendImage = async (imageUri: string) => {
     setIsUploading(true);
 
-    const result = await sendMessage({
-      bookingId,
-      senderId: currentUserId,
-      receiverId: otherUserId,
-      imageUri,
-    });
+    try {
+      // Compress and resize image before upload
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [
+          // Resize if too large (max width 1200px)
+          { resize: { width: 1200 } },
+        ],
+        {
+          compress: 0.7, // 70% quality
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
 
-    setIsUploading(false);
+      const result = await sendMessage({
+        bookingId,
+        senderId: currentUserId,
+        receiverId: otherUserId,
+        imageUri: manipulatedImage.uri,
+      });
 
-    if (result.success) {
-      // Don't add message manually - real-time subscription will handle it
-      // This prevents duplicates
-    } else {
-      Alert.alert('Error', result.error || 'Failed to send image');
+      if (!result.success) {
+        Alert.alert('Error', result.error || 'Failed to send image');
+      }
+    } catch (error) {
+      console.error('Image compression error:', error);
+      Alert.alert('Error', 'Failed to process image');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -213,10 +230,7 @@ export default function ChatScreen({
         {item.image_url && (
           <TouchableOpacity
             activeOpacity={0.9}
-            onPress={() => {
-              // TODO: Open full-screen image viewer
-              console.log('Open image:', item.image_url);
-            }}
+            onPress={() => setSelectedImageUrl(item.image_url)}
           >
             <Image
               source={{ uri: item.image_url }}
@@ -266,11 +280,12 @@ export default function ChatScreen({
   // =====================================================
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
-    >
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -332,18 +347,18 @@ export default function ChatScreen({
       {isUploading && (
         <View style={styles.uploadingContainer}>
           <ActivityIndicator size="small" color={Colors.primary} />
-          <Text style={styles.uploadingText}>Uploading image...</Text>
+          <Text style={styles.uploadingText}>Sending photo...</Text>
         </View>
       )}
 
       {/* Input */}
       <View style={styles.inputContainer}>
         <TouchableOpacity
-          onPress={handlePickImage}
-          style={styles.attachButton}
+          onPress={handleTakePhoto}
+          style={styles.cameraButton}
           disabled={isUploading}
         >
-          <Ionicons name="image-outline" size={24} color={Colors.primary} />
+          <Ionicons name="camera-outline" size={24} color={Colors.primary} />
         </TouchableOpacity>
 
         <TextInput
@@ -373,6 +388,38 @@ export default function ChatScreen({
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+
+      {/* Full-Screen Image Viewer Modal */}
+      <Modal
+        visible={selectedImageUrl !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedImageUrl(null)}
+      >
+        <View style={styles.imageViewerContainer}>
+          <TouchableOpacity
+            style={styles.imageViewerCloseArea}
+            activeOpacity={1}
+            onPress={() => setSelectedImageUrl(null)}
+          >
+            {selectedImageUrl && (
+              <Image
+                source={{ uri: selectedImageUrl }}
+                style={styles.fullScreenImage}
+                resizeMode="contain"
+              />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.imageViewerCloseButton}
+            onPress={() => setSelectedImageUrl(null)}
+          >
+            <Ionicons name="close" size={30} color={Colors.white} />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -528,7 +575,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border.light,
     gap: Spacing.sm,
   },
-  attachButton: {
+  cameraButton: {
     padding: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -556,5 +603,29 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: Colors.gray[300],
+  },
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerCloseArea: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerCloseButton: {
+    position: 'absolute',
+    top: Spacing.xl + 40, // Account for status bar
+    right: Spacing.lg,
+    padding: Spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  fullScreenImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
   },
 });

@@ -123,8 +123,13 @@ class LocationTrackingService {
           });
 
           await this.updateLocationFromCoords(userId, location.coords, mode);
-        } catch (error) {
-          console.error('❌ Error in foreground watcher:', error);
+        } catch (error: any) {
+          // Gracefully handle timeout errors (common when app resumes from background)
+          if (error?.message?.includes('timeout')) {
+            console.warn('⚠️ Location update timed out (app may have just resumed) - will retry on next interval');
+          } else {
+            console.error('❌ Error in foreground watcher:', error);
+          }
         }
       }
     );
@@ -270,12 +275,24 @@ class LocationTrackingService {
         })
         .eq('id', userId);
       
-      // Add 15 second timeout for mobile networks
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database update timeout')), 15000)
-      );
+      // Add timeout for mobile networks (with proper cleanup)
+      // Use longer timeout on retries to handle congestion/app resume scenarios
+      const timeoutMs = retryCount > 0 ? 20000 : 15000;
+      let timeoutId: NodeJS.Timeout;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Database update timeout')), timeoutMs);
+      });
       
-      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
+      let result;
+      try {
+        result = await Promise.race([updatePromise, timeoutPromise]) as any;
+        clearTimeout(timeoutId); // Clear timeout on success
+      } catch (error) {
+        clearTimeout(timeoutId); // Clear timeout on error
+        throw error;
+      }
+      
+      const { error } = result;
 
       if (error) {
         // Check if error is empty object (network issue)
@@ -300,7 +317,12 @@ class LocationTrackingService {
       if (mode === 'on-the-way') {
         await this.updateActiveBookingMetrics(userId, locationData);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Timeout errors are expected during app resume - let caller handle them
+      if (error?.message?.includes('timeout')) {
+        throw error; // Re-throw without logging (caller will handle gracefully)
+      }
+      // Log other errors normally
       console.error('❌ Error in updateLocationFromCoords:', error);
       throw error;
     }
@@ -349,12 +371,22 @@ class LocationTrackingService {
         })
         .eq('id', userId);
       
-      // Add 15 second timeout for mobile networks
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database update timeout')), 15000)
-      );
+      // Add 15 second timeout for mobile networks (with proper cleanup)
+      let timeoutId: NodeJS.Timeout;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Database update timeout')), 15000);
+      });
       
-      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
+      let result;
+      try {
+        result = await Promise.race([updatePromise, timeoutPromise]) as any;
+        clearTimeout(timeoutId); // Clear timeout on success
+      } catch (error) {
+        clearTimeout(timeoutId); // Clear timeout on error
+        throw error;
+      }
+      
+      const { error } = result;
 
       if (error) {
         // Check if error is empty object (network issue)

@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { profileService } from '@mari-gunting/shared/services/profileService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Colors, theme } from '@mari-gunting/shared/theme';
@@ -87,8 +88,20 @@ export default function CompleteProfileScreen() {
           return;
         }
 
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { resize: { width: 800 } },
+          ],
+          {
+            compress: 0.8,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+
         // Store locally only - will upload after registration
-        setAvatar(uri);
+        setAvatar(compressedImage.uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);

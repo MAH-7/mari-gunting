@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Device from 'expo-device';
 import { barberOnboardingService, uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
 import { supabase } from '@mari-gunting/shared/config/supabase';
@@ -97,19 +98,31 @@ export default function EKYCScreen() {
           return;
         }
 
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+        
         // Store locally only - NO upload yet
         switch (type) {
           case 'ic_front':
-            setIcFrontUri(uri);
+            setIcFrontUri(compressedImage.uri);
             break;
           case 'ic_back':
-            setIcBackUri(uri);
+            setIcBackUri(compressedImage.uri);
             break;
           case 'selfie':
-            setSelfieUri(uri);
+            setSelfieUri(compressedImage.uri);
             break;
           case 'certificate':
-            setCertificateUris([...certificateUris, uri]);
+            setCertificateUris([...certificateUris, compressedImage.uri]);
             break;
         }
         
@@ -157,16 +170,28 @@ export default function EKYCScreen() {
           return;
         }
 
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+        
         // Store locally only - NO upload yet
         switch (type) {
           case 'ic_front':
-            setIcFrontUri(uri);
+            setIcFrontUri(compressedImage.uri);
             break;
           case 'ic_back':
-            setIcBackUri(uri);
+            setIcBackUri(compressedImage.uri);
             break;
           case 'selfie':
-            setSelfieUri(uri);
+            setSelfieUri(compressedImage.uri);
             break;
         }
         

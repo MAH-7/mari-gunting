@@ -165,9 +165,6 @@ export default function ProfileScreen() {
       case 'addresses':
         router.push('/profile/addresses');
         break;
-      case 'favorites':
-        Alert.alert('Coming Soon', 'Favorites feature is coming soon!');
-        break;
       case 'help':
         Alert.alert('Coming Soon', 'Help center is coming soon!');
         break;
@@ -176,9 +173,6 @@ export default function ProfileScreen() {
         break;
       case 'about':
         Alert.alert('About Mari Gunting', 'Version 1.0.0\n\nMari Gunting - Your trusted barber booking platform.');
-        break;
-      case 'settings':
-        Alert.alert('Coming Soon', 'Settings page is coming soon!');
         break;
       case 'privacy':
         Alert.alert('Coming Soon', 'Privacy policy page is coming soon!');
@@ -196,7 +190,6 @@ export default function ProfileScreen() {
       title: 'Account',
       items: [
         { id: 'addresses', icon: 'location', label: 'My Addresses', badge: currentUser.savedAddresses?.length || 0, color: Colors.primary },
-        { id: 'favorites', icon: 'heart', label: 'Favorite Barbers', badge: null, color: Colors.error },
       ]
     },
     {
@@ -210,7 +203,6 @@ export default function ProfileScreen() {
     {
       title: 'More',
       items: [
-        { id: 'settings', icon: 'settings', label: 'Settings', badge: null, color: Colors.gray[500] },
         { id: 'privacy', icon: 'lock-closed', label: 'Privacy Policy', badge: null, color: Colors.gray[500] },
         { id: 'terms', icon: 'document-text', label: 'Terms of Service', badge: null, color: Colors.gray[500] },
       ]

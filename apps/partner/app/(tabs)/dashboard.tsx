@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Dimensions, Animated, Easing, Platform, AppState, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Dimensions, Animated, Easing, Platform, AppState, Alert, Linking, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -178,6 +178,29 @@ export default function PartnerDashboardScreen() {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Handle Android back button on dashboard
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return;
+
+      const onBackPress = () => {
+        Alert.alert(
+          'Exit App',
+          'Are you sure you want to exit?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
+          ],
+          { cancelable: true }
+        );
+        return true; // Prevent default back action
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [])
+  );
   
   // Extract fetchStats as reusable function (for auto-refresh + pull-to-refresh)
   const fetchStats = useCallback(async () => {
@@ -584,50 +607,66 @@ export default function PartnerDashboardScreen() {
     }
 
     try {
-      // Check if permission was already granted
+      // Check if foreground permission was already granted
       const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
-      const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
 
-      console.log('📍 Permission status check:', { foregroundStatus, backgroundStatus });
+      console.log('📍 Foreground permission status:', foregroundStatus);
 
-      // If both permissions granted, no need to ask
-      if (foregroundStatus === 'granted' && backgroundStatus === 'granted') {
-        console.log('✅ Location permissions already granted');
+      // If foreground permission granted, we're good (background will be requested when going online)
+      if (foregroundStatus === 'granted') {
+        console.log('✅ Foreground location permission already granted');
         return;
       }
 
-      // Permission missing - request directly (iOS will show its own popups)
-      console.log('⚠️ Location permission missing - requesting now');
-      await requestLocationPermission();
+      // Foreground permission missing - request it now
+      console.log('⚠️ Foreground location permission missing - requesting now');
+      await requestForegroundPermission();
     } catch (error) {
       console.error('Error checking location permission:', error);
     }
   };
 
-  // Request location permission (for returning users)
-  const requestLocationPermission = async () => {
+  // Request ONLY foreground permission (on app launch)
+  const requestForegroundPermission = async () => {
     try {
-      console.log('📍 Requesting location permissions...');
+      console.log('📍 Requesting foreground location permission...');
 
-      // Request foreground first
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
       if (foregroundStatus !== 'granted') {
         console.warn('⚠️ Foreground permission denied');
         return;
       }
 
-      // Request background permission
+      console.log('✅ Foreground location permission granted');
+    } catch (error) {
+      console.error('Error requesting foreground permission:', error);
+    }
+  };
+
+  // Request background permission (when going online)
+  const requestBackgroundPermission = async () => {
+    try {
+      console.log('📍 Requesting background location permission...');
+
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
       if (backgroundStatus !== 'granted') {
         console.warn('⚠️ Background permission denied');
-        return;
+        Alert.alert(
+          'Background Location Required',
+          'To go online and receive bookings, please allow "Allow all the time" location access. This lets customers see your location and helps you receive booking notifications.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return false;
       }
 
-      console.log('✅ Location permissions granted');
-      setToast({ message: 'Location permission granted!', type: 'success', visible: true });
+      console.log('✅ Background location permission granted');
+      return true;
     } catch (error) {
-      console.error('Error requesting location permission:', error);
-      Alert.alert('Error', 'Failed to request location permission. Please try again.');
+      console.error('Error requesting background permission:', error);
+      return false;
     }
   };
 
@@ -775,27 +814,15 @@ export default function PartnerDashboardScreen() {
         const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
         
         if (bgStatus !== 'granted') {
-          console.warn('⚠️ Background location not granted - blocking online toggle');
+          console.warn('⚠️ Background location not granted - requesting now');
           
-          Alert.alert(
-            'Background Location Required',
-            'To go online, you need to enable "Always Allow" for location access. This lets customers see your location even when the app is minimized.\n\nPlease go to Settings and change location permission to "Always Allow".',
-            [
-              { 
-                text: 'Cancel', 
-                style: 'cancel',
-                onPress: () => setIsTogglingStatus(false),
-              },
-              { 
-                text: 'Open Settings', 
-                onPress: () => {
-                  Linking.openSettings();
-                  setIsTogglingStatus(false);
-                },
-              },
-            ]
-          );
-          return; // Don't proceed with going online
+          // Request background permission
+          const granted = await requestBackgroundPermission();
+          
+          if (!granted) {
+            setIsTogglingStatus(false);
+            return; // Don't proceed with going online
+          }
         }
         
         console.log('✅ Background location permission confirmed - proceeding');
@@ -1519,6 +1546,7 @@ const styles = StyleSheet.create({
   toggleSection: {
     paddingHorizontal: 20,
     paddingTop: 20,
+    overflow: 'hidden',
   },
   toggleButton: {
     borderRadius: 16,
@@ -1527,7 +1555,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 0,
   },
   toggleOnline: {
     backgroundColor: COLORS.primary,

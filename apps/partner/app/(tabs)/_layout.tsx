@@ -119,7 +119,9 @@ export default function PartnerTabLayout() {
           if (Platform.OS === 'ios') {
             Vibration.vibrate([0, 400, 200, 400]);
           } else {
-            Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+            // Android: Use longer single vibration for compatibility
+            // Some devices ignore patterns and only vibrate once
+            Vibration.vibrate(800); // Single 800ms vibration (more noticeable)
           }
           
           // Show alert

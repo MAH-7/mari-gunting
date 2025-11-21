@@ -16,6 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { barberOnboardingService, uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 import { useStore } from '@mari-gunting/shared/store/useStore';
@@ -79,8 +80,20 @@ export default function ServiceDetailsScreen() {
           return;
         }
 
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [
+            { resize: { width: 1200 } },
+          ],
+          {
+            compress: 0.7,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+
         // Store locally only (staged upload)
-        setPortfolioUris([...portfolioUris, uri]);
+        setPortfolioUris([...portfolioUris, compressedImage.uri]);
         console.log('✅ Portfolio image stored locally - will upload on submit');
       }
     } catch (error) {

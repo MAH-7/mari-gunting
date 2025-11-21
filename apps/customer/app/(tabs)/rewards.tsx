@@ -263,9 +263,6 @@ export default function RewardsScreen() {
       <View style={[styles.pointsCard, { backgroundColor: Colors.primary }]}>
         <View style={styles.pointsHeader}>
           <Text style={styles.pointsLabel}>Your Rewards</Text>
-          <View style={styles.memberBadge}>
-            <Text style={styles.memberText}>Gold Member</Text>
-          </View>
         </View>
         
         {/* Stacked Layout - Points Section (Secondary) */}
@@ -893,7 +890,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activityIconEarn: {
-    backgroundColor: getStatusBackground("ready"),
+    backgroundColor: Colors.successLight,
   },
   activityIconRedeem: {
     backgroundColor: Colors.errorLight,

@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { COLORS, TYPOGRAPHY } from '@/shared/constants';
@@ -128,7 +129,20 @@ export default function PortfolioManagementScreen() {
       }
       
       console.log('📸 Selected image URI:', result.assets[0].uri);
-      await uploadImage(result.assets[0].uri);
+      
+      // Compress image
+      const compressedImage = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [
+          { resize: { width: 1200 } },
+        ],
+        {
+          compress: 0.7,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      
+      await uploadImage(compressedImage.uri);
     } catch (error) {
       console.error('❌ Error picking image:', error);
       Alert.alert('Error', 'Failed to select image');
@@ -178,7 +192,20 @@ export default function PortfolioManagementScreen() {
       }
       
       console.log('📷 Captured image URI:', result.assets[0].uri);
-      await uploadImage(result.assets[0].uri);
+      
+      // Compress image
+      const compressedImage = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [
+          { resize: { width: 1200 } },
+        ],
+        {
+          compress: 0.7,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      
+      await uploadImage(compressedImage.uri);
     } catch (error: any) {
       console.error('❌ Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo');

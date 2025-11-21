@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { COLORS } from '@/shared/constants';
 import { profileService } from '@mari-gunting/shared/services/profileService';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
@@ -167,6 +168,20 @@ export default function ProfileEditScreen() {
       setUploadingAvatar(true);
       
       try {
+        // Compress image
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          imageUri,
+          [
+            { resize: { width: 800 } }, // Avatar size
+          ],
+          {
+            compress: 0.8,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        );
+        
+        const finalImageUri = compressedImage.uri;
+        
         // Delete old avatar file from storage if exists
         if (avatarUrl && avatarUrl.includes('supabase.co/storage')) {
           try {
@@ -191,7 +206,7 @@ export default function ProfileEditScreen() {
         }
         
         // Upload new avatar
-        const updatedProfile = await profileService.updateAvatar(currentUser.id, imageUri);
+        const updatedProfile = await profileService.updateAvatar(currentUser.id, finalImageUri);
         
         if (updatedProfile && updatedProfile.avatar_url) {
           setAvatarUrl(updatedProfile.avatar_url);
@@ -209,10 +224,10 @@ export default function ProfileEditScreen() {
           throw new Error('No avatar URL returned from server');
         }
       } catch (error: any) {
-        console.error('[EditProfile] Avatar upload failed:', error);
+        console.error('[EditProfile] Upload/compression failed:', error);
         Alert.alert(
-          'Upload Failed',
-          error.message || 'Failed to upload photo. Please try again.'
+          'Error',
+          error.message || 'Failed to process image. Please try again.'
         );
       } finally {
         setUploadingAvatar(false);
