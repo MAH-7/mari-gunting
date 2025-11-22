@@ -18,6 +18,7 @@ export default function Index() {
   const [verificationChecked, setVerificationChecked] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<VerificationInfo | null>(null);
   const [currentOnboardingStep, setCurrentOnboardingStep] = useState<number>(0);
+  const [currentBarbershopStep, setCurrentBarbershopStep] = useState<number>(0);
 
   useEffect(() => {
     // Validate auth session on startup
@@ -94,6 +95,10 @@ export default function Index() {
       } else if (status.accountType === 'barbershop') {
         console.log('📥 Loading barbershop progress from database...');
         await loadBarbershopProgressFromDB(currentUser.id);
+        // Get current step
+        const step = await barbershopOnboardingService.getCurrentStep();
+        setCurrentBarbershopStep(step);
+        console.log('📍 Current barbershop step:', step);
       }
       
       setVerificationStatus(status);
@@ -156,7 +161,17 @@ export default function Index() {
           ];
           return <Redirect href={steps[currentOnboardingStep] as any} />;
         } else if (verificationStatus.accountType === 'barbershop') {
-          return <Redirect href="/onboarding/barbershop/business-info" />;
+          // Route to last completed step
+          const steps = [
+            '/onboarding/barbershop/business-info',
+            '/onboarding/barbershop/location',
+            '/onboarding/barbershop/documents',
+            '/onboarding/barbershop/operating-hours',
+            '/onboarding/barbershop/staff-services',
+            '/onboarding/barbershop/amenities',
+            '/onboarding/barbershop/payout',
+          ];
+          return <Redirect href={steps[currentBarbershopStep] as any} />;
         }
       }
       // No account type selected - go to selection screen
@@ -176,7 +191,17 @@ export default function Index() {
         ];
         return <Redirect href={steps[currentOnboardingStep] as any} />;
       } else if (verificationStatus.accountType === 'barbershop') {
-        return <Redirect href="/onboarding/barbershop/business-info" />;
+        // Route to last completed step
+        const steps = [
+          '/onboarding/barbershop/business-info',
+          '/onboarding/barbershop/location',
+          '/onboarding/barbershop/documents',
+          '/onboarding/barbershop/operating-hours',
+          '/onboarding/barbershop/staff-services',
+          '/onboarding/barbershop/amenities',
+          '/onboarding/barbershop/payout',
+        ];
+        return <Redirect href={steps[currentBarbershopStep] as any} />;
       }
     }
     

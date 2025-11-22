@@ -207,13 +207,42 @@ export const barbershopOnboardingService = {
   /**
    * Save progress for a specific step
    */
-  async saveProgress(step: keyof BarbershopOnboardingData, data: any): Promise<void> {
+  async saveProgress(step: keyof BarbershopOnboardingData, data: any, updateStep: boolean = true): Promise<void> {
     try {
       const key = `onboarding_barbershop_${step}`;
       await AsyncStorage.setItem(key, JSON.stringify(data));
+      
+      // Track current step (only when user actually saves, not when loading from DB)
+      if (updateStep) {
+        const stepOrder: Array<keyof BarbershopOnboardingData> = [
+          'businessInfo',
+          'location',
+          'documents',
+          'operatingHours',
+          'staffServices',
+          'amenities',
+          'payout',
+        ];
+        const stepIndex = stepOrder.indexOf(step);
+        if (stepIndex >= 0) {
+          await AsyncStorage.setItem('onboarding_barbershop_currentStep', stepIndex.toString());
+        }
+      }
     } catch (error) {
       console.error(`Error saving barbershop progress (${step}):`, error);
       throw error;
+    }
+  },
+
+  /**
+   * Get the last completed step index (0-6)
+   */
+  async getCurrentStep(): Promise<number> {
+    try {
+      const step = await AsyncStorage.getItem('onboarding_barbershop_currentStep');
+      return step ? parseInt(step, 10) : 0;
+    } catch (error) {
+      return 0;
     }
   },
 
@@ -261,6 +290,7 @@ export const barbershopOnboardingService = {
         'onboarding_barbershop_staffServices',
         'onboarding_barbershop_amenities',
         'onboarding_barbershop_payout',
+        'onboarding_barbershop_currentStep',
       ]);
     } catch (error) {
       console.error('Error clearing barbershop progress:', error);
@@ -296,11 +326,11 @@ export const barbershopOnboardingService = {
       // Create location point for PostGIS
       const locationPoint = `POINT(${data.location.longitude} ${data.location.latitude})`;
 
-      // Update or insert barbershop record
+      // Update barbershop record with complete onboarding data
+      // (Record was created during account type selection with placeholder data)
       const { error } = await supabase
         .from('barbershops')
-        .upsert({
-          owner_id: userId,
+        .update({
           name: data.businessInfo.name,
           description: data.businessInfo.description,
           phone_number: data.businessInfo.phoneNumber,
@@ -452,7 +482,7 @@ export async function loadBarbershopProgressFromDB(userId: string): Promise<void
         email: data.email || '',
         ssmNumber: data.ssm_number || undefined,
       };
-      await barbershopOnboardingService.saveProgress('businessInfo', progress.businessInfo);
+      await barbershopOnboardingService.saveProgress('businessInfo', progress.businessInfo, false);
     }
 
     // Location
@@ -466,7 +496,7 @@ export async function loadBarbershopProgressFromDB(userId: string): Promise<void
         latitude: 0, // Will be recalculated if needed
         longitude: 0,
       };
-      await barbershopOnboardingService.saveProgress('location', progress.location);
+      await barbershopOnboardingService.saveProgress('location', progress.location, false);
     }
 
     // Documents
@@ -478,19 +508,19 @@ export async function loadBarbershopProgressFromDB(userId: string): Promise<void
         ssmDocUrl: docs?.ssm_document || undefined,
         businessLicenseUrl: docs?.business_license || undefined,
       };
-      await barbershopOnboardingService.saveProgress('documents', progress.documents);
+      await barbershopOnboardingService.saveProgress('documents', progress.documents, false);
     }
 
     // Operating Hours
     if (data.opening_hours) {
       progress.operatingHours = data.opening_hours;
-      await barbershopOnboardingService.saveProgress('operatingHours', progress.operatingHours);
+      await barbershopOnboardingService.saveProgress('operatingHours', progress.operatingHours, false);
     }
 
     // Amenities
     if (data.amenities) {
       progress.amenities = data.amenities;
-      await barbershopOnboardingService.saveProgress('amenities', progress.amenities);
+      await barbershopOnboardingService.saveProgress('amenities', progress.amenities, false);
     }
 
     // Payout
@@ -500,10 +530,21 @@ export async function loadBarbershopProgressFromDB(userId: string): Promise<void
         accountNumber: data.bank_account_number || '',
         accountName: data.bank_account_name || '',
       };
-      await barbershopOnboardingService.saveProgress('payout', progress.payout);
+      await barbershopOnboardingService.saveProgress('payout', progress.payout, false);
     }
 
-    console.log('✅ Loaded barbershop progress from database');
+    // Determine current step based on what data exists
+    let currentStep = 0;
+    if (progress.payout) currentStep = 6;
+    else if (progress.amenities) currentStep = 5;
+    else if (progress.staffServices) currentStep = 4;
+    else if (progress.operatingHours) currentStep = 3;
+    else if (progress.documents) currentStep = 2;
+    else if (progress.location) currentStep = 1;
+    else if (progress.businessInfo) currentStep = 0;
+    
+    await AsyncStorage.setItem('onboarding_barbershop_currentStep', currentStep.toString());
+    console.log('✅ Loaded barbershop progress from database - current step:', currentStep);
   } catch (error) {
     console.error('Error loading barbershop progress from DB:', error);
   }

@@ -50,6 +50,7 @@ export default function LocationScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [showStatePicker, setShowStatePicker] = useState(false);
+  const [locationVerified, setLocationVerified] = useState(false);
 
   useEffect(() => {
     loadProgress();
@@ -66,6 +67,7 @@ export default function LocationScreen() {
         setPostalCode(progress.location.postalCode);
         setLatitude(progress.location.latitude);
         setLongitude(progress.location.longitude);
+        setLocationVerified(true);
       }
     } catch (error) {
       console.error('Error loading progress:', error);
@@ -89,6 +91,7 @@ export default function LocationScreen() {
 
       setLatitude(location.coords.latitude);
       setLongitude(location.coords.longitude);
+      setLocationVerified(true);
 
       // Reverse geocode to get address
       const geocode = await Location.reverseGeocodeAsync({
@@ -104,7 +107,7 @@ export default function LocationScreen() {
         if (address.postalCode) setPostalCode(address.postalCode);
       }
 
-      Alert.alert('Success', 'Location retrieved successfully!');
+      Alert.alert('Success', 'Location retrieved successfully! You can now edit the details if needed.');
     } catch (error) {
       console.error('Error getting location:', error);
       Alert.alert('Error', 'Failed to get current location. Please enter manually.');
@@ -149,6 +152,11 @@ export default function LocationScreen() {
 
 
   const validateForm = (): boolean => {
+    if (!locationVerified) {
+      Alert.alert('Location Required', 'Please use your current location to verify your barbershop address.');
+      return false;
+    }
+
     if (addressLine1.trim().length < 5) {
       Alert.alert('Address Required', 'Please enter your street address (min 5 characters).');
       return false;
@@ -223,22 +231,26 @@ export default function LocationScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Location</Text>
         <Text style={styles.subtitle}>
-          Tell us where customers can find your barbershop.
+          Tell us where customers can find your barbershop. You must verify your location using GPS.
         </Text>
 
         {/* Current Location Button */}
         <TouchableOpacity
-          style={styles.locationButton}
+          style={[styles.locationButton, locationVerified && styles.locationButtonVerified]}
           onPress={getCurrentLocation}
           disabled={gettingLocation}
         >
         {gettingLocation ? (
             <ActivityIndicator size="small" color={Colors.primary} />
           ) : (
-            <Ionicons name="location" size={20} color={Colors.primary} />
+            <Ionicons 
+              name={locationVerified ? "checkmark-circle" : "location"} 
+              size={20} 
+              color={locationVerified ? "#10b981" : Colors.primary} 
+            />
           )}
-          <Text style={styles.locationButtonText}>
-            {gettingLocation ? 'Getting location...' : 'Use Current Location'}
+          <Text style={[styles.locationButtonText, locationVerified && styles.locationButtonTextVerified]}>
+            {gettingLocation ? 'Getting location...' : locationVerified ? 'Location Verified ✓' : 'Use Current Location (Required)'}
           </Text>
         </TouchableOpacity>
 
@@ -302,7 +314,7 @@ export default function LocationScreen() {
           
           {showStatePicker && (
             <View style={styles.pickerList}>
-              <ScrollView style={styles.pickerScroll}>
+              <ScrollView style={styles.pickerScroll} nestedScrollEnabled={true}>
                 {MALAYSIAN_STATES.map((s) => (
                   <TouchableOpacity
                     key={s}
@@ -353,9 +365,9 @@ export default function LocationScreen() {
       {/* Continue Button */}
       <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
         <TouchableOpacity
-          style={[styles.continueButton, (loading || gettingLocation) && styles.continueButtonDisabled]}
+          style={[styles.continueButton, (loading || gettingLocation || !locationVerified) && styles.continueButtonDisabled]}
           onPress={handleContinue}
-          disabled={loading || gettingLocation}
+          disabled={loading || gettingLocation || !locationVerified}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -445,10 +457,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f9f4',
     marginBottom: 32,
   },
+  locationButtonVerified: {
+    borderColor: '#10b981',
+    backgroundColor: '#d1fae5',
+  },
   locationButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  locationButtonTextVerified: {
+    color: '#10b981',
   },
   section: {
     marginBottom: 20,

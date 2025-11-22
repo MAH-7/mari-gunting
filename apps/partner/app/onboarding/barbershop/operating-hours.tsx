@@ -2,16 +2,18 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { barbershopOnboardingService } from '@mari-gunting/shared/services/onboardingService';
 import { Colors, theme } from '@mari-gunting/shared/theme';
 
@@ -38,6 +40,10 @@ export default function OperatingHoursScreen() {
     sat: { start: '09:00', end: '18:00', isOpen: true },
     sun: { start: '09:00', end: '18:00', isOpen: false },
   });
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [editingType, setEditingType] = useState<'start' | 'end'>('start');
+  const [pickerDate, setPickerDate] = useState(new Date());
 
   useEffect(() => {
     loadProgress();
@@ -64,14 +70,48 @@ export default function OperatingHoursScreen() {
     });
   };
 
-  const updateTime = (day: string, type: 'start' | 'end', value: string) => {
-    setOperatingHours({
-      ...operatingHours,
-      [day]: {
-        ...operatingHours[day],
-        [type]: value,
-      },
-    });
+  const formatTime = (time: string): string => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+
+  const openTimePicker = (day: string, type: 'start' | 'end') => {
+    const currentTime = operatingHours[day][type];
+    const [hour, minute] = currentTime.split(':').map(Number);
+    
+    // Create a date with the current time
+    const date = new Date();
+    date.setHours(hour);
+    date.setMinutes(minute);
+    
+    setPickerDate(date);
+    setEditingDay(day);
+    setEditingType(type);
+    setShowTimePicker(true);
+  };
+
+  const onTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    
+    if (selectedDate && editingDay) {
+      const hours = selectedDate.getHours().toString().padStart(2, '0');
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+      const time24 = `${hours}:${minutes}`;
+      
+      setOperatingHours({
+        ...operatingHours,
+        [editingDay]: {
+          ...operatingHours[editingDay],
+          [editingType]: time24,
+        },
+      });
+      
+      setPickerDate(selectedDate);
+    }
   };
 
   const copyToAll = (day: string) => {
@@ -184,23 +224,23 @@ export default function OperatingHoursScreen() {
             {operatingHours[day.key].isOpen && (
               <View style={styles.rightSection}>
                 <View style={styles.timeInputs}>
-                  <TextInput
-                    style={styles.timeInput}
-                    value={operatingHours[day.key].start}
-                    onChangeText={(text) => updateTime(day.key, 'start', text)}
-                    placeholder="9:00 AM"
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={8}
-                  />
+                  <TouchableOpacity
+                    style={styles.timeButton}
+                    onPress={() => openTimePicker(day.key, 'start')}
+                  >
+                    <Text style={styles.timeButtonText}>
+                      {formatTime(operatingHours[day.key].start)}
+                    </Text>
+                  </TouchableOpacity>
                   <Text style={styles.timeSeparator}>-</Text>
-                  <TextInput
-                    style={styles.timeInput}
-                    value={operatingHours[day.key].end}
-                    onChangeText={(text) => updateTime(day.key, 'end', text)}
-                    placeholder="6:00 PM"
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={8}
-                  />
+                  <TouchableOpacity
+                    style={styles.timeButton}
+                    onPress={() => openTimePicker(day.key, 'end')}
+                  >
+                    <Text style={styles.timeButtonText}>
+                      {formatTime(operatingHours[day.key].end)}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
                 <TouchableOpacity
                   style={styles.copyButton}
@@ -226,6 +266,39 @@ export default function OperatingHoursScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Time Picker - iOS & Android */}
+      {showTimePicker && (
+        <>
+          {Platform.OS === 'ios' && (
+            <View style={styles.iosPickerOverlay}>
+              <View style={styles.iosPickerContainer}>
+                <View style={styles.iosPickerHeader}>
+                  <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                    <Text style={styles.iosPickerDone}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="time"
+                  display="spinner"
+                  onChange={onTimeChange}
+                  minuteInterval={15}
+                />
+              </View>
+            </View>
+          )}
+          {Platform.OS === 'android' && (
+            <DateTimePicker
+              value={pickerDate}
+              mode="time"
+              display="default"
+              onChange={onTimeChange}
+              minuteInterval={15}
+            />
+          )}
+        </>
+      )}
 
       {/* Continue Button */}
       <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
@@ -352,17 +425,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  timeInput: {
-    width: 70,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+  timeButton: {
     borderWidth: 1,
     borderColor: '#e0e0e0',
     borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#fafafa',
+    minWidth: 90,
+  },
+  timeButtonText: {
     fontSize: 14,
     color: '#1a1a1a',
     textAlign: 'center',
-    backgroundColor: '#fafafa',
+    fontWeight: '500',
   },
   timeSeparator: {
     fontSize: 16,
@@ -414,5 +489,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  iosPickerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  iosPickerContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  iosPickerDone: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });

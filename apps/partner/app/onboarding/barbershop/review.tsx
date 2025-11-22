@@ -7,7 +7,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +45,24 @@ export default function ReviewScreen() {
   const maskAccountNumber = (number: string) => {
     if (number.length <= 4) return number;
     return '*'.repeat(number.length - 4) + number.slice(-4);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Exit Onboarding?',
+      'Your progress will be saved. You can continue later by logging in again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
   };
 
   const handleEdit = (screen: string) => {
@@ -139,7 +159,7 @@ export default function ReviewScreen() {
           </View>
           <View style={styles.card}>
             <InfoRow label="Business Name" value={data.businessInfo?.name || 'N/A'} />
-            <InfoRow label="Phone Number" value={data.businessInfo?.phone || 'N/A'} />
+            <InfoRow label="Phone Number" value={data.businessInfo?.phoneNumber || 'N/A'} />
             <InfoRow label="Email" value={data.businessInfo?.email || 'N/A'} />
             <InfoRow label="Description" value={data.businessInfo?.description || 'N/A'} multiline />
           </View>
@@ -154,13 +174,18 @@ export default function ReviewScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.card}>
-            <InfoRow label="Address" value={data.location?.address || 'N/A'} multiline />
+            <InfoRow
+              label="Address"
+              value={`${data.location?.addressLine1 || ''}${data.location?.addressLine2 ? ', ' + data.location.addressLine2 : ''}`}
+              multiline
+            />
+            <InfoRow label="City" value={data.location?.city || 'N/A'} />
             <InfoRow label="State" value={data.location?.state || 'N/A'} />
-            <InfoRow label="Postcode" value={data.location?.postcode || 'N/A'} />
-            {data.location?.coordinates && (
+            <InfoRow label="Postcode" value={data.location?.postalCode || 'N/A'} />
+            {data.location?.latitude && data.location?.longitude && (
               <InfoRow
                 label="Coordinates"
-                value={`${data.location.coordinates.latitude.toFixed(6)}, ${data.location.coordinates.longitude.toFixed(6)}`}
+                value={`${data.location.latitude.toFixed(6)}, ${data.location.longitude.toFixed(6)}`}
               />
             )}
           </View>
