@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ServiceRadiusSettings } from '@/components/ServiceRadiusSettings';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
@@ -14,17 +15,33 @@ export default function ServiceRadiusScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const [profile, setProfile] = useState<BarberProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop' | null>(null);
 
   useEffect(() => {
-    loadProfile();
-  }, [currentUser]);
+    const loadAccountType = async () => {
+      try {
+        const type = await AsyncStorage.getItem('partnerAccountType');
+        setAccountType((type === 'freelance' || type === 'barbershop') ? type : 'freelance');
+      } catch (error) {
+        console.error('Error loading account type:', error);
+        setAccountType('freelance');
+      }
+    };
+    loadAccountType();
+  }, []);
+
+  useEffect(() => {
+    if (accountType) {
+      loadProfile();
+    }
+  }, [currentUser, accountType]);
 
   const loadProfile = async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || !accountType) return;
     
     try {
       setIsLoading(true);
-      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id);
+      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id, accountType);
       if (barberProfile) {
         setProfile(barberProfile);
       }

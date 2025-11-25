@@ -144,14 +144,7 @@ export default function StaffServicesScreen() {
 
 
   const validateForm = (): boolean => {
-    if (staff.length === 0) {
-      Alert.alert('Staff Required', 'Please add at least 1 staff member.');
-      return false;
-    }
-    if (services.length < 3) {
-      Alert.alert('Services Required', 'Please add at least 3 services.');
-      return false;
-    }
+    // Both staff and services are optional - can be added later via profile menu
     return true;
   };
 
@@ -203,6 +196,7 @@ export default function StaffServicesScreen() {
               <Text style={styles.addButtonText}>Add Staff</Text>
             </TouchableOpacity>
           </View>
+          <Text style={styles.optionalText}>Optional - You can add staff later from the profile menu</Text>
           {staff.map((member, index) => (
             <View key={index} style={styles.card}>
               <View style={styles.cardContent}>
@@ -229,6 +223,7 @@ export default function StaffServicesScreen() {
               <Text style={styles.addButtonText}>Add Service</Text>
             </TouchableOpacity>
           </View>
+          <Text style={styles.optionalText}>Optional - You can add services later from the profile menu</Text>
           {services.map((service, index) => (
             <View key={index} style={styles.card}>
               <View style={styles.cardContent}>
@@ -386,6 +381,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 32 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1a1a1a' },
+  optionalText: { fontSize: 13, color: '#999', marginBottom: 12, fontStyle: 'italic' },
   addButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   addButtonText: { fontSize: 14, fontWeight: '600', color: Colors.primary },
   card: {

@@ -8,6 +8,7 @@ import { api } from '@/services/api';
 import { formatCurrency, formatDistance, formatTimeRange } from '@mari-gunting/shared/utils/format';
 import { SkeletonImage, SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
+import { useLocation } from '@/hooks/useLocation';
 
 const { width, height } = Dimensions.get('window');
 
@@ -49,10 +50,21 @@ export default function BarbershopDetailScreen() {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [imageHeight] = useState(280);
+  const { location, getCurrentLocation, hasPermission } = useLocation();
+
+  // Get user location on mount
+  useEffect(() => {
+    if (hasPermission) {
+      getCurrentLocation();
+    }
+  }, [hasPermission, getCurrentLocation]);
   
   const { data: shopResponse, isLoading } = useQuery({
-    queryKey: ['barbershop', id],
-    queryFn: () => api.getBarbershopById(id),
+    queryKey: ['barbershop', id, location?.latitude, location?.longitude],
+    queryFn: () => api.getBarbershopById(id, location ? {
+      lat: location.latitude,
+      lng: location.longitude,
+    } : undefined),
   });
 
   const { data: reviewsResponse } = useQuery({
@@ -215,7 +227,7 @@ export default function BarbershopDetailScreen() {
     );
   }
 
-  const lowestPrice = shop.services.length > 0 
+  const lowestPrice = shop.services && shop.services.length > 0 
     ? Math.min(...shop.services.map(s => s.price))
     : 0;
 
@@ -328,7 +340,7 @@ export default function BarbershopDetailScreen() {
                   <>
                     <View style={styles.ratingDot} />
                     <Ionicons name="navigate" size={14} color={Colors.primary} />
-                    <Text style={styles.distanceText}>{formatDistance(shop.distance)}</Text>
+                    <Text style={styles.distanceText}>~{formatDistance(shop.distance)}</Text>
                   </>
                 )}
               </View>
@@ -369,11 +381,29 @@ export default function BarbershopDetailScreen() {
             </View>
             <View style={styles.addressContent}>
               <Text style={styles.addressLabel}>Location</Text>
-              <Text style={styles.addressText} numberOfLines={2}>{shop.address}</Text>
+              <Text style={styles.addressText} numberOfLines={2}>
+                {typeof shop.address === 'string' 
+                  ? shop.address 
+                  : `${shop.address.line1}${shop.address.line2 ? ', ' + shop.address.line2 : ''}, ${shop.address.city}, ${shop.address.state} ${shop.address.postalCode}`
+                }
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
           </TouchableOpacity>
         </View>
+
+        {/* About Section */}
+        {shop.description && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="information-circle-outline" size={22} color={Colors.text.primary} />
+                <Text style={styles.sectionTitle}>About</Text>
+              </View>
+            </View>
+            <Text style={styles.descriptionText}>{shop.description}</Text>
+          </View>
+        )}
 
         {/* Operating Hours Section */}
         {shop.detailedHours && (
@@ -447,7 +477,7 @@ export default function BarbershopDetailScreen() {
               <Text style={styles.sectionTitle}>Services Available</Text>
             </View>
             <View style={styles.servicesBadge}>
-              <Text style={styles.servicesBadgeText}>{shop.services.length}</Text>
+              <Text style={styles.servicesBadgeText}>{shop.services?.length || 0}</Text>
             </View>
           </View>
           
@@ -456,24 +486,33 @@ export default function BarbershopDetailScreen() {
               <Ionicons name="information-circle" size={16} color={Colors.primary} />
             </View>
             <Text style={styles.servicesNoteText}>
-              Choose your preferred service when booking
+              {shop.services && shop.services.length > 0 
+                ? 'Choose your preferred service when booking'
+                : 'No services available at this time'
+              }
             </Text>
           </View>
 
           <View style={styles.servicesGrid}>
-            {shop.services.map((service: any, index: number) => (
-              <View
-                key={service.id}
-                style={[
-                  styles.serviceCard,
-                  index === shop.services.length - 1 && styles.serviceCardLast,
-                ]}
-              >
+            {shop.services && shop.services.length > 0 ? (
+              shop.services.map((service: any, index: number) => (
+                <View
+                  key={service.id}
+                  style={[
+                    styles.serviceCard,
+                    index === shop.services.length - 1 && styles.serviceCardLast,
+                  ]}
+                >
                 <View style={styles.serviceIconBg}>
                   <Ionicons name="cut" size={20} color={Colors.primary} />
                 </View>
                 <View style={styles.serviceInfo}>
                   <Text style={styles.serviceName}>{service.name}</Text>
+                  {service.description && (
+                    <Text style={styles.serviceDescription} numberOfLines={2}>
+                      {service.description}
+                    </Text>
+                  )}
                   <View style={styles.serviceDetails}>
                     <View style={styles.servicePrice}>
                       <Text style={styles.servicePriceText}>{formatCurrency(service.price)}</Text>
@@ -485,7 +524,13 @@ export default function BarbershopDetailScreen() {
                   </View>
                 </View>
               </View>
-            ))}
+              ))
+            ) : (
+              <View style={styles.emptyServicesCard}>
+                <Ionicons name="cut-outline" size={32} color={Colors.gray[300]} />
+                <Text style={styles.emptyServicesText}>No services available</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -998,6 +1043,19 @@ const styles = StyleSheet.create({
   servicesGrid: {
     gap: 10,
   },
+  emptyServicesCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 14,
+    gap: 8,
+  },
+  emptyServicesText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.gray[500],
+  },
   serviceCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1029,6 +1087,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: Colors.text.primary,
+  },
+  serviceDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: Colors.gray[600],
   },
   serviceDetails: {
     flexDirection: 'row',
@@ -1310,6 +1373,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: Colors.primary,
+  },
+  descriptionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.gray[700],
   },
   noReviews: {
     paddingVertical: 48,

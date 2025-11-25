@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@/shared/constants';
 import { profileService } from '@mari-gunting/shared/services/profileService';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
@@ -23,6 +24,7 @@ export default function ProfileEditScreen() {
   const [email, setEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop' | null>(null);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -41,10 +43,26 @@ export default function ProfileEditScreen() {
   const buttonSlideAnim = useRef(new Animated.Value(200)).current;
   
 
-  // Fetch profile data on mount
+  // Load account type first
   useEffect(() => {
-    loadProfile();
-  }, [currentUser]);
+    const loadAccountType = async () => {
+      try {
+        const type = await AsyncStorage.getItem('partnerAccountType');
+        setAccountType((type === 'freelance' || type === 'barbershop') ? type : 'freelance');
+      } catch (error) {
+        console.error('Error loading account type:', error);
+        setAccountType('freelance');
+      }
+    };
+    loadAccountType();
+  }, []);
+  
+  // Fetch profile data after account type is loaded
+  useEffect(() => {
+    if (accountType) {
+      loadProfile();
+    }
+  }, [currentUser, accountType]);
   
   // Animate on mount
   useEffect(() => {
@@ -78,13 +96,15 @@ export default function ProfileEditScreen() {
     try {
       setIsLoading(true);
       
-      if (!currentUser?.id) {
-        Alert.alert('Error', 'User not logged in');
-        router.back();
+      if (!currentUser?.id || !accountType) {
+        if (!currentUser?.id) {
+          Alert.alert('Error', 'User not logged in');
+          router.back();
+        }
         return;
       }
 
-      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id);
+      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id, accountType);
       
       if (barberProfile) {
         setProfile(barberProfile);

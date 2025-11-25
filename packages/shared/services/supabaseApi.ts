@@ -685,4 +685,407 @@ export const supabaseApi = {
       };
     }
   },
+
+  /**
+   * Get all barbershops
+   */
+  getBarbershops: async (filters?: {
+    isOpen?: boolean;
+    location?: { lat: number; lng: number; radius?: number };
+  }): Promise<ApiResponse<PaginatedResponse<any>>> => {
+    try {
+      console.log('🔍 Fetching barbershops from Supabase');
+
+      const { data: shops, error } = await supabase
+        .from('barbershops')
+        .select('*');
+        // Temporarily removed filters to see all shops:
+        // .eq('is_active', true)
+        // .eq('is_verified', true);
+
+      if (error) {
+        console.error('❌ Error fetching barbershops:', error);
+        throw error;
+      }
+
+      // Fetch services for all barbershops
+      const shopIds = (shops || []).map((s: any) => s.id);
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*')
+        .in('barbershop_id', shopIds)
+        .eq('is_active', true);
+
+      if (servicesError) {
+        console.error('❌ Error fetching services:', servicesError);
+      }
+
+      // Group services by barbershop_id
+      const servicesByShop = (servicesData || []).reduce((acc: any, service: any) => {
+        if (!acc[service.barbershop_id]) {
+          acc[service.barbershop_id] = [];
+        }
+        acc[service.barbershop_id].push({
+          id: service.id,
+          name: service.name,
+          description: service.description || '',
+          price: service.price,
+          duration: service.duration_minutes,
+          category: service.category || 'haircut',
+          image: service.image_url || undefined,
+        });
+        return acc;
+      }, {});
+
+      console.log(`✅ Fetched services for ${Object.keys(servicesByShop).length} barbershops`);
+
+      // Helper to calculate distance (Haversine formula)
+      const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6371; // Earth's radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
+
+      // Transform barbershops data
+      const transformedShops = (shops || []).map((shop: any) => {
+        const coords = parseLocation(shop.location);
+        
+        // Calculate distance if user location provided
+        let distance: number | undefined = undefined;
+        if (filters?.location && coords) {
+          distance = calculateDistance(
+            filters.location.lat,
+            filters.location.lng,
+            coords.latitude,
+            coords.longitude
+          );
+        }
+        
+        return {
+          id: shop.id,
+          name: shop.name,
+          description: shop.description,
+          logo: shop.logo_url,
+          coverImages: shop.cover_images || [],
+          rating: parseFloat(shop.rating) || 0,
+          totalReviews: shop.total_reviews || 0,
+          totalBookings: shop.total_bookings || 0,
+          location: {
+            latitude: coords?.latitude || 3.1569,
+            longitude: coords?.longitude || 101.7123,
+            address: `${shop.address_line1}, ${shop.city}`,
+          },
+          address: {
+            line1: shop.address_line1,
+            line2: shop.address_line2,
+            city: shop.city,
+            state: shop.state,
+            postalCode: shop.postal_code,
+          },
+          openingHours: shop.opening_hours,
+          detailedHours: shop.opening_hours,
+          isOpen: shop.is_open_now || false,
+          amenities: shop.amenities || [],
+          phone: shop.phone_number,
+          email: shop.email,
+          isFeatured: shop.is_featured || false,
+          isVerified: shop.is_verified || false,
+          createdAt: shop.created_at,
+          services: servicesByShop[shop.id] || [],
+          distance, // Add calculated distance
+        };
+      });
+
+      console.log(`✅ Found ${transformedShops.length} barbershops`);
+
+      return {
+        success: true,
+        data: {
+          data: transformedShops,
+          total: transformedShops.length,
+          page: 1,
+          pageSize: 20,
+          hasMore: false,
+        },
+      };
+    } catch (error: any) {
+      console.error('❌ Error in getBarbershops:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch barbershops',
+      };
+    }
+  },
+
+  /**
+   * Get barbershop by ID
+   */
+  getBarbershopById: async (id: string, location?: { lat: number; lng: number }): Promise<ApiResponse<any>> => {
+    try {
+      console.log('🔍 Fetching barbershop by ID:', id);
+
+      const { data: shop, error } = await supabase
+        .from('barbershops')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching barbershop:', error);
+        throw error;
+      }
+
+      if (!shop) {
+        return {
+          success: false,
+          error: 'Barbershop not found',
+        };
+      }
+
+      // Fetch services for this barbershop
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('barbershop_id', id)
+        .eq('is_active', true);
+
+      if (servicesError) {
+        console.error('❌ Error fetching services:', servicesError);
+      }
+
+      const services = (servicesData || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description || '',
+        price: s.price,
+        duration: s.duration_minutes,
+        category: s.category || 'haircut',
+        image: s.image_url || undefined,
+      }));
+
+      console.log(`✅ Found ${services.length} services for barbershop`);
+
+      // Calculate distance if location provided (same helper as getBarbershops)
+      const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
+
+      // Transform barbershop data
+      const coords = parseLocation(shop.location);
+      
+      let distance: number | undefined = undefined;
+      if (location && coords) {
+        distance = calculateDistance(
+          location.lat,
+          location.lng,
+          coords.latitude,
+          coords.longitude
+        );
+      }
+      
+      const transformedShop = {
+        id: shop.id,
+        name: shop.name,
+        description: shop.description,
+        logo: shop.logo_url,
+        coverImages: shop.cover_images || [],
+        rating: parseFloat(shop.rating) || 0,
+        totalReviews: shop.total_reviews || 0,
+        totalBookings: shop.total_bookings || 0,
+        location: {
+          latitude: coords?.latitude || 3.1569,
+          longitude: coords?.longitude || 101.7123,
+          address: `${shop.address_line1}, ${shop.city}`,
+        },
+        address: {
+          line1: shop.address_line1,
+          line2: shop.address_line2,
+          city: shop.city,
+          state: shop.state,
+          postalCode: shop.postal_code,
+        },
+        openingHours: shop.opening_hours,
+        detailedHours: shop.opening_hours,
+        isOpen: shop.is_open_now || false,
+        amenities: shop.amenities || [],
+        phone: shop.phone_number,
+        email: shop.email,
+        website: shop.website_url,
+        isFeatured: shop.is_featured || false,
+        isVerified: shop.is_verified || false,
+        createdAt: shop.created_at,
+        services,
+        distance, // Add calculated distance
+      };
+
+      console.log('✅ Barbershop found:', transformedShop.name);
+
+      return {
+        success: true,
+        data: transformedShop,
+      };
+    } catch (error: any) {
+      console.error('❌ Error in getBarbershopById:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch barbershop',
+      };
+    }
+  },
+
+  /**
+   * Get reviews by barbershop ID
+   */
+  getReviewsByBarbershopId: async (shopId: string): Promise<ApiResponse<any[]>> => {
+    try {
+      console.log('🔍 Fetching reviews for barbershop:', shopId);
+
+      const { data: reviews, error } = await supabase
+        .from('reviews')
+        .select(`
+          id,
+          rating,
+          comment,
+          response,
+          response_at,
+          created_at,
+          bookings (
+            id,
+            customer_id,
+            services,
+            profiles (
+              full_name,
+              avatar_url
+            )
+          )
+        `)
+        .eq('barbershop_id', shopId)
+        .eq('is_visible', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching reviews:', error);
+        throw error;
+      }
+
+      if (!reviews || reviews.length === 0) {
+        console.log('ℹ️ No reviews found for barbershop:', shopId);
+        return {
+          success: true,
+          data: [],
+        };
+      }
+
+      const transformedReviews = reviews.map((review: any) => ({
+        id: review.id,
+        barbershopId: shopId,
+        customerName: review.bookings?.profiles?.full_name || 'Anonymous',
+        customerAvatar: review.bookings?.profiles?.avatar_url || null,
+        rating: review.rating,
+        comment: review.comment,
+        services: review.bookings?.services || [],
+        createdAt: review.created_at,
+        response: review.response ? {
+          text: review.response,
+          date: review.response_at || review.created_at,
+        } : null,
+      }));
+
+      console.log(`✅ Found ${transformedReviews.length} reviews`);
+
+      return {
+        success: true,
+        data: transformedReviews,
+      };
+    } catch (error: any) {
+      console.error('❌ Error in getReviewsByBarbershopId:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch reviews',
+      };
+    }
+  },
+
+  /**
+   * Get staff members by barbershop ID
+   */
+  getBarbersByShopId: async (shopId: string): Promise<ApiResponse<any[]>> => {
+    try {
+      console.log('🔍 Fetching staff for barbershop:', shopId);
+
+      const { data: staff, error } = await supabase
+        .from('barbershop_staff')
+        .select(`
+          *,
+          profile:profiles!barbershop_staff_user_id_fkey(*)
+        `)
+        .eq('barbershop_id', shopId)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('❌ Error fetching staff:', error);
+        throw error;
+      }
+
+      console.log(`✅ Found ${staff?.length || 0} staff members`);
+
+      return {
+        success: true,
+        data: staff || [],
+      };
+    } catch (error: any) {
+      console.error('❌ Error in getBarbersByShopId:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch staff',
+      };
+    }
+  },
+
+  /**
+   * Get staff member's services
+   */
+  getStaffServices: async (staffId: string, shopId: string): Promise<ApiResponse<any[]>> => {
+    try {
+      console.log('🔍 Fetching services for staff:', staffId);
+
+      const { data: services, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('barbershop_id', shopId)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('❌ Error fetching services:', error);
+        throw error;
+      }
+
+      console.log(`✅ Found ${services?.length || 0} services`);
+
+      return {
+        success: true,
+        data: services || [],
+      };
+    } catch (error: any) {
+      console.error('❌ Error in getStaffServices:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch services',
+      };
+    }
+  },
 };

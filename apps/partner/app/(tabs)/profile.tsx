@@ -43,7 +43,7 @@ export default function PartnerProfileScreen() {
   const [profile, setProfile] = useState<BarberProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop' | null>(null);
 
   // Fetch barber profile and account type on mount (initial load)
   useEffect(() => {
@@ -59,20 +59,25 @@ export default function PartnerProfileScreen() {
     };
 
     loadAccountType();
-    if (currentUser?.id) {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+  
+  // Load profile once account type is set
+  useEffect(() => {
+    if (currentUser?.id && accountType) {
       loadBarberProfile(true); // Show loading spinner on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, [accountType, currentUser?.id]);
   
   // Reload profile when screen comes into focus (silent refresh in background)
   useFocusEffect(
     useCallback(() => {
       // Only refresh if profile already exists (skip initial load)
-      if (currentUser?.id && profile) {
+      if (currentUser?.id && profile && accountType) {
         loadBarberProfile(false); // Silent refresh, no loading spinner
       }
-    }, [currentUser?.id, profile])
+    }, [currentUser?.id, profile, accountType])
   );
 
   const loadBarberProfile = async (showLoading: boolean = true) => {
@@ -84,14 +89,14 @@ export default function PartnerProfileScreen() {
         setIsRefreshing(true);
       }
       
-      if (!currentUser?.id) {
+      if (!currentUser?.id || !accountType) {
         setIsLoading(false);
         setIsRefreshing(false);
         return;
       }
       
-      // Fetch barber profile
-      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id);
+      // Fetch partner profile (barber or barbershop)
+      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id, accountType);
       
       if (barberProfile) {
         setProfile(barberProfile);
@@ -128,10 +133,10 @@ export default function PartnerProfileScreen() {
           icon: 'shield-checkmark-outline', 
           label: 'Verification & Documents', 
           action: 'verification',
-          badge: profile?.isVerified ? 'Verified' : 'Pending',
-          badgeColor: profile?.isVerified ? Colors.success : Colors.warning,
-          iconBg: Colors.warningLight,
-          iconColor: Colors.warning,
+          badge: profile?.verificationStatus === 'verified' ? 'Verified' : profile?.verificationStatus === 'pending' ? 'Pending' : 'Unverified',
+          badgeColor: profile?.verificationStatus === 'verified' ? Colors.success : profile?.verificationStatus === 'pending' ? Colors.warning : Colors.gray[400],
+          iconBg: profile?.verificationStatus === 'verified' ? Colors.successLight : Colors.warningLight,
+          iconColor: profile?.verificationStatus === 'verified' ? Colors.success : Colors.warning,
         },
         { 
           icon: 'lock-closed-outline', 
@@ -142,6 +147,26 @@ export default function PartnerProfileScreen() {
         },
       ],
     },
+    // Barbershop Management Section (only for barbershop owners)
+    ...(accountType === 'barbershop' ? [{
+      title: 'BARBERSHOP MANAGEMENT',
+      items: [
+        { 
+          icon: 'people-outline', 
+          label: 'Staff Management', 
+          screen: '/staff-management',
+          iconBg: Colors.primaryLight,
+          iconColor: Colors.primary,
+        },
+        { 
+          icon: 'storefront-outline', 
+          label: 'Shop Settings', 
+          screen: '/shop-settings',
+          iconBg: Colors.infoLight,
+          iconColor: Colors.info,
+        },
+      ],
+    }] : []),
     {
       title: 'BUSINESS SETTINGS',
       items: [

@@ -100,6 +100,11 @@ export default function BusinessInfoScreen() {
       return false;
     }
 
+    if (ssmNumber.trim().length === 0) {
+      Alert.alert('SSM Number Required', 'Please enter your SSM registration number.');
+      return false;
+    }
+
     return true;
   };
 
@@ -114,7 +119,7 @@ export default function BusinessInfoScreen() {
         description: description.trim(),
         phoneNumber: phoneNumber.replace(/[^0-9]/g, ''),
         email: email.trim().toLowerCase(),
-        ssmNumber: ssmNumber.trim() || undefined,
+        ssmNumber: ssmNumber.trim(),
       };
 
       await barbershopOnboardingService.saveProgress('businessInfo', data);
@@ -222,9 +227,11 @@ export default function BusinessInfoScreen() {
           <Text style={styles.hint}>For booking confirmations and updates</Text>
         </View>
 
-        {/* SSM Number (Optional) */}
+        {/* SSM Number */}
         <View style={styles.section}>
-          <Text style={styles.label}>SSM Registration Number (Optional)</Text>
+          <Text style={styles.label}>
+            SSM Registration Number <Text style={styles.required}>*</Text>
+          </Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., 1234567890"
@@ -233,7 +240,7 @@ export default function BusinessInfoScreen() {
             onChangeText={setSsmNumber}
             maxLength={20}
           />
-          <Text style={styles.hint}>If you have a registered business</Text>
+          <Text style={styles.hint}>Enter your registered business number</Text>
         </View>
 
         <View style={{ height: 120 }} />

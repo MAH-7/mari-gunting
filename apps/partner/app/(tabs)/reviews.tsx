@@ -43,7 +43,7 @@ export default function ReviewsScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState<number | null>(null);
   const [page, setPage] = useState(1);
@@ -79,7 +79,7 @@ export default function ReviewsScreen() {
   };
 
   const loadReviews = async (showLoading = true) => {
-    if (!currentUser?.id) {
+    if (!currentUser?.id || !accountType) {
       setLoading(false);
       return;
     }

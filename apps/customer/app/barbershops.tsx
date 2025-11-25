@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { Barbershop } from '@/types';
 import FilterModal, { FilterOptions } from '@/components/FilterModal';
 import { SkeletonCircle, SkeletonText, SkeletonBase } from '@/components/Skeleton';
 import { Colors, theme, getStatusBackground, getStatusColor } from '@mari-gunting/shared/theme';
+import { useLocation } from '@/hooks/useLocation';
 
 // Get current day in user's local timezone (Grab-style)
 const getCurrentDay = () => {
@@ -52,10 +53,27 @@ export default function BarbershopsScreen() {
     openNow: false,
     verifiedOnly: false,
   });
+  
+  const { location, getCurrentLocation, hasPermission } = useLocation();
+
+  // Get user location on mount
+  useEffect(() => {
+    if (hasPermission) {
+      getCurrentLocation();
+    }
+  }, [hasPermission, getCurrentLocation]);
 
   const { data: barbershopsResponse, isLoading } = useQuery({
-    queryKey: ['barbershops'],
-    queryFn: () => api.getBarbershops({}),
+    queryKey: ['barbershops', location?.latitude, location?.longitude],
+    queryFn: () => api.getBarbershops({
+      location: location
+        ? {
+            lat: location.latitude,
+            lng: location.longitude,
+            radius: filters.distance,
+          }
+        : undefined,
+    }),
   });
 
   const barbershops = barbershopsResponse?.data?.data || [];
@@ -247,47 +265,9 @@ export default function BarbershopsScreen() {
 
 function BarbershopCard({ shop }: { shop: Barbershop }) {
   // Get the lowest price from all services
-  const lowestPrice = Math.min(...shop.services.map((s: any) => s.price));
-  
-  // Calculate if shop is currently open dynamically
-  const isOpen = shop.detailedHours ? isShopOpenNow(shop.detailedHours) : shop.isOpen;
-  
-  // Get current day's operating hours
-  const getCurrentDayHours = () => {
-    if (!shop.detailedHours) return shop.operatingHours;
-    
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const currentDay = getCurrentDay();
-    const dayInfo = shop.detailedHours[currentDay];
-    
-    // If closed today, find next open day
-    if (!dayInfo || !dayInfo.isOpen) {
-      const currentDayIndex = days.indexOf(currentDay);
-      
-      // Check next 7 days for when shop opens
-      for (let i = 1; i <= 7; i++) {
-        const nextDayIndex = (currentDayIndex + i) % 7;
-        const nextDay = days[nextDayIndex];
-        const nextDayInfo = shop.detailedHours[nextDay];
-        
-        if (nextDayInfo && nextDayInfo.isOpen) {
-          // Use shorter format to prevent overflow
-          if (i === 1) {
-            return `Tomorrow ${formatTime(nextDayInfo.open)}`;
-          } else {
-            return `${dayShortNames[nextDayIndex]} ${formatTime(nextDayInfo.open)}`;
-          }
-        }
-      }
-      
-      return 'Closed';
-    }
-    
-    return `${formatTime(dayInfo.open)} - ${formatTime(dayInfo.close)}`;
-  };
-  
-  const todayHours = getCurrentDayHours();
+  const lowestPrice = shop.services && shop.services.length > 0 
+    ? Math.min(...shop.services.map((s: any) => s.price))
+    : 0;
   
   return (
     <TouchableOpacity
@@ -295,111 +275,50 @@ function BarbershopCard({ shop }: { shop: Barbershop }) {
       onPress={() => router.push(`/barbershop/${shop.id}` as any)}
       activeOpacity={0.7}
     >
-      {/* Header with Logo, Name & Status */}
-      <View style={styles.cardHeader}>
-        <View style={styles.logoContainer}>
-          <Image source={{ uri: shop.logo }} style={styles.shopLogo} />
-        </View>
+      <View style={styles.cardContent}>
+        {/* Left: Logo */}
+        <Image source={{ uri: shop.logo }} style={styles.shopLogo} />
         
-        <View style={styles.headerInfo}>
-          <View style={styles.nameBadgeRow}>
+        {/* Middle: Info */}
+        <View style={styles.shopInfo}>
+          {/* Name + Verified */}
+          <View style={styles.nameRow}>
             <Text style={styles.shopName} numberOfLines={1}>
               {shop.name}
             </Text>
             {shop.isVerified && (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="shield-checkmark" size={12} color={Colors.info} />
-              </View>
+              <Ionicons name="shield-checkmark" size={16} color={Colors.info} style={{ marginLeft: 4 }} />
             )}
           </View>
           
+          {/* Rating + Reviews + Bookings */}
           <View style={styles.metaRow}>
-            {/* Rating */}
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={12} color="#FBBF24" />
-              <Text style={styles.ratingText}>{shop.rating.toFixed(1)}</Text>
+            <Ionicons name="star" size={14} color="#FBBF24" />
+            <Text style={styles.ratingText}>{shop.rating.toFixed(1)}</Text>
+            <Text style={styles.metaText}>({shop.reviewsCount || 0} reviews)</Text>
+            <Text style={styles.metaDivider}>•</Text>
+            <Text style={styles.metaText}>{shop.bookingsCount || 0} bookings</Text>
+          </View>
+          
+          {/* Distance */}
+          {shop.distance && (
+            <View style={styles.distanceRow}>
+              <Ionicons name="navigate" size={14} color={Colors.primary} />
+              <Text style={styles.distanceText}>~{formatDistance(shop.distance)}</Text>
             </View>
-            
-            <View style={styles.metaDot} />
-            
-            {/* Reviews */}
-            <Text style={styles.metaText}>{shop.reviewsCount} reviews</Text>
-            
-            {shop.distance && (
-              <>
-                <View style={styles.metaDot} />
-                <View style={styles.distanceContainer}>
-                  <Ionicons name="navigate" size={11} color={Colors.primary} />
-                  <Text style={styles.distanceText}>{formatDistance(shop.distance)}</Text>
-                </View>
-              </>
-            )}
+          )}
+          
+          {/* Price */}
+          <View style={styles.priceRow}>
+            <Text style={styles.startingFromLabel}>Starting from</Text>
+            <Text style={[styles.priceValue, { color: '#F97316' }]}>
+              {lowestPrice > 0 ? formatCurrency(lowestPrice) : '—'}
+            </Text>
           </View>
         </View>
         
-        {/* Status Badge */}
-        {isOpen ? (
-          <View style={styles.openBadge}>
-            <View style={styles.openDot} />
-          </View>
-        ) : (
-          <View style={styles.closedBadge}>
-            <Text style={styles.closedText}>Closed</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Quick Info */}
-      <View style={styles.quickInfo}>
-        <View style={styles.quickInfoItem}>
-          <Ionicons 
-            name="time-outline" 
-            size={14} 
-            color={todayHours.startsWith('Tomorrow') || todayHours.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/) ? Colors.warning : Colors.gray[500]} 
-          />
-          <Text 
-            style={[
-              styles.quickInfoText,
-              (todayHours.startsWith('Tomorrow') || todayHours.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/)) && styles.opensHoursText
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {todayHours}
-          </Text>
-        </View>
-        <View style={styles.quickInfoDivider} />
-        <View style={styles.quickInfoItem}>
-          <Ionicons name="people-outline" size={14} color={Colors.gray[500]} />
-          <Text style={styles.quickInfoText} numberOfLines={1}>{shop.bookingsCount}+ bookings</Text>
-        </View>
-      </View>
-
-      {/* Services Preview */}
-      <View style={styles.servicesPreview}>
-        {shop.services.slice(0, 4).map((service, idx) => (
-          <View key={idx} style={styles.serviceTag}>
-            <Text style={styles.serviceTagText}>{service.name}</Text>
-            <Text style={styles.serviceTagPrice}>{formatCurrency(service.price)}</Text>
-          </View>
-        ))}
-        {shop.services.length > 4 && (
-          <View style={styles.moreServicesTag}>
-            <Text style={styles.moreServicesText}>+{shop.services.length - 4}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Footer with Price & Action */}
-      <View style={styles.cardFooter}>
-        <View style={styles.priceSection}>
-          <Text style={styles.fromLabel}>From</Text>
-          <Text style={styles.priceValue}>{formatCurrency(lowestPrice)}</Text>
-        </View>
-        <View style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>View Shop</Text>
-          <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
-        </View>
+        {/* Right: Chevron */}
+        <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
       </View>
     </TouchableOpacity>
   );
@@ -526,7 +445,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 16,
     marginBottom: 16,
-    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -535,110 +453,81 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.gray[100],
   },
-  cardHeader: {
+  cardContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    padding: 16,
     gap: 12,
   },
-  logoContainer: {
-    width: 64,
-    height: 64,
+  shopLogo: {
+    width: 72,
+    height: 72,
     borderRadius: 12,
     backgroundColor: Colors.backgroundSecondary,
-    overflow: 'hidden',
     borderWidth: 1.5,
     borderColor: Colors.gray[200],
   },
-  shopLogo: {
-    width: '100%',
-    height: '100%',
-  },
-  headerInfo: {
+  shopInfo: {
     flex: 1,
     gap: 6,
   },
-  nameBadgeRow: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
   shopName: {
     fontSize: 16,
     fontWeight: '700',
     color: Colors.text.primary,
     letterSpacing: -0.3,
-    flex: 1,
-  },
-  verifiedBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
+    gap: 4,
   },
   ratingText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text.primary,
-  },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.gray[300],
+    marginLeft: 2,
   },
   metaText: {
     fontSize: 13,
     fontWeight: '500',
     color: Colors.gray[500],
   },
-  distanceContainer: {
+  metaDivider: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.gray[300],
+    marginHorizontal: 4,
+  },
+  distanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
   },
   distanceText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.primary,
   },
-  openBadge: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-    borderWidth: 2,
-    borderColor: getStatusBackground("ready"),
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
   },
-  openDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-  },
-  closedBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-  },
-  closedText: {
+  startingFromLabel: {
     fontSize: 11,
+    fontWeight: '500',
+    color: '#8E8E93',
+  },
+  priceValue: {
+    fontSize: 18,
     fontWeight: '700',
-    color: '#DC2626',
-    letterSpacing: 0.3,
+    color: Colors.primary,
+    letterSpacing: -0.4,
   },
   quickInfo: {
     flexDirection: 'row',
@@ -670,15 +559,23 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   servicesPreview: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     marginTop: 12,
     marginBottom: 12,
+    gap: 8,
+  },
+  servicesRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  serviceTagPlaceholder: {
+    flex: 1,
+    height: 36,
   },
   serviceTag: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: Colors.backgroundSecondary,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -698,12 +595,15 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   moreServicesTag: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: Colors.gray[100],
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+    minWidth: 44,
   },
   moreServicesText: {
     fontSize: 12,

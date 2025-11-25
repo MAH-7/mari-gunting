@@ -212,11 +212,19 @@ export default function Index() {
     
     // If verified and approved (status = 'verified')
     if (verificationStatus.canAcceptBookings) {
+      // Route to appropriate dashboard based on account type
+      if (verificationStatus.accountType === 'barbershop') {
+        return <Redirect href="/(tabs)/dashboard-shop" />;
+      }
       return <Redirect href="/(tabs)/dashboard" />;
     }
   }
 
   // Default fallback (shouldn't reach here if logic is correct)
+  // Route to appropriate dashboard based on account type
+  if (verificationStatus?.accountType === 'barbershop') {
+    return <Redirect href="/(tabs)/dashboard-shop" />;
+  }
   return <Redirect href="/(tabs)/dashboard" />;
 }
 

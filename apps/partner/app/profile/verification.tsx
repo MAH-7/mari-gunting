@@ -8,40 +8,54 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
-  Image,
-  Modal,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { barberService, BarberProfile } from '@/shared/services/barberService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS } from '@/shared/constants';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function VerificationDocumentsScreen() {
   const currentUser = useStore((state) => state.currentUser);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<BarberProfile | null>(null);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop' | null>(null);
 
   useEffect(() => {
-    loadProfile();
+    loadAccountType();
   }, []);
+  
+  useEffect(() => {
+    if (accountType) {
+      loadProfile();
+    }
+  }, [accountType]);
+  
+  const loadAccountType = async () => {
+    try {
+      const type = await AsyncStorage.getItem('partnerAccountType');
+      setAccountType((type === 'freelance' || type === 'barbershop') ? type : 'freelance');
+    } catch (error) {
+      console.error('Error loading account type:', error);
+      setAccountType('freelance');
+    }
+  };
 
   const loadProfile = async () => {
     try {
       setLoading(true);
       
-      if (!currentUser?.id) {
-        Alert.alert('Error', 'User not found');
-        router.back();
+      if (!currentUser?.id || !accountType) {
+        if (!currentUser?.id) {
+          Alert.alert('Error', 'User not found');
+          router.back();
+        }
         return;
       }
 
-      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id);
+      const barberProfile = await barberService.getBarberProfileByUserId(currentUser.id, accountType);
       
       if (barberProfile) {
         setProfile(barberProfile);
@@ -183,43 +197,6 @@ export default function VerificationDocumentsScreen() {
             <View style={styles.documentCardDetails}>
               <Text style={styles.documentCardLabel}>Used for identity verification and age confirmation</Text>
             </View>
-            {/* IC Images */}
-            {(profile.verificationDocuments?.ic_front || profile.verificationDocuments?.ic_back) && (
-              <View style={styles.documentImages}>
-                {profile.verificationDocuments?.ic_front && (
-                  <TouchableOpacity 
-                    style={styles.imagePreview}
-                    onPress={() => setSelectedImage(profile.verificationDocuments!.ic_front!)}
-                    activeOpacity={0.7}
-                  >
-                    <Image 
-                      source={{ uri: profile.verificationDocuments.ic_front }} 
-                      style={styles.previewImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.imageLabelContainer}>
-                      <Text style={styles.imageLabel}>Front</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                {profile.verificationDocuments?.ic_back && (
-                  <TouchableOpacity 
-                    style={styles.imagePreview}
-                    onPress={() => setSelectedImage(profile.verificationDocuments!.ic_back!)}
-                    activeOpacity={0.7}
-                  >
-                    <Image 
-                      source={{ uri: profile.verificationDocuments.ic_back }} 
-                      style={styles.previewImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.imageLabelContainer}>
-                      <Text style={styles.imageLabel}>Back</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
           </View>
 
           <View style={styles.documentCard}>
@@ -236,25 +213,10 @@ export default function VerificationDocumentsScreen() {
             <View style={styles.documentCardDetails}>
               <Text style={styles.documentCardLabel}>Used to verify your identity matches your IC photo</Text>
             </View>
-            {/* Selfie Image */}
-            {profile.verificationDocuments?.selfie && (
-              <View style={styles.documentImages}>
-                <TouchableOpacity 
-                  style={[styles.imagePreview, styles.selfiePreview]}
-                  onPress={() => setSelectedImage(profile.verificationDocuments!.selfie!)}
-                  activeOpacity={0.7}
-                >
-                  <Image 
-                    source={{ uri: profile.verificationDocuments.selfie }} 
-                    style={[styles.previewImage, styles.selfieImage]}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
 
-          {profile.verificationDocuments?.certificates && profile.verificationDocuments.certificates.length > 0 && (
+          {/* Freelance Barbers: Show Certificates */}
+          {accountType === 'freelance' && profile.verificationDocuments?.certificates && profile.verificationDocuments.certificates.length > 0 && (
             <View style={styles.documentCard}>
               <View style={styles.documentCardHeader}>
                 <View style={styles.documentCardIcon}>
@@ -269,25 +231,24 @@ export default function VerificationDocumentsScreen() {
               <View style={styles.documentCardDetails}>
                 <Text style={styles.documentCardLabel}>Barbering qualifications and professional certifications</Text>
               </View>
-              {/* Certificate Images */}
-              <View style={styles.documentImages}>
-                {profile.verificationDocuments.certificates.map((cert, index) => (
-                  <TouchableOpacity 
-                    key={index}
-                    style={styles.imagePreview}
-                    onPress={() => setSelectedImage(cert)}
-                    activeOpacity={0.7}
-                  >
-                    <Image 
-                      source={{ uri: cert }} 
-                      style={styles.previewImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.imageLabelContainer}>
-                      <Text style={styles.imageLabel}>Cert {index + 1}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+            </View>
+          )}
+
+          {/* Barbershop Owners: Show SSM Registration */}
+          {accountType === 'barbershop' && profile.verificationDocuments?.ssm_document && (
+            <View style={styles.documentCard}>
+              <View style={styles.documentCardHeader}>
+                <View style={styles.documentCardIcon}>
+                  <Ionicons name="document-text" size={24} color="#4CAF50" />
+                </View>
+                <View style={styles.documentCardContent}>
+                  <Text style={styles.documentCardTitle}>SSM Registration</Text>
+                  <Text style={styles.documentCardDesc}>Business registration document</Text>
+                </View>
+                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+              </View>
+              <View style={styles.documentCardDetails}>
+                <Text style={styles.documentCardLabel}>Official business registration with SSM Malaysia</Text>
               </View>
             </View>
           )}
@@ -333,33 +294,6 @@ export default function VerificationDocumentsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Image Viewer Modal */}
-      <Modal
-        visible={!!selectedImage}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectedImage(null)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity 
-            style={styles.modalClose}
-            onPress={() => setSelectedImage(null)}
-            activeOpacity={0.9}
-          >
-            <View style={styles.closeButton}>
-              <Ionicons name="close" size={28} color="#FFF" />
-            </View>
-          </TouchableOpacity>
-          {selectedImage && (
-            <Image 
-              source={{ uri: selectedImage }} 
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -644,69 +578,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     lineHeight: 18,
-  },
-  documentImages: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 12,
-    gap: 8,
-  },
-  imagePreview: {
-    width: (SCREEN_WIDTH - 40 - 32 - 16) / 2, // Account for padding and gap
-    aspectRatio: 16 / 10,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#F5F5F5',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  selfiePreview: {
-    width: 120,
-    aspectRatio: 1,
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-  },
-  selfieImage: {
-    borderRadius: 8,
-  },
-  imageLabelContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingVertical: 4,
-    alignItems: 'center',
-  },
-  imageLabel: {
-    fontSize: 11,
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalClose: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 10,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fullImage: {
-    width: SCREEN_WIDTH,
-    height: '80%',
   },
 });

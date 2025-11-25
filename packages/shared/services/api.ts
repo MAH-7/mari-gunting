@@ -418,6 +418,12 @@ export const api = {
     isOpen?: boolean;
     location?: { lat: number; lng: number; radius?: number };
   }): Promise<ApiResponse<PaginatedResponse<any>>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getBarbershops(filters) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(800);
     
     let filtered = [...mockBarbershops];
@@ -438,7 +444,13 @@ export const api = {
     };
   },
 
-  getBarbershopById: async (id: string): Promise<ApiResponse<any>> => {
+  getBarbershopById: async (id: string, location?: { lat: number; lng: number }): Promise<ApiResponse<any>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getBarbershopById(id, location) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(500);
     const shop = mockBarbershops.find(s => s.id === id);
     
@@ -456,9 +468,13 @@ export const api = {
   },
 
   getReviewsByBarbershopId: async (shopId: string): Promise<ApiResponse<Review[]>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getReviewsByBarbershopId(shopId) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(500);
-    // For now, return empty reviews for barbershops
-    // In production, you would filter reviews by shopId
     const reviews = mockReviews.filter(r => r.barberId === shopId);
     
     // Sort by most recent first
@@ -471,8 +487,13 @@ export const api = {
   },
 
   getBarbersByShopId: async (shopId: string): Promise<ApiResponse<any[]>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getBarbersByShopId(shopId) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(600);
-    // Return barbershop staff that work at this specific shop
     const staff = mockBarbershopStaff.filter(s => s.barbershopId === shopId);
     
     return {
@@ -483,6 +504,12 @@ export const api = {
 
   // Get staff member's services from shop catalog
   getStaffServices: async (staffId: string, shopId: string): Promise<ApiResponse<any[]>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getStaffServices(staffId, shopId) as any;
+    }
+    
+    // Otherwise use mock data
     await delay(300);
     
     const staff = mockBarbershopStaff.find(s => s.id === staffId);

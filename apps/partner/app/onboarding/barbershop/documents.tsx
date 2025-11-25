@@ -15,6 +15,8 @@ import { router } from 'expo-router';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as Device from 'expo-device';
 import { barbershopOnboardingService, uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
 import { useAuth } from '@mari-gunting/shared/hooks/useAuth';
 import { Colors, theme } from '@mari-gunting/shared/theme';
@@ -26,6 +28,9 @@ export default function DocumentsScreen() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const [icFrontUri, setIcFrontUri] = useState<string | null>(null);
+  const [icBackUri, setIcBackUri] = useState<string | null>(null);
+  const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [coverImageUris, setCoverImageUris] = useState<string[]>([]);
   const [ssmDocUri, setSsmDocUri] = useState<string | null>(null);
@@ -41,6 +46,9 @@ export default function DocumentsScreen() {
       const progress = await barbershopOnboardingService.getProgress();
       if (progress.documents) {
         // Load saved URLs as display URIs
+        if (progress.documents.icFrontUrl) setIcFrontUri(progress.documents.icFrontUrl);
+        if (progress.documents.icBackUrl) setIcBackUri(progress.documents.icBackUrl);
+        if (progress.documents.selfieUrl) setSelfieUri(progress.documents.selfieUrl);
         if (progress.documents.logoUrl) setLogoUri(progress.documents.logoUrl);
         if (progress.documents.coverImageUrls?.length) setCoverImageUris(progress.documents.coverImageUrls);
         if (progress.documents.ssmDocUrl) setSsmDocUri(progress.documents.ssmDocUrl);
@@ -53,7 +61,61 @@ export default function DocumentsScreen() {
     }
   };
 
-  const pickImage = async (type: 'logo' | 'cover' | 'ssm' | 'license') => {
+  const takePhoto = async (type: 'ic_front' | 'ic_back' | 'selfie') => {
+    try {
+      const isSimulator = !Device.isDevice;
+      
+      if (isSimulator) {
+        Alert.alert(
+          'Camera Not Available',
+          'Camera is not available on simulator. Please use "Choose from Gallery" instead.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.7,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        
+        if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+          Alert.alert('Error', 'Failed to capture photo. Please try again.');
+          return;
+        }
+
+        const compressedImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 1200 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        
+        switch (type) {
+          case 'ic_front':
+            setIcFrontUri(compressedImage.uri);
+            break;
+          case 'ic_back':
+            setIcBackUri(compressedImage.uri);
+            break;
+          case 'selfie':
+            setSelfieUri(compressedImage.uri);
+            break;
+        }
+        
+        console.log(`✅ ${type} photo captured`);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo.');
+    }
+  };
+
+  const pickImage = async (type: 'ic_front' | 'ic_back' | 'selfie' | 'logo' | 'cover' | 'ssm' | 'license') => {
     if (type === 'cover' && coverImageUris.length >= 5) {
       Alert.alert('Maximum Reached', 'You can upload up to 5 cover images.');
       return;
@@ -62,9 +124,11 @@ export default function DocumentsScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: type === 'logo' ? [1, 1] : [16, 9],
+        allowsEditing: type === 'logo' ? true : false,
+        aspect: type === 'logo' ? [1, 1] : undefined,
         quality: 0.8,
+        maxWidth: 1920,
+        maxHeight: 1920,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -75,19 +139,39 @@ export default function DocumentsScreen() {
           return;
         }
         
+        // Compress IC/selfie images
+        let finalUri = uri;
+        if (type === 'ic_front' || type === 'ic_back' || type === 'selfie') {
+          const compressedImage = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 1200 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          finalUri = compressedImage.uri;
+        }
+        
         // Store locally only (staged upload)
         switch (type) {
+          case 'ic_front':
+            setIcFrontUri(finalUri);
+            break;
+          case 'ic_back':
+            setIcBackUri(finalUri);
+            break;
+          case 'selfie':
+            setSelfieUri(finalUri);
+            break;
           case 'logo':
-            setLogoUri(uri);
+            setLogoUri(finalUri);
             break;
           case 'cover':
-            setCoverImageUris([...coverImageUris, uri]);
+            setCoverImageUris([...coverImageUris, finalUri]);
             break;
           case 'ssm':
-            setSsmDocUri(uri);
+            setSsmDocUri(finalUri);
             break;
           case 'license':
-            setBusinessLicenseUri(uri);
+            setBusinessLicenseUri(finalUri);
             break;
         }
         console.log(`✅ ${type} stored locally - will upload on submit`);
@@ -123,8 +207,28 @@ export default function DocumentsScreen() {
 
 
   const validateForm = (): boolean => {
+    if (!icFrontUri) {
+      Alert.alert('IC Front Photo Required', 'Please upload front of your IC.');
+      return false;
+    }
+
+    if (!icBackUri) {
+      Alert.alert('IC Back Photo Required', 'Please upload back of your IC.');
+      return false;
+    }
+
+    if (!selfieUri) {
+      Alert.alert('Selfie Required', 'Please take a selfie for verification.');
+      return false;
+    }
+
     if (coverImageUris.length < 1) {
       Alert.alert('Cover Images Required', 'Please add at least 1 cover image of your barbershop.');
+      return false;
+    }
+
+    if (!ssmDocUri) {
+      Alert.alert('SSM Document Required', 'Please upload your SSM registration document.');
       return false;
     }
 
@@ -139,6 +243,21 @@ export default function DocumentsScreen() {
       setUploading(true);
 
       const tasks: Promise<string | null>[] = [];
+      
+      // IC Front
+      if (icFrontUri && !isUrl(icFrontUri)) {
+        tasks.push(uploadOnboardingImage(icFrontUri, 'barbershop-documents', user?.id || 'temp', `${user?.id}_ic_front.jpg`));
+      }
+      
+      // IC Back
+      if (icBackUri && !isUrl(icBackUri)) {
+        tasks.push(uploadOnboardingImage(icBackUri, 'barbershop-documents', user?.id || 'temp', `${user?.id}_ic_back.jpg`));
+      }
+      
+      // Selfie
+      if (selfieUri && !isUrl(selfieUri)) {
+        tasks.push(uploadOnboardingImage(selfieUri, 'barbershop-documents', user?.id || 'temp', `${user?.id}_selfie.jpg`));
+      }
       
       // Logo
       if (logoUri && !isUrl(logoUri)) {
@@ -166,6 +285,9 @@ export default function DocumentsScreen() {
       
       // Parse results
       let resultIndex = 0;
+      const icFrontUrl = (icFrontUri && !isUrl(icFrontUri)) ? results[resultIndex++] : (icFrontUri || undefined);
+      const icBackUrl = (icBackUri && !isUrl(icBackUri)) ? results[resultIndex++] : (icBackUri || undefined);
+      const selfieUrl = (selfieUri && !isUrl(selfieUri)) ? results[resultIndex++] : (selfieUri || undefined);
       const logoUrl = (logoUri && !isUrl(logoUri)) ? results[resultIndex++] : (logoUri || undefined);
       const coverUrls = await Promise.all(coverTasks);
       const ssmUrl = (ssmDocUri && !isUrl(ssmDocUri)) ? results[resultIndex++] : (ssmDocUri || undefined);
@@ -173,6 +295,9 @@ export default function DocumentsScreen() {
 
       console.log('✅ All documents uploaded successfully!');
       return {
+        icFrontUrl,
+        icBackUrl,
+        selfieUrl,
         logoUrl,
         coverImageUrls: coverUrls.filter((url): url is string => url !== null),
         ssmDocUrl: ssmUrl,
@@ -198,6 +323,9 @@ export default function DocumentsScreen() {
       if (isLoadedFromProgress && coverImageUris.every(uri => isUrl(uri))) {
         console.log('✅ Using previously uploaded data');
         finalData = {
+          icFrontUrl: icFrontUri || undefined,
+          icBackUrl: icBackUri || undefined,
+          selfieUrl: selfieUri || undefined,
           logoUrl: logoUri || undefined,
           coverImageUrls: coverImageUris,
           ssmDocUrl: ssmDocUri || undefined,
@@ -247,10 +375,96 @@ export default function DocumentsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Photos & Documents</Text>
+        <Text style={styles.title}>Verification & Documents</Text>
         <Text style={styles.subtitle}>
-          Upload images of your barbershop and business documents.
+          Upload your identity documents and barbershop photos for verification.
         </Text>
+
+        {/* IC Front */}
+        <View style={styles.section}>
+          <Text style={styles.label}>
+            IC Front Photo <Text style={styles.required}>*</Text>
+          </Text>
+          <Text style={styles.hint}>Front of your Malaysian IC</Text>
+          {icFrontUri ? (
+            <View style={styles.documentImageCard}>
+              <Image source={{ uri: icFrontUri }} style={styles.docImage} />
+              <TouchableOpacity
+                style={styles.changePhotoButton}
+                onPress={() => takePhoto('ic_front')}
+              >
+                <Text style={styles.changePhotoText}>Retake Photo</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => takePhoto('ic_front')}
+              disabled={uploading}
+            >
+              <Ionicons name="camera" size={32} color={Colors.primary} />
+              <Text style={styles.cameraButtonText}>Take Photo</Text>
+              <Text style={styles.cameraButtonHint}>Camera only for security</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* IC Back */}
+        <View style={styles.section}>
+          <Text style={styles.label}>
+            IC Back Photo <Text style={styles.required}>*</Text>
+          </Text>
+          <Text style={styles.hint}>Back of your Malaysian IC</Text>
+          {icBackUri ? (
+            <View style={styles.documentImageCard}>
+              <Image source={{ uri: icBackUri }} style={styles.docImage} />
+              <TouchableOpacity
+                style={styles.changePhotoButton}
+                onPress={() => takePhoto('ic_back')}
+              >
+                <Text style={styles.changePhotoText}>Retake Photo</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => takePhoto('ic_back')}
+              disabled={uploading}
+            >
+              <Ionicons name="camera" size={32} color={Colors.primary} />
+              <Text style={styles.cameraButtonText}>Take Photo</Text>
+              <Text style={styles.cameraButtonHint}>Camera only for security</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Selfie */}
+        <View style={styles.section}>
+          <Text style={styles.label}>
+            Selfie Photo <Text style={styles.required}>*</Text>
+          </Text>
+          <Text style={styles.hint}>Clear selfie for identity verification</Text>
+          {selfieUri ? (
+            <View style={styles.documentImageCard}>
+              <Image source={{ uri: selfieUri }} style={styles.docImage} />
+              <TouchableOpacity
+                style={styles.changePhotoButton}
+                onPress={() => takePhoto('selfie')}
+              >
+                <Text style={styles.changePhotoText}>Retake Selfie</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.selfieButton}
+              onPress={() => takePhoto('selfie')}
+              disabled={uploading}
+            >
+              <Ionicons name="camera" size={32} color={Colors.primary} />
+              <Text style={styles.selfieButtonText}>Take Selfie</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Logo */}
         <View style={styles.section}>
@@ -319,8 +533,10 @@ export default function DocumentsScreen() {
 
         {/* SSM Document */}
         <View style={styles.section}>
-          <Text style={styles.label}>SSM Registration Document (Optional)</Text>
-          <Text style={styles.hint}>If you have SSM registration</Text>
+          <Text style={styles.label}>
+            SSM Registration Document <Text style={styles.required}>*</Text>
+          </Text>
+          <Text style={styles.hint}>Upload your SSM registration certificate</Text>
           {ssmDocUri ? (
             <View style={styles.documentCard}>
               <Ionicons name="document-text" size={32} color={Colors.primary} />
@@ -582,6 +798,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary,
   },
+  documentImageCard: {
+    flexDirection: 'column',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#f0f9f4',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
   documentInfo: {
     flex: 1,
   },
@@ -630,5 +854,92 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  // IC and Selfie styles
+  uploadOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  uploadOptionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    backgroundColor: '#f0f9f4',
+    gap: 8,
+  },
+  uploadOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+    textAlign: 'center',
+  },
+  docImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  docActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  docActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#f0f9f4',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  docActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  cameraButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    backgroundColor: '#f0f9f4',
+    gap: 8,
+  },
+  cameraButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  cameraButtonHint: {
+    fontSize: 12,
+    color: '#666',
+  },
+  selfieButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    backgroundColor: '#f0f9f4',
+    gap: 8,
+  },
+  selfieButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });

@@ -34,7 +34,7 @@ export default function PartnerTabLayout() {
   const queryClient = useQueryClient();
   const [accountType, setAccountType] = useState<'freelance' | 'barbershop'>('freelance');
   const [isLoading, setIsLoading] = useState(true);
-  const [barberId, setBarberId] = useState<string | null>(null);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
 
   // Load account type
   useEffect(() => {
@@ -46,28 +46,46 @@ export default function PartnerTabLayout() {
     });
   }, []);
 
-  // Fetch barber ID for global alerts
+  // Fetch partner ID (barber or barbershop) for global alerts
   useEffect(() => {
-    const fetchBarberId = async () => {
-      if (!currentUser?.id) return;
+    const fetchPartnerId = async () => {
+      if (!currentUser?.id || isLoading) return;
       
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', currentUser.id)
-        .single();
-      
-      if (error) {
-        console.error('❌ Error fetching barber ID (global):', error);
-        return;
+      if (accountType === 'freelance') {
+        // Fetch barber ID for freelance barbers
+        const { data, error } = await supabase
+          .from('barbers')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        if (error) {
+          console.error('❌ Error fetching barber ID (global):', error);
+          return;
+        }
+        
+        console.log('✅ Barber ID found for global alerts:', data.id);
+        setPartnerId(data.id);
+      } else {
+        // Fetch barbershop ID for barbershop owners
+        const { data, error } = await supabase
+          .from('barbershops')
+          .select('id')
+          .eq('owner_id', currentUser.id)
+          .single();
+        
+        if (error) {
+          console.error('❌ Error fetching barbershop ID (global):', error);
+          return;
+        }
+        
+        console.log('✅ Barbershop ID found for global alerts:', data.id);
+        setPartnerId(data.id);
       }
-      
-      console.log('✅ Barber ID found for global alerts:', data.id);
-      setBarberId(data.id);
     };
     
-    fetchBarberId();
-  }, [currentUser?.id]);
+    fetchPartnerId();
+  }, [currentUser?.id, accountType, isLoading]);
 
   // Setup notification sound globally (runs once on tabs mount)
   const player = useAudioPlayer(require('../../assets/sounds/notification.wav'));
@@ -86,19 +104,20 @@ export default function PartnerTabLayout() {
   // GLOBAL: Realtime subscription for NEW booking alerts only
   // This runs on app startup, separate from Jobs screen subscription
   useEffect(() => {
-    if (!barberId) return;
+    if (!partnerId || !accountType) return;
 
-    console.log('🔔 Setting up GLOBAL new booking alerts for barber:', barberId);
+    const filterField = accountType === 'freelance' ? 'barber_id' : 'barbershop_id';
+    console.log(`🔔 Setting up GLOBAL new booking alerts for ${accountType}:`, partnerId);
 
     const channel = supabase
-      .channel(`global-booking-alerts-${barberId}`)
+      .channel(`global-booking-alerts-${partnerId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT', // Only NEW bookings for alerts
           schema: 'public',
           table: 'bookings',
-          filter: `barber_id=eq.${barberId}`,
+          filter: `${filterField}=eq.${partnerId}`,
         },
         async (payload) => {
           console.log('🔔 NEW BOOKING (global alert)!', payload);
@@ -133,9 +152,10 @@ export default function PartnerTabLayout() {
               { 
                 text: 'View Now', 
                 onPress: () => {
-                  // Refresh data when user taps "View Now"
-                  queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
-                  queryClient.invalidateQueries({ queryKey: ['barber-booking-counts'] });
+                  // Refresh data for appropriate account type
+                  const queryKey = accountType === 'freelance' ? 'barber-bookings' : 'barbershop-bookings';
+                  queryClient.invalidateQueries({ queryKey: [queryKey] });
+                  queryClient.invalidateQueries({ queryKey: [`${queryKey}-counts`] });
                 }
               }
             ]
@@ -150,7 +170,7 @@ export default function PartnerTabLayout() {
       console.log('🔌 Cleaning up global booking alerts');
       supabase.removeChannel(channel);
     };
-  }, [barberId, queryClient]);
+  }, [partnerId, accountType, queryClient]);
 
   if (isLoading) {
     return null; // Or a loading indicator
@@ -233,8 +253,6 @@ export default function PartnerTabLayout() {
         {/* Hide barbershop tabs from freelance mode */}
         <Tabs.Screen name="dashboard-shop" options={{ href: null }} />
         <Tabs.Screen name="bookings" options={{ href: null }} />
-        <Tabs.Screen name="staff" options={{ href: null }} />
-        <Tabs.Screen name="shop" options={{ href: null }} />
         <Tabs.Screen name="reports" options={{ href: null }} />
         <Tabs.Screen name="schedule" options={{ href: null }} />
       </Tabs>
@@ -249,7 +267,7 @@ export default function PartnerTabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'business' : 'business-outline'} focused={focused} />
+            <TabBarIcon name={focused ? 'grid' : 'grid-outline'} focused={focused} />
           ),
         }}
       />
@@ -263,29 +281,29 @@ export default function PartnerTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="staff"
+        name="reviews"
         options={{
-          title: 'Staff',
+          title: 'Reviews',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'people' : 'people-outline'} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="shop"
-        options={{
-          title: 'Shop',
-          tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'storefront' : 'storefront-outline'} focused={focused} />
+            <TabBarIcon name={focused ? 'star' : 'star-outline'} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
-          title: 'Reports',
+          title: 'Earnings',
           tabBarIcon: ({ focused }) => (
-            <TabBarIcon name={focused ? 'bar-chart' : 'bar-chart-outline'} focused={focused} />
+            <TabBarIcon name={focused ? 'cash' : 'cash-outline'} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon name={focused ? 'person' : 'person-outline'} focused={focused} />
           ),
         }}
       />
@@ -293,9 +311,7 @@ export default function PartnerTabLayout() {
       <Tabs.Screen name="dashboard" options={{ href: null }} />
       <Tabs.Screen name="jobs" options={{ href: null }} />
       <Tabs.Screen name="schedule" options={{ href: null }} />
-      <Tabs.Screen name="reviews" options={{ href: null }} />
       <Tabs.Screen name="earnings" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }

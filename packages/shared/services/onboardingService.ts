@@ -360,8 +360,65 @@ export const barbershopOnboardingService = {
         return { success: false, error: error.message };
       }
 
-      // Insert staff and services (if applicable)
-      // This would require separate tables/logic - implement based on schema
+      // Fetch the barbershop ID to link services
+      const { data: barbershop, error: fetchError } = await supabase
+        .from('barbershops')
+        .select('id')
+        .eq('owner_id', userId)
+        .single();
+
+      if (fetchError || !barbershop) {
+        console.error('Failed to fetch barbershop ID:', fetchError);
+        return { success: false, error: 'Failed to link services to barbershop' };
+      }
+
+      // Insert services into the services table
+      if (data.staffServices?.services && data.staffServices.services.length > 0) {
+        const serviceInserts = data.staffServices.services.map((service) => ({
+          barbershop_id: barbershop.id,
+          barber_id: null,
+          name: service.name,
+          description: null,
+          category: null,
+          price: service.price,
+          duration_minutes: service.duration,
+          is_active: true,
+          is_popular: false,
+        }));
+
+        const { error: servicesError } = await supabase
+          .from('services')
+          .insert(serviceInserts);
+
+        if (servicesError) {
+          console.error('Error inserting services:', servicesError);
+          // Don't fail the whole onboarding if services fail - they can be added later
+        } else {
+          console.log(`✅ Inserted ${serviceInserts.length} services for barbershop`);
+        }
+      }
+
+      // Insert staff members into barbershop_staff table
+      if (data.staffServices?.staff && data.staffServices.staff.length > 0) {
+        const staffInserts = data.staffServices.staff.map((staff) => ({
+          barbershop_id: barbershop.id,
+          name: staff.name,
+          role: staff.role,
+          specializations: staff.specializations,
+          is_active: true,
+        }));
+
+        const { error: staffError } = await supabase
+          .from('barbershop_staff')
+          .insert(staffInserts);
+
+        if (staffError) {
+          console.error('Error inserting staff:', staffError);
+          // Don't fail the whole onboarding if staff fail - they can be added later
+        } else {
+          console.log(`✅ Inserted ${staffInserts.length} staff members for barbershop`);
+        }
+      }
 
       // Clear saved progress after successful submission
       await this.clearProgress();

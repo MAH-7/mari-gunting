@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { barberService } from '@/shared/services/barberService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { COLORS } from '@/shared/constants';
@@ -51,6 +52,7 @@ export default function BankPayoutSettingsScreen() {
   const [accountName, setAccountName] = useState('');
   const [showIOSPicker, setShowIOSPicker] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [accountType, setAccountType] = useState<'freelance' | 'barbershop' | null>(null);
   
   // Original values to track changes
   const [originalData, setOriginalData] = useState({
@@ -60,8 +62,24 @@ export default function BankPayoutSettingsScreen() {
   });
 
   useEffect(() => {
-    loadBankDetails();
+    loadAccountType();
   }, []);
+  
+  useEffect(() => {
+    if (accountType) {
+      loadBankDetails();
+    }
+  }, [accountType]);
+  
+  const loadAccountType = async () => {
+    try {
+      const type = await AsyncStorage.getItem('partnerAccountType');
+      setAccountType((type === 'freelance' || type === 'barbershop') ? type : 'freelance');
+    } catch (error) {
+      console.error('Error loading account type:', error);
+      setAccountType('freelance');
+    }
+  };
 
   useEffect(() => {
     // Check if there are changes
@@ -76,13 +94,15 @@ export default function BankPayoutSettingsScreen() {
     try {
       setLoading(true);
       
-      if (!currentUser?.id) {
-        Alert.alert('Error', 'User not found');
-        router.back();
+      if (!currentUser?.id || !accountType) {
+        if (!currentUser?.id) {
+          Alert.alert('Error', 'User not found');
+          router.back();
+        }
         return;
       }
 
-      const profile = await barberService.getBarberProfileByUserId(currentUser.id);
+      const profile = await barberService.getBarberProfileByUserId(currentUser.id, accountType);
       
       if (profile) {
         const data = {
@@ -139,12 +159,12 @@ export default function BankPayoutSettingsScreen() {
     try {
       setSaving(true);
 
-      if (!currentUser?.id) {
+      if (!currentUser?.id || !accountType) {
         Alert.alert('Error', 'User not found');
         return;
       }
 
-      const profile = await barberService.getBarberProfileByUserId(currentUser.id);
+      const profile = await barberService.getBarberProfileByUserId(currentUser.id, accountType);
       
       if (!profile) {
         Alert.alert('Error', 'Profile not found');

@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { authService } from '@mari-gunting/shared/services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as Device from 'expo-device';
 import { profileService } from '@mari-gunting/shared/services/profileService';
 import { useStore } from '@mari-gunting/shared/store/useStore';
 import { Colors, theme } from '@mari-gunting/shared/theme';
@@ -58,21 +59,28 @@ export default function CompleteProfileScreen() {
 
   const handlePickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Check if running on simulator
+      const isSimulator = !Device.isDevice;
+      
+      if (isSimulator) {
+        Alert.alert('Camera Not Available', 'Camera is not available on simulator. Please use a real device.');
+        return;
+      }
+
+      // Request camera permission
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
       
       if (status !== 'granted') {
         Alert.alert(
           'Permission Required',
-          'Please allow access to your photos to upload a profile picture',
+          'Please allow camera access to take your profile photo',
           [{ text: 'OK' }]
         );
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
+      // Launch camera
+      const result = await ImagePicker.launchCameraAsync({
         quality: 0.7,
         // Resize to reasonable avatar size
         maxWidth: 512,
@@ -84,7 +92,7 @@ export default function CompleteProfileScreen() {
         
         // Validate URI
         if (!uri || typeof uri !== 'string' || uri.trim() === '') {
-          Alert.alert('Error', 'Failed to get image. Please try again.');
+          Alert.alert('Error', 'Failed to capture photo. Please try again.');
           return;
         }
 
@@ -104,8 +112,8 @@ export default function CompleteProfileScreen() {
         setAvatar(compressedImage.uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 

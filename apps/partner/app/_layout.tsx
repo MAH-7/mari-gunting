@@ -176,7 +176,6 @@ export default function PartnerRootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
-        <Stack.Screen name="register" />
         <Stack.Screen name="verify-otp" />
         <Stack.Screen name="complete-profile" />
         <Stack.Screen name="select-account-type" />

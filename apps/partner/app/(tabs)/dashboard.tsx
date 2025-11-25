@@ -139,6 +139,25 @@ export default function PartnerDashboardScreen() {
   const isOnlineRef = useRef(isOnline);
   const backgroundTimeRef = useRef<number | null>(null);
   const permissionCheckedRef = useRef(false);
+  
+  // GUARD: Redirect barbershop users to their correct dashboard
+  useEffect(() => {
+    const checkAccountType = async () => {
+      if (!currentUser?.id) return;
+      
+      try {
+        const type = await AsyncStorage.getItem('partnerAccountType');
+        if (type === 'barbershop') {
+          console.log('⚠️ Barbershop user detected on freelance dashboard - redirecting...');
+          router.replace('/(tabs)/dashboard-shop');
+        }
+      } catch (error) {
+        console.error('Error checking account type:', error);
+      }
+    };
+    
+    checkAccountType();
+  }, [currentUser?.id]);
 
   // Animation
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -220,7 +239,10 @@ export default function PartnerDashboardScreen() {
         });
       
       if (todayError) {
-        console.error('❌ Error fetching today stats:', todayError);
+        // Silently handle error for new users with no data yet
+        if (todayError.message !== 'Internal server error.') {
+          console.error('❌ Error fetching today stats:', todayError);
+        }
       } else if (todayData && todayData.length > 0) {
         setTodayStats(todayData[0]);
       }
@@ -234,7 +256,10 @@ export default function PartnerDashboardScreen() {
         });
       
       if (monthError) {
-        console.error('❌ Error fetching month stats:', monthError);
+        // Silently handle error for new users with no data yet
+        if (monthError.message !== 'Internal server error.') {
+          console.error('❌ Error fetching month stats:', monthError);
+        }
       } else if (monthData && monthData.length > 0) {
         setMonthlyStats(monthData[0]);
       }
@@ -246,7 +271,10 @@ export default function PartnerDashboardScreen() {
         });
       
       if (allTimeError) {
-        console.error('❌ Error fetching all-time stats:', allTimeError);
+        // Silently handle error for new users with no data yet  
+        if (allTimeError.message !== 'Internal server error.') {
+          console.error('❌ Error fetching all-time stats:', allTimeError);
+        }
       } else if (allTimeData && allTimeData.length > 0) {
         setAllTimeStats(allTimeData[0]);
       }
@@ -277,6 +305,8 @@ export default function PartnerDashboardScreen() {
         setRealRating(stats.avgRating);
       } catch (error) {
         console.error('❌ [Dashboard] Failed to load rating:', error);
+        // Set default rating on error
+        setRealRating(0);
       }
     };
     loadRating();
@@ -293,6 +323,8 @@ export default function PartnerDashboardScreen() {
           setRealRating(stats.avgRating);
         } catch (error) {
           console.error('Failed to refresh rating:', error);
+          // Set default rating on error
+          setRealRating(0);
         }
       };
       refreshRating();
