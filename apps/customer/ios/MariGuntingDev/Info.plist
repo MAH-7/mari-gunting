@@ -42,6 +42,11 @@
     <string>1</string>
     <key>GMSApiKey</key>
     <string>pk.eyJ1IjoiZW1hbmhha2ltIiwiYSI6ImNtZ2w2Y2ZnNzByZWUycnE0Zzh5aHliMzYifQ.vrYCXoePJpvs2ZqlQ1tCWg</string>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>comgooglemaps</string>
+      <string>waze</string>
+    </array>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>

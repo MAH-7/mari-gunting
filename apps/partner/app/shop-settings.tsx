@@ -11,6 +11,7 @@ import {
   StatusBar,
   Switch,
   Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -21,18 +22,8 @@ import { Colors } from '@mari-gunting/shared/theme';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { uploadOnboardingImage } from '@mari-gunting/shared/services/onboardingService';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-const AMENITIES = [
-  'WiFi',
-  'Air Conditioning',
-  'Parking Available',
-  'Wheelchair Accessible',
-  'TV/Entertainment',
-  'Prayer Room',
-  'Kids Play Area',
-  'Refreshments',
-  'Comfortable Waiting Area',
-];
 
 interface OperatingHours {
   [day: string]: {
@@ -44,6 +35,8 @@ interface OperatingHours {
 
 export default function ShopSettingsScreen() {
   const currentUser = useStore((state) => state.currentUser);
+  const tempShopLocation = useStore((state) => state.tempShopLocation);
+  const setTempShopLocation = useStore((state) => state.setTempShopLocation);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -76,10 +69,14 @@ export default function ShopSettingsScreen() {
     sat: { start: '09:00', end: '18:00', isOpen: true },
     sun: { start: '09:00', end: '18:00', isOpen: false },
   });
-
-  const [amenities, setAmenities] = useState<string[]>([]);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  
+  // Time picker state
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [editingType, setEditingType] = useState<'start' | 'end'>('start');
+  const [pickerDate, setPickerDate] = useState(new Date());
 
   const dayNames = {
     mon: 'Monday',
@@ -94,6 +91,31 @@ export default function ShopSettingsScreen() {
   useEffect(() => {
     loadShopData();
   }, []);
+
+  // Handle location data returned from map picker
+  useEffect(() => {
+    if (tempShopLocation) {
+      // Update state with location data from map picker
+      setLatitude(tempShopLocation.latitude);
+      setLongitude(tempShopLocation.longitude);
+      
+      try {
+        const addressData = JSON.parse(tempShopLocation.address);
+        setAddress((prev) => ({
+          ...prev,
+          addressLine1: addressData.addressLine1 || prev.addressLine1,
+          city: addressData.city || prev.city,
+          state: addressData.state || prev.state,
+          postalCode: addressData.postalCode || prev.postalCode,
+        }));
+      } catch (error) {
+        console.error('Error parsing address:', error);
+      }
+      
+      // Clear the temp location to avoid re-triggering
+      setTempShopLocation(null);
+    }
+  }, [tempShopLocation]);
 
   const loadShopData = async () => {
     try {
@@ -141,11 +163,6 @@ export default function ShopSettingsScreen() {
       // Load operating hours
       if (barbershop.opening_hours) {
         setOperatingHours(barbershop.opening_hours);
-      }
-
-      // Load amenities
-      if (barbershop.amenities) {
-        setAmenities(barbershop.amenities);
       }
     } catch (error) {
       console.error('Error loading shop data:', error);
@@ -239,24 +256,29 @@ export default function ShopSettingsScreen() {
     try {
       setSaving(true);
 
+      // Build update object
+      const updateData: any = {
+        name: businessInfo.name.trim(),
+        description: businessInfo.description.trim(),
+        phone_number: businessInfo.phoneNumber.trim(),
+        email: businessInfo.email.trim(),
+        address_line1: address.addressLine1.trim(),
+        address_line2: address.addressLine2.trim(),
+        city: address.city.trim(),
+        state: address.state.trim(),
+        postal_code: address.postalCode.trim(),
+        opening_hours: operatingHours,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Only update location if we have valid coordinates
+      if (latitude && longitude) {
+        updateData.location = `POINT(${longitude} ${latitude})`;
+      }
+
       const { error } = await supabase
         .from('barbershops')
-        .update({
-          name: businessInfo.name.trim(),
-          description: businessInfo.description.trim(),
-          phone_number: businessInfo.phoneNumber.trim(),
-          email: businessInfo.email.trim(),
-          address_line1: address.addressLine1.trim(),
-          address_line2: address.addressLine2.trim(),
-          city: address.city.trim(),
-          state: address.state.trim(),
-          postal_code: address.postalCode.trim(),
-          latitude: latitude || null,
-          longitude: longitude || null,
-          opening_hours: operatingHours,
-          amenities: amenities,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', barbershopId);
 
       if (error) {
@@ -326,14 +348,6 @@ export default function ShopSettingsScreen() {
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
 
-  const toggleAmenity = (amenity: string) => {
-    if (amenities.includes(amenity)) {
-      setAmenities(amenities.filter((a) => a !== amenity));
-    } else {
-      setAmenities([...amenities, amenity]);
-    }
-  };
-
   const toggleDayOpen = (day: string) => {
     setOperatingHours({
       ...operatingHours,
@@ -342,6 +356,42 @@ export default function ShopSettingsScreen() {
         isOpen: !operatingHours[day].isOpen,
       },
     });
+  };
+
+  const openTimePicker = (day: string, type: 'start' | 'end') => {
+    const currentTime = operatingHours[day][type];
+    const [hour, minute] = currentTime.split(':').map(Number);
+    
+    const date = new Date();
+    date.setHours(hour);
+    date.setMinutes(minute);
+    
+    setPickerDate(date);
+    setEditingDay(day);
+    setEditingType(type);
+    setShowTimePicker(true);
+  };
+
+  const onTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    
+    if (selectedDate && editingDay) {
+      const hours = selectedDate.getHours().toString().padStart(2, '0');
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+      const time24 = `${hours}:${minutes}`;
+      
+      setOperatingHours({
+        ...operatingHours,
+        [editingDay]: {
+          ...operatingHours[editingDay],
+          [editingType]: time24,
+        },
+      });
+      
+      setPickerDate(selectedDate);
+    }
   };
 
   if (loading) {
@@ -456,28 +506,34 @@ export default function ShopSettingsScreen() {
           <Text style={styles.sectionTitle}>Address</Text>
 
           <TouchableOpacity
-            style={styles.locationButton}
-            onPress={getCurrentLocation}
-            disabled={gettingLocation}
+            style={styles.mapPickerButton}
+            onPress={() => router.push({
+              pathname: '/map-picker',
+              params: {
+                latitude: latitude?.toString() || '3.139',
+                longitude: longitude?.toString() || '101.6869',
+              },
+            })}
           >
-            {gettingLocation ? (
-              <ActivityIndicator color={Colors.primary} size="small" />
-            ) : (
-              <Ionicons name="location" size={20} color={Colors.primary} />
-            )}
-            <Text style={styles.locationButtonText}>
-              {gettingLocation ? 'Getting Location...' : 'Use Current Location'}
-            </Text>
+            <Ionicons name="map" size={20} color={Colors.primary} />
+            <Text style={styles.mapPickerButtonText}>Pick Location on Map</Text>
           </TouchableOpacity>
 
-          {!latitude || !longitude ? (
+          {latitude && longitude ? (
+            <View style={styles.coordinatesInfo}>
+              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+              <Text style={styles.coordinatesText}>
+                Location set: {latitude.toFixed(4)}, {longitude.toFixed(4)}
+              </Text>
+            </View>
+          ) : (
             <View style={styles.locationWarning}>
               <Ionicons name="information-circle" size={20} color="#FF9800" />
               <Text style={styles.locationWarningText}>
-                Please use current location first to get coordinates
+                Please pick location on map first to enable address fields
               </Text>
             </View>
-          ) : null}
+          )}
 
           <Text style={styles.label}>Address Line 1 *</Text>
           <TextInput
@@ -530,14 +586,30 @@ export default function ShopSettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Operating Hours</Text>
           
-          {Object.keys(operatingHours).map((day) => (
+          {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((day) => (
             <View key={day} style={styles.dayRow}>
               <View style={styles.dayInfo}>
                 <Text style={styles.dayName}>{dayNames[day as keyof typeof dayNames]}</Text>
                 {operatingHours[day].isOpen ? (
-                  <Text style={styles.dayHours}>
-                    {formatTime(operatingHours[day].start)} - {formatTime(operatingHours[day].end)}
-                  </Text>
+                  <View style={styles.timeButtons}>
+                    <TouchableOpacity
+                      style={styles.timeButton}
+                      onPress={() => openTimePicker(day, 'start')}
+                    >
+                      <Text style={styles.timeButtonText}>
+                        {formatTime(operatingHours[day].start)}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text style={styles.timeSeparator}>-</Text>
+                    <TouchableOpacity
+                      style={styles.timeButton}
+                      onPress={() => openTimePicker(day, 'end')}
+                    >
+                      <Text style={styles.timeButtonText}>
+                        {formatTime(operatingHours[day].end)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <Text style={[styles.dayHours, { color: Colors.error }]}>Closed</Text>
                 )}
@@ -552,41 +624,40 @@ export default function ShopSettingsScreen() {
           ))}
         </View>
 
-        {/* Amenities Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Amenities</Text>
-          <Text style={styles.sectionSubtitle}>Select the amenities available at your shop</Text>
-
-          <View style={styles.amenitiesGrid}>
-            {AMENITIES.map((amenity) => (
-              <TouchableOpacity
-                key={amenity}
-                style={[
-                  styles.amenityChip,
-                  amenities.includes(amenity) && styles.amenityChipActive,
-                ]}
-                onPress={() => toggleAmenity(amenity)}
-              >
-                <Ionicons
-                  name={amenities.includes(amenity) ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={20}
-                  color={amenities.includes(amenity) ? Colors.primary : '#999'}
-                />
-                <Text
-                  style={[
-                    styles.amenityText,
-                    amenities.includes(amenity) && styles.amenityTextActive,
-                  ]}
-                >
-                  {amenity}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Time Picker Modal */}
+      {showTimePicker && (
+        <>
+          {Platform.OS === 'ios' ? (
+            <View style={styles.iosPickerOverlay}>
+              <View style={styles.iosPickerContainer}>
+                <View style={styles.iosPickerHeader}>
+                  <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                    <Text style={styles.iosPickerDone}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="time"
+                  is24Hour={true}
+                  display="spinner"
+                  onChange={onTimeChange}
+                />
+              </View>
+            </View>
+          ) : (
+            <DateTimePicker
+              value={pickerDate}
+              mode="time"
+              is24Hour={true}
+              display="default"
+              onChange={onTimeChange}
+            />
+          )}
+        </>
+      )}
 
       {/* Save Button */}
       <View style={styles.footer}>
@@ -708,33 +779,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  amenitiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  amenityChip: {
+  timeButtons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FAFAFA',
   },
-  amenityChipActive: {
+  timeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: Colors.primaryLight,
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: Colors.primary,
   },
-  amenityText: {
+  timeButtonText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  timeSeparator: {
+    fontSize: 16,
     fontWeight: '500',
     color: '#666',
-  },
-  amenityTextActive: {
-    color: Colors.primary,
   },
   logoContainer: {
     alignItems: 'center',
@@ -791,7 +857,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFF',
   },
-  locationButton: {
+  mapPickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -801,14 +867,28 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: Colors.primary,
-    borderStyle: 'dashed',
     backgroundColor: Colors.primaryLight,
     marginBottom: 16,
   },
-  locationButtonText: {
+  mapPickerButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  coordinatesInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#d1fae5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  coordinatesText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#10b981',
+    fontWeight: '500',
   },
   locationWarning: {
     flexDirection: 'row',
@@ -848,5 +928,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFF',
+  },
+  iosPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  iosPickerContainer: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  iosPickerDone: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });

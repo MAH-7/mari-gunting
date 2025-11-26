@@ -147,7 +147,6 @@ export default function BusinessInfoScreen() {
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
-          <View style={styles.progressDot} />
         </View>
         <View style={{ width: 40 }} />
       </View>

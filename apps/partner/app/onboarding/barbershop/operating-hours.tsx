@@ -191,7 +191,6 @@ export default function OperatingHoursScreen() {
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
-          <View style={styles.progressDot} />
         </View>
         <View style={{ width: 40 }} />
       </View>

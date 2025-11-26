@@ -692,16 +692,51 @@ export const supabaseApi = {
   getBarbershops: async (filters?: {
     isOpen?: boolean;
     location?: { lat: number; lng: number; radius?: number };
+    page?: number;
+    limit?: number;
   }): Promise<ApiResponse<PaginatedResponse<any>>> => {
     try {
       console.log('🔍 Fetching barbershops from Supabase');
 
-      const { data: shops, error } = await supabase
-        .from('barbershops')
-        .select('*');
-        // Temporarily removed filters to see all shops:
-        // .eq('is_active', true)
-        // .eq('is_verified', true);
+      let shopsData: any[];
+      let error: any;
+
+      // Use PostGIS function if location is provided (OPTIMIZED)
+      if (filters?.location) {
+        const { lat, lng, radius = 20 } = filters.location;
+        const limit = filters?.limit || 30;
+        const page = filters?.page || 1;
+        const offset = (page - 1) * limit;
+        
+        console.log(`📍 Using PostGIS geospatial query (lat: ${lat}, lng: ${lng}, radius: ${radius}km, page: ${page}, limit: ${limit})`);
+        
+        const { data, error: rpcError } = await supabase
+          .rpc('get_nearby_barbershops', {
+            customer_lat: lat,
+            customer_lng: lng,
+            radius_km: radius,
+            page_limit: limit,
+            page_offset: offset
+          });
+        
+        shopsData = data;
+        error = rpcError;
+        
+        if (data) {
+          console.log(`✅ PostGIS returned ${data.length} nearby barbershops (server-filtered)`);
+        }
+      } else {
+        // Fall back to regular query if no location provided
+        console.log('📍 No location provided, fetching all barbershops');
+        
+        const { data, error: queryError } = await supabase
+          .from('barbershops')
+          .select('*')
+          .eq('is_active', true);
+        
+        shopsData = data;
+        error = queryError;
+      }
 
       if (error) {
         console.error('❌ Error fetching barbershops:', error);
@@ -709,7 +744,7 @@ export const supabaseApi = {
       }
 
       // Fetch services for all barbershops
-      const shopIds = (shops || []).map((s: any) => s.id);
+      const shopIds = (shopsData || []).map((s: any) => s.id);
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select('*')
@@ -739,40 +774,35 @@ export const supabaseApi = {
 
       console.log(`✅ Fetched services for ${Object.keys(servicesByShop).length} barbershops`);
 
-      // Helper to calculate distance (Haversine formula)
-      const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-        const R = 6371; // Earth's radius in km
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = 
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-      };
-
       // Transform barbershops data
-      const transformedShops = (shops || []).map((shop: any) => {
-        const coords = parseLocation(shop.location);
+      const transformedShops = (shopsData || []).map((shop: any) => {
+        // PostGIS function returns flattened data with lat/lng already extracted
+        const isFromPostGIS = filters?.location && shop.location_lat !== undefined;
         
-        // Calculate distance if user location provided
         let distance: number | undefined = undefined;
-        if (filters?.location && coords) {
-          distance = calculateDistance(
-            filters.location.lat,
-            filters.location.lng,
-            coords.latitude,
-            coords.longitude
-          );
+        let coords: { latitude: number; longitude: number } | null = null;
+        
+        if (isFromPostGIS) {
+          // PostGIS returns distance directly
+          distance = shop.straight_line_distance_km;
+          coords = {
+            latitude: shop.location_lat,
+            longitude: shop.location_lng,
+          };
+        } else {
+          // Regular query - need to parse location
+          coords = parseLocation(shop.location);
         }
+        
+        const coverImagesArray = shop.cover_images ? (Array.isArray(shop.cover_images) ? shop.cover_images : [shop.cover_images]) : [];
         
         return {
           id: shop.id,
           name: shop.name,
           description: shop.description,
           logo: shop.logo_url,
-          coverImages: shop.cover_images || [],
+          image: coverImagesArray[0] || shop.logo_url,
+          coverImages: coverImagesArray,
           rating: parseFloat(shop.rating) || 0,
           totalReviews: shop.total_reviews || 0,
           totalBookings: shop.total_bookings || 0,
@@ -790,7 +820,7 @@ export const supabaseApi = {
           },
           openingHours: shop.opening_hours,
           detailedHours: shop.opening_hours,
-          isOpen: shop.is_open_now || false,
+          isOpen: false, // Will be calculated client-side based on opening_hours
           amenities: shop.amenities || [],
           phone: shop.phone_number,
           email: shop.email,
@@ -798,20 +828,26 @@ export const supabaseApi = {
           isVerified: shop.is_verified || false,
           createdAt: shop.created_at,
           services: servicesByShop[shop.id] || [],
-          distance, // Add calculated distance
+          distance, // Distance from PostGIS or undefined
+          reviewsCount: shop.total_reviews || 0,
+          bookingsCount: shop.total_bookings || 0,
         };
       });
 
       console.log(`✅ Found ${transformedShops.length} barbershops`);
+
+      const limit = filters?.limit || 30;
+      const page = filters?.page || 1;
+      const hasMore = transformedShops.length === limit; // If we got full page, there might be more
 
       return {
         success: true,
         data: {
           data: transformedShops,
           total: transformedShops.length,
-          page: 1,
-          pageSize: 20,
-          hasMore: false,
+          page,
+          pageSize: limit,
+          hasMore,
         },
       };
     } catch (error: any) {
@@ -897,15 +933,18 @@ export const supabaseApi = {
         );
       }
       
+      const coverImagesArray = shop.cover_images ? (Array.isArray(shop.cover_images) ? shop.cover_images : [shop.cover_images]) : [];
+      
       const transformedShop = {
         id: shop.id,
         name: shop.name,
         description: shop.description,
         logo: shop.logo_url,
-        coverImages: shop.cover_images || [],
+        image: coverImagesArray[0] || shop.logo_url,
+        coverImages: coverImagesArray,
         rating: parseFloat(shop.rating) || 0,
-        totalReviews: shop.total_reviews || 0,
-        totalBookings: shop.total_bookings || 0,
+        reviewsCount: shop.total_reviews || 0,
+        bookingsCount: shop.total_bookings || 0,
         location: {
           latitude: coords?.latitude || 3.1569,
           longitude: coords?.longitude || 101.7123,

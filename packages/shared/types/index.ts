@@ -43,7 +43,8 @@ export interface Barbershop {
   name: string;
   image: string;
   logo: string;
-  photos?: string[]; // Array of additional photos for the image carousel
+  photos?: string[]; // Array of additional photos (mock data)
+  cover_images?: string[]; // Array of portfolio/work photos (real database)
   rating: number;
   reviewsCount: number;
   address: string;

@@ -154,7 +154,7 @@ export default function StaffServicesScreen() {
     try {
       setLoading(true);
       await barbershopOnboardingService.saveProgress('staffServices', { staff, services });
-      router.push('/onboarding/barbershop/amenities');
+      router.push('/onboarding/barbershop/payout');
     } catch (error) {
       console.error('Error saving progress:', error);
       Alert.alert('Error', 'Failed to save progress. Please try again.');
@@ -176,7 +176,6 @@ export default function StaffServicesScreen() {
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
           <View style={[styles.progressDot, styles.progressActive]} />
-          <View style={styles.progressDot} />
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
         </View>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, ActivityIndicator, Platform, Animated } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Platform, NativeScrollEvent, NativeSyntheticEvent, Linking, Alert, Modal, FlatList } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -14,7 +15,7 @@ const { width, height } = Dimensions.get('window');
 
 // Get current day in user's local timezone (Grab-style)
 const getCurrentDay = () => {
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const now = new Date();
   return days[now.getDay()]; // Use device's local timezone
 };
@@ -24,7 +25,7 @@ const isShopOpenNow = (detailedHours: any) => {
   if (!detailedHours) return false;
 
   const now = new Date();
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const currentDay = days[now.getDay()]; // Use device's local timezone
   const dayInfo = detailedHours[currentDay];
   
@@ -34,12 +35,14 @@ const isShopOpenNow = (detailedHours: any) => {
   const currentMinute = now.getMinutes();
   const currentTimeInMinutes = currentHour * 60 + currentMinute;
   
-  // Parse opening time
-  const [openHour, openMinute] = dayInfo.open.split(':').map(Number);
+  // Parse opening time - database uses 'start' field
+  const openTime = dayInfo.start || dayInfo.open;
+  const [openHour, openMinute] = openTime.split(':').map(Number);
   const openTimeInMinutes = openHour * 60 + openMinute;
   
-  // Parse closing time
-  const [closeHour, closeMinute] = dayInfo.close.split(':').map(Number);
+  // Parse closing time - database uses 'end' field
+  const closeTime = dayInfo.end || dayInfo.close;
+  const [closeHour, closeMinute] = closeTime.split(':').map(Number);
   const closeTimeInMinutes = closeHour * 60 + closeMinute;
   
   return currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes;
@@ -48,8 +51,11 @@ const isShopOpenNow = (detailedHours: any) => {
 export default function BarbershopDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [imageHeight] = useState(280);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [viewerImageIndex, setViewerImageIndex] = useState(0);
+  const portfolioScrollRef = useRef<ScrollView>(null);
+  const fullscreenFlatListRef = useRef<FlatList>(null);
   const { location, getCurrentLocation, hasPermission } = useLocation();
 
   // Get user location on mount
@@ -77,100 +83,90 @@ export default function BarbershopDetailScreen() {
   const reviews = reviewsResponse?.data || [];
   const currentDay = getCurrentDay();
   const isOpen = shop?.detailedHours ? isShopOpenNow(shop.detailedHours) : false;
+  
+  // Debug: Check if photos exist (supports multiple field names)
+  const portfolioPhotos = shop?.photos || shop?.cover_images || shop?.coverImages || [];
+  console.log('🖼️ Portfolio photos:', portfolioPhotos);
+  console.log('🖼️ Photos length:', portfolioPhotos.length);
+  console.log('🕐 Current day:', currentDay);
+  console.log('🕐 Detailed hours:', shop?.detailedHours);
+  console.log('🕐 Is open:', isOpen);
+  if (shop?.detailedHours) {
+    console.log('🕐 Today info:', shop.detailedHours[currentDay]);
+  }
+  
+  // Handle portfolio gallery scroll
+  const handlePortfolioScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollPosition = event.nativeEvent.contentOffset.x;
+    const imageWidth = width - 40;
+    const index = Math.round(scrollPosition / imageWidth);
+    setActivePhotoIndex(index);
+  };
 
-  // Header opacity animation
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, imageHeight - 100],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  // Open fullscreen gallery
+  const openFullscreen = (index: number) => {
+    setViewerImageIndex(index);
+    setShowImageViewer(true);
+    // Scroll to the correct image after modal opens
+    setTimeout(() => {
+      fullscreenFlatListRef.current?.scrollToIndex({
+        index: index,
+        animated: false,
+      });
+    }, 100);
+  };
 
-  // Image scale animation
-  const imageScale = scrollY.interpolate({
-    inputRange: [-100, 0],
-    outputRange: [1.3, 1],
-    extrapolate: 'clamp',
-  });
+  // Handle fullscreen viewable items change
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setViewerImageIndex(viewableItems[0].index || 0);
+    }
+  }).current;
 
-  const imageTranslateY = scrollY.interpolate({
-    inputRange: [0, imageHeight],
-    outputRange: [0, -imageHeight / 2],
-    extrapolate: 'clamp',
-  });
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        {/* Skeleton Hero Image */}
-        <View style={[styles.heroImageContainer, { height: imageHeight }]}>
-          <SkeletonImage width="100%" height={imageHeight} borderRadius={0} />
-          <View style={styles.heroImageOverlay} />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Barbershop</Text>
+          <View style={{ width: 24 }} />
         </View>
-
-        {/* Fixed Header Buttons */}
-        <SafeAreaView edges={['top']} style={styles.fixedHeaderButtons}>
-          <View style={styles.fixedHeaderContent}>
-            <TouchableOpacity 
-              onPress={() => router.back()} 
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.iconButton}>
-                <Ionicons name="arrow-back" size={24} color={Colors.white} />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.iconButton}>
-                <Ionicons name="share-outline" size={22} color={Colors.white} />
-              </View>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-
+        
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={{ height: imageHeight - 40 }} />
 
-          {/* Skeleton Shop Info Card */}
-          <View style={styles.shopInfoCard}>
-            <View style={styles.shopInfoHeader}>
-              <SkeletonCircle size={64} />
-              <View style={styles.shopInfoMain}>
-                <SkeletonText width="70%" height={24} />
-                <SkeletonText width="50%" height={16} style={{ marginTop: 8 }} />
-              </View>
+          {/* Skeleton Profile Header */}
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              <SkeletonCircle size={100} />
             </View>
-
-            {/* Skeleton Quick Stats */}
-            <View style={styles.quickStats}>
-              <View style={styles.statItem}>
-                <SkeletonCircle size={44} />
-                <SkeletonText width={40} height={20} style={{ marginTop: 6 }} />
-                <SkeletonText width={50} height={14} style={{ marginTop: 4 }} />
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <SkeletonCircle size={44} />
-                <SkeletonText width={40} height={20} style={{ marginTop: 6 }} />
-                <SkeletonText width={50} height={14} style={{ marginTop: 4 }} />
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <SkeletonCircle size={44} />
-                <SkeletonText width={40} height={20} style={{ marginTop: 6 }} />
-                <SkeletonText width={50} height={14} style={{ marginTop: 4 }} />
-              </View>
+            <View style={styles.profileInfo}>
+              <SkeletonText width="60%" height={24} style={{ marginBottom: 8 }} />
+              <SkeletonText width="40%" height={16} style={{ marginBottom: 6 }} />
+              <SkeletonText width="35%" height={14} />
             </View>
+          </View>
 
-            {/* Skeleton Address */}
-            <View style={styles.addressCard}>
-              <SkeletonCircle size={40} />
-              <View style={styles.addressContent}>
-                <SkeletonText width={60} height={12} style={{ marginBottom: 6 }} />
-                <SkeletonText width="100%" height={16} />
-              </View>
+          {/* Skeleton Stats */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <SkeletonText width={60} height={28} style={{ marginBottom: 6 }} />
+              <SkeletonText width={70} height={14} />
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <SkeletonText width={60} height={28} style={{ marginBottom: 6 }} />
+              <SkeletonText width={70} height={14} />
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <SkeletonText width={60} height={28} style={{ marginBottom: 6 }} />
+              <SkeletonText width={70} height={14} />
             </View>
           </View>
 
@@ -189,238 +185,304 @@ export default function BarbershopDetailScreen() {
         </ScrollView>
 
         {/* Skeleton Bottom Bar */}
-        <View style={styles.bottomBar}>
-          <View style={[styles.bottomBarContent, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
-            <View style={styles.priceWrapper}>
-              <SkeletonText width={80} height={14} style={{ marginBottom: 4 }} />
-              <SkeletonText width={100} height={24} />
-            </View>
-            <SkeletonBase width={140} height={52} borderRadius={24} />
+        <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
+          <View style={styles.priceContainer}>
+            <SkeletonText width={80} height={14} style={{ marginBottom: 4 }} />
+            <SkeletonText width={100} height={24} />
           </View>
+          <SkeletonBase width={140} height={52} borderRadius={26} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!shop) {
     return (
-      <View style={styles.container}>
-        <SafeAreaView edges={['top']} style={styles.loadingHeaderButtons}>
-          <View style={styles.fixedHeaderContent}>
-            <TouchableOpacity 
-              onPress={() => router.back()} 
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.iconButton}>
-                <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
-              </View>
-            </TouchableOpacity>
-            <View style={{ width: 40 }} />
-          </View>
-        </SafeAreaView>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Barbershop</Text>
+          <View style={{ width: 24 }} />
+        </View>
         <View style={styles.emptyContainer}>
           <Ionicons name="alert-circle-outline" size={64} color={Colors.gray[300]} />
           <Text style={styles.emptyText}>Barbershop not found</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   const lowestPrice = shop.services && shop.services.length > 0 
     ? Math.min(...shop.services.map(s => s.price))
     : 0;
+  
+  const joinedYear = shop.createdAt ? new Date(shop.createdAt).getFullYear() : new Date().getFullYear();
 
   // Operating hours data
   const daysOfWeek = [
-    { key: 'monday', label: 'Monday' },
-    { key: 'tuesday', label: 'Tuesday' },
-    { key: 'wednesday', label: 'Wednesday' },
-    { key: 'thursday', label: 'Thursday' },
-    { key: 'friday', label: 'Friday' },
-    { key: 'saturday', label: 'Saturday' },
-    { key: 'sunday', label: 'Sunday' },
+    { key: 'mon', label: 'Monday' },
+    { key: 'tue', label: 'Tuesday' },
+    { key: 'wed', label: 'Wednesday' },
+    { key: 'thu', label: 'Thursday' },
+    { key: 'fri', label: 'Friday' },
+    { key: 'sat', label: 'Saturday' },
+    { key: 'sun', label: 'Sunday' },
   ];
 
   return (
-    <View style={styles.container}>
-      {/* Hero Image Banner */}
-      <Animated.View style={[styles.heroImageContainer, { height: imageHeight }]}>
-        <Animated.Image
-          source={{ uri: shop.image }}
-          style={[
-            styles.heroImage,
-            {
-              transform: [
-                { scale: imageScale },
-                { translateY: imageTranslateY },
-              ],
-            },
-          ]}
-        />
-        <View style={styles.heroImageOverlay} />
-      </Animated.View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Barbershop</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
-      {/* Animated Header */}
-      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.headerButton}>
-              <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.headerTitleAnimated} numberOfLines={1}>{shop.name}</Text>
-          <TouchableOpacity 
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.headerButton}>
-              <Ionicons name="share-outline" size={22} color="#1C1C1E" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-
-      {/* Fixed Header Buttons (Over Image) */}
-      <SafeAreaView edges={['top']} style={styles.fixedHeaderButtons}>
-        <View style={styles.fixedHeaderContent}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iconButton}>
-              <Ionicons name="arrow-back" size={24} color={Colors.white} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iconButton}>
-              <Ionicons name="share-outline" size={22} color={Colors.white} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-
-      <Animated.ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
-      >
-        <View style={{ height: imageHeight - 40 }} />
-
-        {/* Shop Info Card */}
-        <View style={styles.shopInfoCard}>
-          <View style={styles.shopInfoHeader}>
-            <View style={styles.logoWrapper}>
-              <Image source={{ uri: shop.logo }} style={styles.shopLogo} />
-              {shop.isVerified && (
-                <View style={styles.logoVerifiedBadge}>
-                  <Ionicons name="shield-checkmark" size={14} color={Colors.white} />
-                </View>
-              )}
-            </View>
-            <View style={styles.shopInfoMain}>
-              <Text style={styles.shopName}>{shop.name}</Text>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={16} color="#FBBF24" />
-                <Text style={styles.ratingText}>{shop.rating.toFixed(1)}</Text>
-                <Text style={styles.ratingCount}>({shop.reviewsCount} reviews)</Text>
-                {shop.distance && (
-                  <>
-                    <View style={styles.ratingDot} />
-                    <Ionicons name="navigate" size={14} color={Colors.primary} />
-                    <Text style={styles.distanceText}>~{formatDistance(shop.distance)}</Text>
-                  </>
-                )}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Profile Header */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarContainer}>
+            <Image 
+              source={{ uri: shop.logo }} 
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
+            {shop.isVerified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={22} color="#007AFF" />
               </View>
-            </View>
+            )}
           </View>
+          
+          <View style={styles.profileInfo}>
+            <Text style={styles.name} numberOfLines={2}>{shop.name}</Text>
+            
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={18} color="#FBBF24" />
+              <Text style={styles.ratingText}>{shop.rating.toFixed(1)}</Text>
+              <Text style={styles.reviewCount}>({shop.reviewsCount || 0} reviews)</Text>
+              <Text style={styles.bookingsCount}>• {shop.bookingsCount || 0} bookings</Text>
+            </View>
 
-          {/* Quick Stats */}
-          <View style={styles.quickStats}>
-            <View style={styles.statItem}>
-              <View style={styles.statIconWrapper}>
-                <Ionicons name="people" size={20} color={Colors.primary} />
+            {shop.distance && (
+              <View style={styles.locationRow}>
+                <Ionicons name="navigate" size={16} color={Colors.primary} />
+                <Text style={styles.distanceText}>{formatDistance(shop.distance)} away</Text>
               </View>
-              <Text style={styles.statValue}>{shop.bookingsCount}+</Text>
-              <Text style={styles.statLabel}>Bookings</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIconWrapper}>
-                <Ionicons name="star" size={20} color="#FBBF24" />
-              </View>
-              <Text style={styles.statValue}>{shop.rating}</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIconWrapper}>
-                <Ionicons name="chatbox" size={20} color={Colors.info} />
-              </View>
-              <Text style={styles.statValue}>{shop.reviewsCount}</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
-            </View>
+            )}
           </View>
+        </View>
 
-          {/* Address */}
-          <TouchableOpacity style={styles.addressCard} activeOpacity={0.7}>
-            <View style={styles.addressIconWrapper}>
-              <Ionicons name="location" size={20} color={Colors.primary} />
-            </View>
-            <View style={styles.addressContent}>
-              <Text style={styles.addressLabel}>Location</Text>
-              <Text style={styles.addressText} numberOfLines={2}>
-                {typeof shop.address === 'string' 
-                  ? shop.address 
-                  : `${shop.address.line1}${shop.address.line2 ? ', ' + shop.address.line2 : ''}, ${shop.address.city}, ${shop.address.state} ${shop.address.postalCode}`
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{shop.bookingsCount || 0}</Text>
+            <Text style={styles.statLabel}>Bookings</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{shop.reviewsCount || 0}</Text>
+            <Text style={styles.statLabel}>Reviews</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{joinedYear}</Text>
+            <Text style={styles.statLabel}>Joined</Text>
+          </View>
+        </View>
+
+        {/* Location Section */}
+        {shop.address && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Location</Text>
+            <Text style={styles.addressText}>
+              {typeof shop.address === 'string' 
+                ? shop.address 
+                : `${shop.address.line1 || ''}${shop.address.line2 ? ', ' + shop.address.line2 : ''}${shop.address.city ? ', ' + shop.address.city : ''}${shop.address.state ? ', ' + shop.address.state : ''}${shop.address.postalCode ? ' ' + shop.address.postalCode : ''}`
+              }
+            </Text>
+            <TouchableOpacity
+              style={styles.directionsButton}
+              onPress={async () => {
+                const addressStr = typeof shop.address === 'string' 
+                  ? shop.address
+                  : `${shop.address.line1}, ${shop.address.city}, ${shop.address.state} ${shop.address.postalCode}`;
+                
+                // Use coordinates from shop.location object
+                const latitude = shop.location?.latitude;
+                const longitude = shop.location?.longitude;
+                const hasCoords = !!(latitude && longitude);
+                const coords = hasCoords ? `${latitude},${longitude}` : encodeURIComponent(addressStr);
+                
+                // iOS: Show choice of navigation apps
+                if (Platform.OS === 'ios') {
+                  const options: string[] = ['Apple Maps'];
+                  const urls: string[] = [
+                    hasCoords 
+                      ? `maps://app?daddr=${coords}`
+                      : `maps://app?daddr=${encodeURIComponent(addressStr)}`
+                  ];
+                  
+                  // Check if Google Maps is installed
+                  const googleMapsUrl = hasCoords
+                    ? `comgooglemaps://?daddr=${coords}`
+                    : `comgooglemaps://?daddr=${encodeURIComponent(addressStr)}`;
+                  
+                  try {
+                    const hasGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
+                    if (hasGoogleMaps) {
+                      options.push('Google Maps');
+                      urls.push(googleMapsUrl);
+                    }
+                  } catch (e) {
+                    console.log('Google Maps check failed:', e);
+                  }
+                  
+                  // Check if Waze is installed
+                  const wazeUrl = hasCoords
+                    ? `waze://?ll=${coords}&navigate=yes`
+                    : `waze://?q=${encodeURIComponent(addressStr)}&navigate=yes`;
+                  
+                  try {
+                    const hasWaze = await Linking.canOpenURL(wazeUrl);
+                    if (hasWaze) {
+                      options.push('Waze');
+                      urls.push(wazeUrl);
+                    }
+                  } catch (e) {
+                    console.log('Waze check failed:', e);
+                  }
+                  
+                  options.push('Cancel');
+                  
+                  // Show action sheet
+                  Alert.alert(
+                    'Open in Navigation App',
+                    'Choose your preferred navigation app:',
+                    [
+                      ...options.slice(0, -1).map((option, index) => ({
+                        text: option,
+                        onPress: () => Linking.openURL(urls[index])
+                      })),
+                      { text: 'Cancel', style: 'cancel' }
+                    ]
+                  );
+                } else {
+                  // Android: Use coordinates if available
+                  const candidates: string[] = [];
+                  if (hasCoords) {
+                    candidates.push(`google.navigation:q=${latitude},${longitude}&mode=d`);
+                    candidates.push(`geo:${latitude},${longitude}`);
+                    candidates.push(`geo:0,0?q=${latitude},${longitude}`);
+                  } else {
+                    candidates.push(`geo:0,0?q=${encodeURIComponent(addressStr)}`);
+                  }
+
+                  try {
+                    let opened = false;
+                    for (const candidate of candidates) {
+                      const supported = await Linking.canOpenURL(candidate);
+                      if (supported) {
+                        await Linking.openURL(candidate);
+                        opened = true;
+                        break;
+                      }
+                    }
+                    if (!opened) {
+                      // Final fallback: Google Maps via browser
+                      const googleMapsUrl = hasCoords
+                        ? `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`
+                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressStr)}&travelmode=driving`;
+                      await Linking.openURL(googleMapsUrl);
+                    }
+                  } catch (error) {
+                    Alert.alert('Error', 'Unable to open maps application');
+                  }
                 }
+              }}
+            >
+              <Ionicons name="navigate" size={18} color={Colors.primary} />
+              <Text style={styles.directionsButtonText}>Get Directions</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Our Work Section - Portfolio */}
+        {portfolioPhotos.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.portfolioHeader}>
+              <Text style={styles.sectionTitle}>Our Work</Text>
+              <Text style={styles.photoCount}>{portfolioPhotos.length} photo{portfolioPhotos.length !== 1 ? 's' : ''}</Text>
+            </View>
+            
+            <ScrollView 
+              ref={portfolioScrollRef}
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              pagingEnabled
+              onScroll={handlePortfolioScroll}
+              scrollEventThrottle={16}
+              snapToInterval={width - 40}
+              decelerationRate="fast"
+            >
+              {portfolioPhotos.map((photo: string, index: number) => (
+                <TouchableOpacity 
+                  key={index}
+                  activeOpacity={0.9}
+                  style={{ marginRight: 0 }}
+                  onPress={() => openFullscreen(index)}
+                >
+                  <Image 
+                    source={{ uri: photo }} 
+                    style={styles.portfolioImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
+                  <View style={styles.zoomHint}>
+                    <Ionicons name="expand-outline" size={20} color={Colors.white} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            
+            <View style={styles.photoIndicatorsContainer}>
+              <View style={styles.photoIndicators}>
+                {portfolioPhotos.map((_: string, index: number) => (
+                  <View 
+                    key={index} 
+                    style={[
+                      styles.indicator,
+                      activePhotoIndex === index && styles.indicatorActive
+                    ]} 
+                  />
+                ))}
+              </View>
+              <Text style={styles.photoCounter}>
+                {activePhotoIndex + 1} / {portfolioPhotos.length}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
 
         {/* About Section */}
         {shop.description && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons name="information-circle-outline" size={22} color={Colors.text.primary} />
-                <Text style={styles.sectionTitle}>About</Text>
-              </View>
-            </View>
-            <Text style={styles.descriptionText}>{shop.description}</Text>
+            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.bioText}>{shop.description}</Text>
           </View>
         )}
 
         {/* Operating Hours Section */}
         {shop.detailedHours && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons name="time-outline" size={22} color={Colors.text.primary} />
-                <Text style={styles.sectionTitle}>Operating Hours</Text>
-              </View>
-              {/* Dynamic Open/Closed Status Badge */}
-              <View style={[styles.currentStatusBadge, isOpen ? styles.currentStatusBadgeOpen : styles.currentStatusBadgeClosed]}>
-                {isOpen && <View style={styles.currentStatusDot} />}
-                <Text style={[styles.currentStatusText, !isOpen && styles.currentStatusTextClosed]}>
-                  {isOpen ? 'Open Now' : 'Closed'}
-                </Text>
-              </View>
-            </View>
+            <Text style={styles.sectionTitle}>Operating Hours</Text>
             <View style={styles.hoursContainer}>
               {daysOfWeek.map((day) => {
                 const dayInfo = shop.detailedHours?.[day.key];
@@ -442,11 +504,6 @@ export default function BarbershopDetailScreen() {
                     ]}
                   >
                     <View style={styles.hourDayWrapper}>
-                      {isToday ? (
-                        <View style={[styles.todayIndicator, shouldShowRed && styles.todayIndicatorClosed]} />
-                      ) : (
-                        <View style={styles.todayIndicatorPlaceholder} />
-                      )}
                       <Text style={[styles.hourDay, isToday && styles.hourDayToday]}>
                         {day.label}
                       </Text>
@@ -454,7 +511,7 @@ export default function BarbershopDetailScreen() {
                     <View style={styles.hourTimeWrapper}>
                       {isDayOpen ? (
                         <Text style={[styles.hourTime, isToday && styles.hourTimeToday]}>
-                          {formatTimeRange(dayInfo.open, dayInfo.close)}
+                          {formatTimeRange(dayInfo.start || dayInfo.open, dayInfo.end || dayInfo.close)}
                         </Text>
                       ) : (
                         <Text style={[styles.closedText, isToday && styles.closedTextToday]}>
@@ -469,579 +526,474 @@ export default function BarbershopDetailScreen() {
           </View>
         )}
 
-        {/* Services Section - View Only */}
+        {/* Services */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="cut-outline" size={22} color={Colors.text.primary} />
-              <Text style={styles.sectionTitle}>Services Available</Text>
-            </View>
-            <View style={styles.servicesBadge}>
-              <Text style={styles.servicesBadgeText}>{shop.services?.length || 0}</Text>
-            </View>
+          <View style={styles.servicesHeader}>
+            <Text style={styles.sectionTitle}>Services & Pricing</Text>
+            <Text style={styles.servicesSubtitle}>Select on next screen</Text>
           </View>
-          
-          <View style={styles.servicesNote}>
-            <View style={styles.servicesNoteIcon}>
-              <Ionicons name="information-circle" size={16} color={Colors.primary} />
-            </View>
-            <Text style={styles.servicesNoteText}>
-              {shop.services && shop.services.length > 0 
-                ? 'Choose your preferred service when booking'
-                : 'No services available at this time'
-              }
-            </Text>
-          </View>
-
-          <View style={styles.servicesGrid}>
-            {shop.services && shop.services.length > 0 ? (
-              shop.services.map((service: any, index: number) => (
-                <View
-                  key={service.id}
-                  style={[
-                    styles.serviceCard,
-                    index === shop.services.length - 1 && styles.serviceCardLast,
-                  ]}
-                >
-                <View style={styles.serviceIconBg}>
-                  <Ionicons name="cut" size={20} color={Colors.primary} />
-                </View>
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceName}>{service.name}</Text>
+          {shop.services && shop.services.length > 0 ? (
+            shop.services.map((service: any) => (
+              <View key={service.id} style={styles.serviceInfoCard}>
+                <View style={styles.serviceContent}>
+                  <View style={styles.serviceHeader}>
+                    <View style={styles.serviceNameContainer}>
+                      <Text style={styles.serviceName}>{service.name}</Text>
+                    </View>
+                    <Text style={styles.servicePrice}>{formatCurrency(service.price)}</Text>
+                  </View>
                   {service.description && (
-                    <Text style={styles.serviceDescription} numberOfLines={2}>
-                      {service.description}
-                    </Text>
+                    <Text style={styles.serviceDescription}>{service.description}</Text>
                   )}
-                  <View style={styles.serviceDetails}>
-                    <View style={styles.servicePrice}>
-                      <Text style={styles.servicePriceText}>{formatCurrency(service.price)}</Text>
-                    </View>
-                    <View style={styles.serviceDuration}>
-                      <Ionicons name="time-outline" size={12} color={Colors.gray[500]} />
-                      <Text style={styles.serviceDurationText}>{service.duration} min</Text>
-                    </View>
+                  <View style={styles.serviceMeta}>
+                    <Ionicons name="time-outline" size={14} color="#8E8E93" />
+                    <Text style={styles.serviceTime}>{service.duration} min</Text>
                   </View>
                 </View>
               </View>
-              ))
-            ) : (
-              <View style={styles.emptyServicesCard}>
-                <Ionicons name="cut-outline" size={32} color={Colors.gray[300]} />
-                <Text style={styles.emptyServicesText}>No services available</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Reviews Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons name="star" size={22} color="#FBBF24" />
-              <Text style={styles.sectionTitle}>Customer Reviews</Text>
-            </View>
-            {reviews.length > 0 && (
-              <TouchableOpacity 
-                style={styles.seeAllButton}
-                activeOpacity={0.6}
-                onPress={() => router.push(`/barbershop/reviews/${id}` as any)}
-              >
-                <Text style={styles.seeAllText}>See all</Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Rating Overview */}
-          <View style={styles.ratingOverview}>
-            <View style={styles.ratingOverviewLeft}>
-              <View style={styles.ratingScoreWrapper}>
-                <Text style={styles.ratingScore}>{shop.rating.toFixed(1)}</Text>
-                <Ionicons name="star" size={28} color="#FBBF24" />
-              </View>
-              <View style={styles.ratingStars}>
-                {[...Array(5)].map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < Math.floor(shop.rating) ? 'star' : 'star-outline'}
-                    size={18}
-                    color="#FBBF24"
-                  />
-                ))}
-              </View>
-              <Text style={styles.ratingOverviewCount}>Based on {shop.reviewsCount} reviews</Text>
-            </View>
-            <View style={styles.ratingOverviewBars}>
-              {[5, 4, 3, 2, 1].map((star) => {
-                const count = reviews.filter((r: any) => r.rating === star).length;
-                const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
-                return (
-                  <View key={star} style={styles.ratingBarRow}>
-                    <Text style={styles.ratingBarStar}>{star}</Text>
-                    <Ionicons name="star" size={10} color="#FBBF24" />
-                    <View style={styles.ratingBarTrack}>
-                      <View style={[styles.ratingBarFill, { width: `${percentage}%` }]} />
-                    </View>
-                    <Text style={styles.ratingBarCount}>{count}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Recent Reviews */}
-          {reviews.length > 0 ? (
-            <View style={styles.reviewsList}>
-              {reviews.slice(0, 3).map((review: any, index: number) => (
-                <View
-                  key={review.id}
-                  style={[
-                    styles.reviewCard,
-                    index === Math.min(reviews.length, 3) - 1 && styles.reviewCardLast,
-                  ]}
-                >
-                  <View style={styles.reviewHeader}>
-                    <Image
-                      source={{ uri: review.customerAvatar || 'https://via.placeholder.com/44' }}
-                      style={styles.reviewAvatar}
-                    />
-                    <View style={styles.reviewInfo}>
-                      <Text style={styles.reviewName}>{review.customerName || 'Anonymous'}</Text>
-                      <View style={styles.reviewMeta}>
-                        <View style={styles.reviewStars}>
-                          {[...Array(5)].map((_, i) => (
-                            <Ionicons
-                              key={i}
-                              name={i < review.rating ? 'star' : 'star-outline'}
-                              size={12}
-                              color={i < review.rating ? '#FBBF24' : Colors.gray[200]}
-                            />
-                          ))}
-                        </View>
-                        <View style={styles.reviewDot} />
-                        <Text style={styles.reviewDate}>
-                          {new Date(review.createdAt).toLocaleDateString('en-MY', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </Text>
-                      </View>
-                    </View>
-                    <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
-                  </View>
-                  {review.comment && (
-                    <Text style={styles.reviewComment}>{review.comment}</Text>
-                  )}
-                </View>
-              ))}
-
-              {reviews.length > 3 && (
-                <TouchableOpacity 
-                  style={styles.viewAllReviewsButton}
-                  activeOpacity={0.7}
-                  onPress={() => router.push(`/barbershop/reviews/${id}` as any)}
-                >
-                  <Text style={styles.viewAllReviewsText}>
-                    View all {shop.reviewsCount} reviews
-                  </Text>
-                  <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
-                </TouchableOpacity>
-              )}
-            </View>
+            ))
           ) : (
-            <View style={styles.noReviews}>
-              <View style={styles.noReviewsIcon}>
-                <Ionicons name="chatbubbles-outline" size={40} color={Colors.gray[300]} />
-              </View>
-              <Text style={styles.noReviewsText}>No reviews yet</Text>
-              <Text style={styles.noReviewsSubtext}>
-                Complete a booking to leave the first review
-              </Text>
+            <View style={styles.emptyServicesCard}>
+              <Ionicons name="cut-outline" size={32} color={Colors.gray[300]} />
+              <Text style={styles.emptyServicesText}>No services available</Text>
             </View>
           )}
         </View>
 
-        <View style={{ height: 120 }} />
-      </Animated.ScrollView>
+        {/* Reviews */}
+        {reviews.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.reviewsHeader}>
+              <Text style={styles.sectionTitle}>Customer Reviews</Text>
+              <Text style={styles.reviewsCount}>{reviews.length} review{reviews.length !== 1 ? 's' : ''}</Text>
+            </View>
+            {reviews.slice(0, 3).map((review: any) => (
+              <View key={review.id} style={styles.reviewCard}>
+                <View style={styles.reviewCardHeader}>
+                  <View style={styles.customerInfo}>
+                    <View style={styles.reviewAvatar}>
+                      {review.customerAvatar ? (
+                        <Image 
+                          source={{ uri: review.customerAvatar }} 
+                          style={styles.reviewAvatarImage}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <Text style={styles.reviewAvatarText}>
+                          {(review.customerName || 'A').substring(0, 2).toUpperCase()}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.reviewCustomerDetails}>
+                      <Text style={styles.reviewerName} numberOfLines={1} ellipsizeMode="tail">
+                        {review.customerName || 'Anonymous'}
+                      </Text>
+                      {review.services && review.services.length > 0 && (
+                        <View style={styles.reviewServices}>
+                          <Ionicons name="cut" size={12} color={Colors.primary} />
+                          <Text style={styles.reviewServicesText}>
+                            {review.services.map((s: any) => s.name).join(', ')}
+                          </Text>
+                        </View>
+                      )}
+                      <Text style={styles.reviewDate}>
+                        {new Date(review.createdAt).toLocaleDateString('en-MY', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={[
+                    styles.reviewRatingBadge,
+                    review.rating >= 4 && styles.ratingGood,
+                    review.rating === 3 && styles.ratingNeutral,
+                    review.rating <= 2 && styles.ratingPoor,
+                  ]}>
+                    <Ionicons 
+                      name="star" 
+                      size={12} 
+                      color={review.rating >= 4 ? '#00C853' : review.rating === 3 ? '#FFB800' : '#FF3B30'} 
+                    />
+                    <Text style={styles.reviewRatingText}>{review.rating.toFixed(1)}</Text>
+                  </View>
+                </View>
+                {review.comment && (
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                )}
+                {review.response && (
+                  <View style={styles.responseContainer}>
+                    <View style={styles.responseBadge}>
+                      <View style={styles.responseBadgeLeft}>
+                        <Ionicons name="checkmark-circle" size={12} color="#00C853" />
+                        <Text style={styles.responseBadgeText} numberOfLines={1} ellipsizeMode="tail">
+                          {shop.name.toUpperCase()} REPLIED
+                        </Text>
+                      </View>
+                      <Text style={styles.responseDate}>
+                        {new Date(review.response.date).toLocaleDateString('en-MY', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </Text>
+                    </View>
+                    <Text style={styles.responseContent}>{review.response.text}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+            {reviews.length > 3 && (
+              <TouchableOpacity 
+                style={styles.viewAllReviews}
+                onPress={() => router.push(`/barbershop/reviews/${id}` as any)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.viewAllReviewsText}>View all {reviews.length} reviews</Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
 
       {/* Fixed Bottom Button */}
-      <View style={styles.bottomBar}>
-        <View style={[styles.bottomBarContent, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
-          <View style={styles.priceWrapper}>
-            <Text style={styles.priceLabel}>Starting from</Text>
-            <Text style={styles.priceValue}>{formatCurrency(lowestPrice)}</Text>
-          </View>
+      <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceLabel}>Starting from</Text>
+          <Text style={styles.price}>{formatCurrency(lowestPrice)}</Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.bookButton,
+            !isOpen && styles.bookButtonDisabled,
+          ]}
+          disabled={!isOpen}
+          onPress={() => router.push(`/barbershop/barbers/${shop.id}` as any)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.bookButtonText}>
+            {isOpen ? 'Book Now' : 'Closed'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Image Viewer Modal */}
+      <Modal
+        visible={showImageViewer}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageViewer(false)}
+      >
+        <View style={styles.imageViewerContainer}>
+          {/* Close Button */}
           <TouchableOpacity
-            style={[
-              styles.bookButton,
-              !isOpen && styles.bookButtonDisabled,
-            ]}
-            disabled={!isOpen}
-            onPress={() => router.push(`/barbershop/barbers/${shop.id}` as any)}
+            style={styles.closeButton}
+            onPress={() => setShowImageViewer(false)}
             activeOpacity={0.8}
           >
-            <Text style={styles.bookButtonText}>
-              {isOpen ? 'Book Now' : 'Closed'}
-            </Text>
-            {isOpen && <Ionicons name="arrow-forward" size={20} color={Colors.white} />}
+            <Ionicons name="close" size={32} color={Colors.white} />
           </TouchableOpacity>
+
+          {/* Image Counter */}
+          <View style={styles.imageCounter}>
+            <Text style={styles.imageCounterText}>
+              {viewerImageIndex + 1} / {portfolioPhotos.length}
+            </Text>
+          </View>
+
+          {/* Scrollable Images */}
+          <FlatList
+            ref={fullscreenFlatListRef}
+            data={portfolioPhotos}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => index.toString()}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            getItemLayout={(data, index) => ({
+              length: width,
+              offset: width * index,
+              index,
+            })}
+            renderItem={({ item }) => (
+              <View style={styles.imageViewerSlide}>
+                <Image
+                  source={{ uri: item }}
+                  style={styles.fullScreenImage}
+                  contentFit="contain"
+                  transition={200}
+                  cachePolicy="memory-disk"
+                />
+              </View>
+            )}
+            initialScrollIndex={viewerImageIndex}
+          />
+
+          {/* Navigation Hint */}
+          <Text style={styles.swipeHint}>Swipe to see more photos</Text>
         </View>
-      </View>
-    </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundSecondary,
-  },
-  heroImageContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    overflow: 'hidden',
-    backgroundColor: '#000',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  heroImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  currentStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 5,
-  },
-  currentStatusBadgeOpen: {
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: getStatusBackground("ready"),
-  },
-  currentStatusBadgeClosed: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: Colors.errorLight,
-  },
-  currentStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-  },
-  currentStatusText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  currentStatusTextClosed: {
-    color: '#DC2626',
+    backgroundColor: '#F2F2F7',
   },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: Colors.white,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: '#E5E5EA',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 16,
-    paddingBottom: 12,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleAnimated: {
-    flex: 1,
+  headerTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1C1C1E',
-    textAlign: 'center',
-    marginHorizontal: 12,
-  },
-  fixedHeaderButtons: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 99,
-  },
-  loadingHeaderButtons: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 99,
-    backgroundColor: 'transparent',
-  },
-  fixedHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    letterSpacing: -0.4,
   },
   scrollView: {
     flex: 1,
   },
-  shopInfoCard: {
-    backgroundColor: Colors.white,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  shopInfoHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: 12,
   },
-  logoWrapper: {
+  emptyText: {
+    fontSize: 16,
+    color: '#8E8E93',
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    padding: 20,
+    backgroundColor: Colors.white,
+    gap: 16,
+  },
+  avatarContainer: {
     position: 'relative',
   },
-  shopLogo: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 2,
-    borderColor: Colors.white,
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#E5E5EA',
   },
-  logoVerifiedBadge: {
+  verifiedBadge: {
     position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.info,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.white,
+    bottom: 2,
+    right: 2,
   },
-  shopInfoMain: {
+  profileInfo: {
     flex: 1,
-    gap: 6,
+    justifyContent: 'center',
+    gap: 8,
   },
-  shopName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.text.primary,
+  name: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1C1C1E',
     letterSpacing: -0.5,
+    flexShrink: 1,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    flexWrap: 'wrap',
   },
   ratingText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text.primary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
   },
-  ratingCount: {
+  reviewCount: {
     fontSize: 14,
-    fontWeight: '500',
-    color: Colors.gray[500],
+    color: '#8E8E93',
   },
-  ratingDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.gray[300],
-    marginHorizontal: 4,
+  bookingsCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   distanceText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.primary,
   },
-  quickStats: {
+  statsContainer: {
     flexDirection: 'row',
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: Colors.gray[100],
-    marginBottom: 16,
+    backgroundColor: Colors.white,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 20,
+    marginTop: 12,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
     gap: 6,
   },
-  statIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.text.primary,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1C1C1E',
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.gray[500],
+    color: '#8E8E93',
   },
   statDivider: {
     width: 1,
     backgroundColor: Colors.gray[200],
   },
-  addressCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.gray[200],
-  },
-  addressIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addressContent: {
-    flex: 1,
-    gap: 2,
-  },
-  addressLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.gray[500],
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  addressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text.primary,
-    lineHeight: 20,
-  },
   section: {
     backgroundColor: Colors.white,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 20,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    marginTop: 12,
   },
   sectionTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: Colors.text.primary,
-    letterSpacing: -0.5,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginBottom: 16,
+    letterSpacing: -0.4,
   },
-  servicesBadge: {
-    minWidth: 32,
-    height: 32,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    backgroundColor: Colors.primaryLight,
+  bioText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#3C3C43',
+  },
+  servicesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: getStatusBackground("ready"),
+    marginBottom: 16,
   },
-  servicesBadgeText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.primary,
+  servicesSubtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#8E8E93',
   },
-  servicesNote: {
+  serviceInfoCard: {
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    padding: 16,
+  },
+  serviceContent: {
+    flex: 1,
+  },
+  serviceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  serviceNameContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 12,
-    marginBottom: 16,
     gap: 8,
-    borderWidth: 1,
-    borderColor: getStatusBackground("ready"),
+    flexWrap: 'wrap',
   },
-  servicesNoteIcon: {
-    width: 20,
-    height: 20,
+  serviceName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  servicePrice: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  serviceDescription: {
+    fontSize: 14,
+    color: Colors.gray[500],
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  serviceMeta: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
-  servicesNoteText: {
-    flex: 1,
+  serviceTime: {
+    fontSize: 13,
+    color: '#8E8E93',
+  },
+  portfolioHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  photoCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  portfolioImage: {
+    width: width - 40,
+    height: 280,
+    borderRadius: 16,
+    backgroundColor: '#E5E5EA',
+  },
+  zoomHint: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoIndicatorsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 8,
+  },
+  photoIndicators: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  indicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.gray[300],
+  },
+  indicatorActive: {
+    backgroundColor: Colors.primary,
+    width: 20,
+  },
+  photoCounter: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#059669',
-    lineHeight: 18,
-  },
-  servicesGrid: {
-    gap: 10,
+    color: '#1C1C1E',
   },
   emptyServicesCard: {
     alignItems: 'center',
@@ -1053,71 +1005,6 @@ const styles = StyleSheet.create({
   },
   emptyServicesText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: Colors.gray[500],
-  },
-  serviceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.gray[200],
-  },
-  serviceCardLast: {
-    marginBottom: 0,
-  },
-  serviceIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: getStatusBackground("ready"),
-  },
-  serviceInfo: {
-    flex: 1,
-    gap: 6,
-  },
-  serviceName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text.primary,
-  },
-  serviceDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: Colors.gray[600],
-  },
-  serviceDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  servicePrice: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: Colors.white,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-  },
-  servicePriceText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  serviceDuration: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  serviceDurationText: {
-    fontSize: 13,
     fontWeight: '600',
     color: Colors.gray[500],
   },
@@ -1135,11 +1022,7 @@ const styles = StyleSheet.create({
   },
   hourRowTodayOpen: {
     backgroundColor: Colors.primaryLight,
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
     paddingVertical: 14,
-    marginTop: -1,
-    marginBottom: -1,
     borderRadius: 12,
     borderBottomWidth: 0,
     borderWidth: 1.5,
@@ -1147,11 +1030,7 @@ const styles = StyleSheet.create({
   },
   hourRowTodayClosed: {
     backgroundColor: '#FEF2F2',
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
     paddingVertical: 14,
-    marginTop: -1,
-    marginBottom: -1,
     borderRadius: 12,
     borderBottomWidth: 0,
     borderWidth: 1.5,
@@ -1163,27 +1042,14 @@ const styles = StyleSheet.create({
     gap: 8,
     minWidth: 0,
   },
-  todayIndicator: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.primary,
-  },
-  todayIndicatorClosed: {
-    backgroundColor: '#DC2626',
-  },
-  todayIndicatorPlaceholder: {
-    width: 4,
-    height: 4,
-  },
   hourDay: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.gray[700],
   },
   hourDayToday: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: Colors.text.primary,
   },
   hourTimeWrapper: {
@@ -1194,22 +1060,22 @@ const styles = StyleSheet.create({
   },
   hourTime: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.text.primary,
   },
   hourTimeToday: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '500',
     color: Colors.text.primary,
   },
   closedText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#DC2626',
   },
   closedTextToday: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#DC2626',
   },
   seeAllButton: {
@@ -1223,193 +1089,202 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
   },
-  ratingOverview: {
+  reviewsHeader: {
     flexDirection: 'row',
-    padding: 20,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 16,
-    marginBottom: 20,
-    gap: 24,
-    borderWidth: 1,
-    borderColor: Colors.gray[100],
-  },
-  ratingOverviewLeft: {
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingRight: 20,
-    borderRightWidth: 1,
-    borderRightColor: Colors.gray[200],
+    marginBottom: 16,
   },
-  ratingScoreWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  ratingScore: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: Colors.text.primary,
-    letterSpacing: -1,
-  },
-  ratingStars: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  ratingOverviewCount: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.gray[500],
-    textAlign: 'center',
-  },
-  ratingOverviewBars: {
-    flex: 1,
-    gap: 8,
-    justifyContent: 'center',
-  },
-  ratingBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  ratingBarStar: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.gray[500],
-    width: 10,
-  },
-  ratingBarTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: Colors.gray[200],
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  ratingBarFill: {
-    height: '100%',
-    backgroundColor: '#FBBF24',
-    borderRadius: 3,
-  },
-  ratingBarCount: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.gray[400],
-    width: 24,
-    textAlign: 'right',
-  },
-  reviewsList: {
-    gap: 0,
+  reviewsCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+    fontWeight: '500',
   },
   reviewCard: {
-    paddingTop: 16,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.gray[100],
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
-  reviewCardLast: {
-    borderBottomWidth: 0,
-    paddingBottom: 0,
-  },
-  reviewHeader: {
+  reviewCardHeader: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 10,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  reviewAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.gray[100],
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
-  reviewInfo: {
-    flex: 1,
-    gap: 6,
-  },
-  reviewName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text.primary,
-  },
-  reviewMeta: {
+  customerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    flex: 1,
   },
-  reviewStars: {
+  reviewAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  reviewAvatarImage: {
+    width: 40,
+    height: 40,
+  },
+  reviewAvatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  reviewCustomerDetails: {
+    flex: 1,
+  },
+  reviewerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 2,
+  },
+  reviewServices: {
     flexDirection: 'row',
-    gap: 2,
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+    marginBottom: 2,
   },
-  reviewDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.gray[300],
+  reviewServicesText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '500',
   },
   reviewDate: {
     fontSize: 12,
-    fontWeight: '600',
-    color: Colors.gray[400],
+    color: '#999',
+  },
+  reviewRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  ratingGood: {
+    backgroundColor: '#E8F5E9',
+  },
+  ratingNeutral: {
+    backgroundColor: '#FFF8E1',
+  },
+  ratingPoor: {
+    backgroundColor: '#FFEBEE',
+  },
+  reviewRatingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000',
   },
   reviewComment: {
     fontSize: 14,
-    lineHeight: 21,
-    color: Colors.gray[700],
+    color: '#333',
+    lineHeight: 20,
+    marginBottom: 8,
   },
-  viewAllReviewsButton: {
+  responseContainer: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  responseBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  responseBadgeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+    marginRight: 8,
+  },
+  responseBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#00C853',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  responseDate: {
+    fontSize: 11,
+    color: '#999',
+  },
+  responseContent: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  viewAllReviews: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  viewAllReviewsText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  addressText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#3C3C43',
+    marginBottom: 8,
+  },
+  distanceInfo: {
+    fontSize: 13,
+    color: '#8E8E93',
+    marginBottom: 16,
+  },
+  directionsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: Colors.primaryLight,
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: getStatusBackground("ready"),
+    borderWidth: 1,
+    borderColor: Colors.primary,
   },
-  viewAllReviewsText: {
-    fontSize: 14,
-    fontWeight: '800',
+  directionsButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
     color: Colors.primary,
   },
-  descriptionText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: Colors.gray[700],
-  },
-  noReviews: {
-    paddingVertical: 48,
-    alignItems: 'center',
-    gap: 12,
-  },
-  noReviewsIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  noReviewsText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.gray[500],
-  },
-  noReviewsSubtext: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.gray[400],
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
     backgroundColor: Colors.white,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
@@ -1419,35 +1294,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  bottomBarContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: Platform.OS === 'android' ? 16 : 32, // Will be overridden inline with insets
-  },
-  priceWrapper: {
+  priceContainer: {
     gap: 2,
   },
   priceLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.gray[500],
+    color: '#8E8E93',
   },
-  priceValue: {
+  price: {
     fontSize: 22,
-    fontWeight: '800',
-    color: Colors.text.primary,
+    fontWeight: '700',
+    color: '#1C1C1E',
   },
   bookButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
     paddingHorizontal: 40,
     paddingVertical: 16,
-    borderRadius: 24,
-    gap: 8,
+    borderRadius: 26,
+    backgroundColor: Colors.primary,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -1460,30 +1324,55 @@ const styles = StyleSheet.create({
   },
   bookButtonText: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     color: Colors.white,
-    letterSpacing: 0.3,
   },
-  loadingContainer: {
+  imageViewerContainer: {
     flex: 1,
+    backgroundColor: Colors.black,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
+    zIndex: 10,
   },
-  loadingText: {
+  imageCounter: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  imageCounterText: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.gray[500],
+    color: Colors.white,
   },
-  emptyContainer: {
-    flex: 1,
+  imageViewerSlide: {
+    width: width,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.gray[500],
+  fullScreenImage: {
+    width: width,
+    height: '100%',
+  },
+  swipeHint: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 60 : 40,
+    alignSelf: 'center',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
   },
 });

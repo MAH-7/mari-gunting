@@ -146,7 +146,6 @@ export default function PayoutScreen() {
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
-          <View style={styles.progressDotCompleted} />
           <View style={[styles.progressDot, styles.progressActive]} />
           <View style={styles.progressDot} />
         </View>

@@ -73,6 +73,10 @@ interface AppState {
   // UI State
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  
+  // Temp data for passing between screens
+  tempShopLocation: { latitude: number; longitude: number; address: string } | null;
+  setTempShopLocation: (location: { latitude: number; longitude: number; address: string } | null) => void;
 }
 
 export const useStore = create<AppState>()(persist(
@@ -93,6 +97,7 @@ export const useStore = create<AppState>()(persist(
     selectedAddress: null,
     currentBooking: null,
     isLoading: false,
+    tempShopLocation: null,
     
     // Actions
     setCurrentUser: (user) => set({ currentUser: user }),
@@ -228,6 +233,8 @@ export const useStore = create<AppState>()(persist(
   setCurrentBooking: (booking) => set({ currentBooking: booking }),
   
     setIsLoading: (loading) => set({ isLoading: loading }),
+    
+    setTempShopLocation: (location) => set({ tempShopLocation: location }),
   }),
   {
     name: 'mari-gunting-storage',

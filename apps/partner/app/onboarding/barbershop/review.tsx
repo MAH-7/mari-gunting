@@ -137,7 +137,6 @@ export default function ReviewScreen() {
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
           <View style={styles.progressDotCompleted} />
-          <View style={styles.progressDotCompleted} />
           <View style={[styles.progressDot, styles.progressActive]} />
         </View>
         <View style={{ width: 40 }} />
@@ -279,30 +278,6 @@ export default function ReviewScreen() {
                   </Text>
                 ))}
               </View>
-            )}
-          </View>
-        </View>
-
-        {/* Amenities Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Amenities</Text>
-            <TouchableOpacity onPress={() => handleEdit('amenities')}>
-              <Text style={styles.editButton}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.card}>
-            {data.amenities && data.amenities.length > 0 ? (
-              <View style={styles.amenitiesList}>
-                {data.amenities.map((amenity, index) => (
-                  <View key={index} style={styles.amenityItem}>
-                    <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
-                    <Text style={styles.amenityText}>{amenity}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <InfoRow label="Status" value="No amenities selected" />
             )}
           </View>
         </View>
