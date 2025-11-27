@@ -16,11 +16,12 @@ export default function BarbershopBookingScreen() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [showAllDates, setShowAllDates] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
-  // Fetch staff details
+  // Fetch staff details (barbershop staff, not freelance barber)
   const { data: barberResponse } = useQuery({
-    queryKey: ['barber', barberId],
-    queryFn: () => api.getBarberById(barberId),
+    queryKey: ['staff', barberId],
+    queryFn: () => api.getStaffById(barberId),
   });
 
   // Fetch barbershop details
@@ -32,10 +33,9 @@ export default function BarbershopBookingScreen() {
   const barber = barberResponse?.data; // This is BarbershopStaff
   const shop = shopResponse?.data;
   
-  // Get staff's available services from shop catalog (staff has serviceIds, not services)
-  const staffServices = shop?.services.filter((service: any) => 
-    barber?.serviceIds?.includes(service.id)
-  ) || [];
+  // Services are based on barbershop, not individual staff
+  // All staff can perform all shop services at shop's prices
+  const staffServices = shop?.services || [];
   
   const selectedServices = staffServices.filter((s: any) => selectedServiceIds.includes(s.id)) || [];
   
@@ -51,18 +51,21 @@ export default function BarbershopBookingScreen() {
   // Generate next 14 days for date selection (2 weeks)
   // Filter out closed days based on shop's operating hours
   const dates = useMemo(() => {
-    if (!shop?.detailedHours) return [];
+    if (!shop?.detailedHours) {
+      return [];
+    }
     
     const result = [];
     const today = new Date();
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    // Database uses short day keys: sun, mon, tue, wed, thu, fri, sat
+    const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     
     for (let i = 0; i < 14; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       
-      const dayOfWeek = dayNames[date.getDay()];
-      const dayInfo = shop.detailedHours[dayOfWeek];
+      const dayKey = dayKeys[date.getDay()];
+      const dayInfo = shop.detailedHours[dayKey];
       
       // Skip if shop is closed on this day
       if (!dayInfo?.isOpen) continue;
@@ -86,9 +89,9 @@ export default function BarbershopBookingScreen() {
         displayLabel,
         isToday: i === 0,
         isTomorrow: i === 1,
-        dayOfWeek,
-        openTime: dayInfo.open,
-        closeTime: dayInfo.close,
+        dayOfWeek: dayKey,
+        openTime: dayInfo.start,  // Database uses 'start', not 'open'
+        closeTime: dayInfo.end,    // Database uses 'end', not 'close'
       });
     }
     
@@ -179,6 +182,11 @@ export default function BarbershopBookingScreen() {
       return;
     }
 
+    // Format address for payment params
+    const formattedAddress = typeof shop.address === 'string' 
+      ? shop.address 
+      : `${shop.address.line1}${shop.address.line2 ? ', ' + shop.address.line2 : ''}, ${shop.address.city}, ${shop.address.state} ${shop.address.postalCode}`;
+
     // Navigate to payment method selection with complete booking data
     router.push({
       pathname: '/payment-method',
@@ -191,7 +199,7 @@ export default function BarbershopBookingScreen() {
         barberName: barber.name,
         barberAvatar: barber.avatar,
         shopName: shop.name,
-        shopAddress: shop.address,
+        shopAddress: formattedAddress,
         shopPhone: shop.phone,         // NEW: Shop phone number
         serviceIds: selectedServiceIds.join(','),
         services: JSON.stringify(selectedServices),
@@ -242,54 +250,63 @@ export default function BarbershopBookingScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Booking Summary Card */}
-        {(selectedDate || selectedTime || selectedServiceIds.length > 0) && (
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryHeader}>
-              <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
-              <Text style={styles.summaryTitle}>Booking Summary</Text>
+        {/* 1. Booking At - Context First */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="location" size={20} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Booking At</Text>
+          </View>
+          <View style={styles.bookingAtCard}>
+            {/* Shop */}
+            <View style={styles.shopRow}>
+              <Ionicons name="storefront" size={18} color={Colors.primary} />
+              <Text style={styles.shopName}>{shop.name}</Text>
+              {shop.isVerified && (
+                <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
+              )}
+            </View>
+            <View style={styles.shopAddress}>
+              <Ionicons name="location-outline" size={14} color={Colors.gray[500]} />
+              <Text style={styles.shopAddressText}>
+                {typeof shop.address === 'string' ? shop.address : 
+                 `${shop.address.line1}, ${shop.address.city}`}
+              </Text>
             </View>
             
-            <View style={styles.summaryContent}>
-              {/* Date & Time */}
-              {selectedDate && (
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Date & Time</Text>
-                  <View style={styles.summaryValueContainer}>
-                    <Text style={styles.summaryValue}>
-                      {dates.find(d => d.id === selectedDate)?.displayLabel || 'Not selected'}
-                    </Text>
-                    {selectedTime && (
-                      <Text style={styles.summaryValue}>
-                        {' • '}{timeSlots.morning.concat(timeSlots.afternoon, timeSlots.evening).find((s: any) => s.id === selectedTime)?.label || selectedTime}
-                      </Text>
-                    )}
-                  </View>
+            {/* Divider */}
+            <View style={styles.bookingAtDivider} />
+            
+            {/* Barber */}
+            <View style={styles.barberRow}>
+              <Image source={{ uri: barber.avatar || 'https://via.placeholder.com/40' }} style={styles.barberAvatar} />
+              <View style={styles.barberInfo}>
+                <View style={styles.barberNameRow}>
+                  <Text style={styles.barberName}>{barber.name}</Text>
+                  {barber.isVerified && (
+                    <Ionicons name="checkmark-circle" size={14} color="#007AFF" />
+                  )}
                 </View>
-              )}
-              
-              {/* Services */}
-              {selectedServiceIds.length > 0 && (
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Services</Text>
-                  <Text style={styles.summaryValue}>{selectedServiceIds.length} selected • {totalDuration} min</Text>
+                <View style={styles.barberMeta}>
+                  <Ionicons name="star" size={12} color="#FBBF24" />
+                  <Text style={styles.barberMetaText}>{barber.rating.toFixed(1)}</Text>
+                  <Text style={styles.barberMetaText}> • </Text>
+                  <Text style={styles.barberMetaText}>{barber.completedJobs} jobs</Text>
                 </View>
-              )}
-              
-              {/* Total */}
-              {selectedServiceIds.length > 0 && (
-                <View style={[styles.summaryRow, styles.summaryRowTotal]}>
-                  <Text style={styles.summaryLabelTotal}>Total Amount</Text>
-                  <Text style={styles.summaryValueTotal}>{formatPrice(total)}</Text>
-                </View>
-              )}
+              </View>
             </View>
           </View>
-        )}
+        </View>
 
-        {/* Service Selection */}
+        {/* 2. Service Selection - Step 1 */}
         <View style={styles.section}>
-          <View style={styles.servicesHeader}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.stepIndicator}>
+              {selectedServiceIds.length > 0 ? (
+                <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+              ) : (
+                <View style={styles.stepNumber}><Text style={styles.stepNumberText}>1</Text></View>
+              )}
+            </View>
             <Text style={styles.sectionTitle}>Select Services</Text>
             {selectedServiceIds.length > 0 && (
               <Text style={styles.selectedCount}>{selectedServiceIds.length} selected</Text>
@@ -333,9 +350,18 @@ export default function BarbershopBookingScreen() {
           })}
         </View>
 
-        {/* Date Selection - Grab Style */}
+        {/* 3. Date Selection - Step 2 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Date</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.stepIndicator}>
+              {selectedDate ? (
+                <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+              ) : (
+                <View style={styles.stepNumber}><Text style={styles.stepNumberText}>2</Text></View>
+              )}
+            </View>
+            <Text style={styles.sectionTitle}>Select Date</Text>
+          </View>
           <View style={styles.dateListGrab}>
             {(showAllDates ? dates : dates.slice(0, 5)).map((date, index) => {
               return (
@@ -381,9 +407,18 @@ export default function BarbershopBookingScreen() {
           )}
         </View>
 
-        {/* Time Selection - Grab Style */}
+        {/* 4. Time Selection - Step 3 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Time</Text>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.stepIndicator}>
+              {selectedTime ? (
+                <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+              ) : (
+                <View style={styles.stepNumber}><Text style={styles.stepNumberText}>3</Text></View>
+              )}
+            </View>
+            <Text style={styles.sectionTitle}>Select Time</Text>
+          </View>
           
           {!selectedDate ? (
             <View style={styles.timeEmptyState}>
@@ -486,55 +521,64 @@ export default function BarbershopBookingScreen() {
           )}
         </View>
 
-        {/* Barber & Shop Info - Shop First */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Booking At</Text>
-          <View style={styles.compactInfoCard}>
-            {/* Shop Info */}
-            <View style={styles.shopSection}>
-              <View style={styles.shopHeader}>
-                <Ionicons name="storefront" size={18} color={Colors.primary} />
-                <Text style={styles.shopNameText}>{shop.name}</Text>
-                {shop.isVerified && (
-                  <Ionicons name="checkmark-circle" size={16} color="#007AFF" />
-                )}
-              </View>
-              <View style={styles.compactLocation}>
-                <Ionicons name="location" size={14} color="#8E8E93" />
-                <Text style={styles.compactLocationText}>{shop.address}</Text>
-              </View>
-            </View>
-            
-            {/* Divider */}
-            <View style={styles.infoDivider} />
-            
-            {/* Barber Info */}
-            <View style={styles.barberSection}>
-              <Text style={styles.barberLabel}>Your Barber</Text>
-              <View style={styles.compactRow}>
-                <Image source={{ uri: barber.avatar }} style={styles.compactAvatar} />
-                <View style={styles.compactInfo}>
-                  <View style={styles.compactNameRow}>
-                    <Text style={styles.compactName}>{barber.name}</Text>
-                    {barber.isVerified && (
-                      <Ionicons name="checkmark-circle" size={14} color="#007AFF" />
-                    )}
-                  </View>
-                  <View style={styles.compactMeta}>
-                    <Ionicons name="star" size={12} color="#FBBF24" />
-                    <Text style={styles.compactMetaText}>{barber.rating.toFixed(1)}</Text>
-                    <Text style={styles.compactMetaText}> • </Text>
-                    <Text style={styles.compactMetaText}>{barber.completedJobs} jobs</Text>
-                  </View>
+        {/* Bottom Padding */}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+
+      {/* Sticky Summary (Grab Style) */}
+      <TouchableOpacity 
+        style={styles.stickySummary}
+        onPress={() => setSummaryExpanded(!summaryExpanded)}
+        activeOpacity={0.9}
+      >
+        <View style={styles.summaryHeader}>
+          <View style={styles.summaryHeaderLeft}>
+            <Ionicons name={summaryExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={Colors.gray[600]} />
+            <Text style={styles.summaryHeaderTitle}>Summary</Text>
+          </View>
+          <Text style={styles.summaryHeaderTotal}>
+            Total {selectedServiceIds.length > 0 ? formatPrice(total) : 'RM 0.00'}
+          </Text>
+        </View>
+        
+        {summaryExpanded && (
+          <View style={styles.summaryExpandedContent}>
+            {/* Price Breakdown */}
+            {selectedServiceIds.length > 0 && (
+              <>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryRowLabel}>Services ({selectedServiceIds.length})</Text>
+                  <Text style={styles.summaryRowValue}>{formatPrice(subtotal)}</Text>
                 </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryRowLabel}>Booking Fee</Text>
+                  <Text style={styles.summaryRowValue}>{formatPrice(bookingFee)}</Text>
+                </View>
+              </>
+            )}
+            
+            {/* Details */}
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryDetails}>
+              <View style={styles.summaryDetailRow}>
+                <Ionicons name={selectedServiceIds.length > 0 ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={selectedServiceIds.length > 0 ? Colors.primary : Colors.gray[400]} />
+                <Text style={styles.summaryDetailText}>
+                  {selectedServiceIds.length > 0 ? `${selectedServiceIds.length} services • ${totalDuration} min` : 'No services selected'}
+                </Text>
+              </View>
+              <View style={styles.summaryDetailRow}>
+                <Ionicons name={selectedDate && selectedTime ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={selectedDate && selectedTime ? Colors.primary : Colors.gray[400]} />
+                <Text style={styles.summaryDetailText}>
+                  {selectedDate && selectedTime
+                    ? `${dates.find(d => d.id === selectedDate)?.displayLabel}, ${timeSlots.morning.concat(timeSlots.afternoon, timeSlots.evening).find((s: any) => s.id === selectedTime)?.label}`
+                    : 'Date & time not selected'}
+                </Text>
               </View>
             </View>
           </View>
-        </View>
-
-        {/* Bottom Padding */}
-        <View style={{ height: 100 }} />
-      </ScrollView>
+        )}
+      </TouchableOpacity>
 
       {/* Fixed Bottom Button */}
       <View style={[styles.bottomBar, { paddingBottom: Platform.OS === 'android' ? insets.bottom + 16 : 32 }]}>
@@ -548,7 +592,7 @@ export default function BarbershopBookingScreen() {
           activeOpacity={0.8}
         >
           <Text style={styles.bookButtonText}>
-            Confirm Booking {selectedServiceIds.length > 0 && ` • ${formatPrice(total)}`}
+            Continue to Payment{selectedServiceIds.length > 0 && ` • ${formatPrice(total)}`}
           </Text>
         </TouchableOpacity>
       </View>
@@ -603,75 +647,173 @@ const styles = StyleSheet.create({
     flex: 1,
     letterSpacing: -0.3,
   },
-  // Booking Summary Card
-  summaryCard: {
-    backgroundColor: Colors.white,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 12,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  // Step Indicators
+  stepIndicator: {
+    width: 24,
+    height: 24,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.gray[200],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.gray[600],
+  },
+  // Booking At Section
+  bookingAtCard: {
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.gray[200],
   },
-  summaryHeader: {
+  shopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.gray[100],
+    gap: 8,
   },
-  summaryTitle: {
-    fontSize: 17,
+  shopName: {
+    fontSize: 16,
     fontWeight: '700',
     color: '#1C1C1E',
+    flex: 1,
   },
-  summaryContent: {
+  shopAddress: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 8,
+    marginLeft: 26,
+  },
+  shopAddressText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.gray[500],
+    lineHeight: 18,
+  },
+  bookingAtDivider: {
+    height: 1,
+    backgroundColor: Colors.gray[200],
+    marginVertical: 16,
+  },
+  barberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+  },
+  barberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.gray[200],
+  },
+  barberInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  barberNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  barberName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  barberMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  barberMetaText: {
+    fontSize: 12,
+    color: Colors.gray[500],
+    fontWeight: '500',
+  },
+  // Sticky Summary (Grab Style)
+  stickySummary: {
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray[200],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  summaryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  summaryHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
+  },
+  summaryHeaderTotal: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  summaryExpandedContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: Colors.gray[200],
+    marginBottom: 12,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
-  summaryLabel: {
+  summaryRowLabel: {
     fontSize: 14,
-    color: Colors.gray[500],
+    color: Colors.gray[600],
     fontWeight: '500',
   },
-  summaryValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  summaryValue: {
+  summaryRowValue: {
     fontSize: 14,
     color: '#1C1C1E',
     fontWeight: '600',
-    textAlign: 'right',
   },
-  summaryRowTotal: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.gray[100],
+  summaryDetails: {
+    gap: 12,
   },
-  summaryLabelTotal: {
-    fontSize: 16,
-    color: '#1C1C1E',
-    fontWeight: '700',
+  summaryDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  summaryValueTotal: {
-    fontSize: 20,
-    color: Colors.primary,
-    fontWeight: '800',
+  summaryDetailText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.gray[600],
+    fontWeight: '500',
   },
   // Compact Barber & Shop Info
   compactInfoCard: {

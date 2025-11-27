@@ -502,6 +502,30 @@ export const api = {
     };
   },
 
+  // Get staff member by ID (barbershop staff, NOT freelance barbers)
+  getStaffById: async (staffId: string): Promise<ApiResponse<any>> => {
+    // Use real Supabase data if enabled
+    if (USE_REAL_DATA) {
+      return supabaseApi.getStaffById(staffId) as any;
+    }
+    
+    // Otherwise use mock data
+    await delay(500);
+    const staff = mockBarbershopStaff.find(s => s.id === staffId);
+    
+    if (!staff) {
+      return {
+        success: false,
+        error: 'Staff not found',
+      };
+    }
+    
+    return {
+      success: true,
+      data: staff,
+    };
+  },
+
   // Get staff member's services from shop catalog
   getStaffServices: async (staffId: string, shopId: string): Promise<ApiResponse<any[]>> => {
     // Use real Supabase data if enabled

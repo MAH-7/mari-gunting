@@ -1066,28 +1066,105 @@ export const supabaseApi = {
     try {
       console.log('🔍 Fetching staff for barbershop:', shopId);
 
-      const { data: staff, error } = await supabase
+      // NOTE: barbershop_staff currently has no user_id FK; remove invalid join
+      // Fetch ALL staff (including inactive) - UI will gray out inactive ones
+      const { data, error } = await supabase
         .from('barbershop_staff')
-        .select(`
-          *,
-          profile:profiles!barbershop_staff_user_id_fkey(*)
-        `)
-        .eq('barbershop_id', shopId)
-        .eq('is_active', true);
+        .select('*')
+        .eq('barbershop_id', shopId);
 
       if (error) {
         console.error('❌ Error fetching staff:', error);
         throw error;
       }
 
-      console.log(`✅ Found ${staff?.length || 0} staff members`);
+      const staff = data || [];
+      console.log(`✅ Found ${staff.length} staff members`);
+
+      // Transform to BarbershopStaff UI shape with sensible fallbacks
+      const transformed = staff.map((s: any) => ({
+        id: s.id,
+        barbershopId: s.barbershop_id,
+        name: s.name,
+        avatar: s.avatar || '', // optional future column; empty string safe with RN Image background
+        bio: s.bio || '',
+        rating: typeof s.rating === 'number' ? s.rating : 0,
+        totalReviews: typeof s.total_reviews === 'number' ? s.total_reviews : 0,
+        completedJobs: typeof s.completed_jobs === 'number' ? s.completed_jobs : 0,
+        joinedDate: s.created_at,
+        specializations: Array.isArray(s.specializations) ? s.specializations : [],
+        certifications: Array.isArray(s.certifications) ? s.certifications : [],
+        photos: Array.isArray(s.photos) ? s.photos : [],
+        serviceIds: Array.isArray(s.service_ids) ? s.service_ids : [],
+        isAvailable: s.is_active ?? true, // Map is_active to isAvailable for UI
+        isVerified: s.is_verified ?? false,
+      }));
 
       return {
         success: true,
-        data: staff || [],
+        data: transformed,
       };
     } catch (error: any) {
       console.error('❌ Error in getBarbersByShopId:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch staff',
+      };
+    }
+  },
+
+  /**
+   * Get staff member by ID (for barbershop staff, NOT freelance barbers)
+   */
+  getStaffById: async (staffId: string): Promise<ApiResponse<any>> => {
+    try {
+      console.log('🔍 Fetching staff by ID:', staffId);
+
+      const { data, error } = await supabase
+        .from('barbershop_staff')
+        .select('*')
+        .eq('id', staffId)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching staff:', error);
+        throw error;
+      }
+
+      if (!data) {
+        return {
+          success: false,
+          error: 'Staff not found',
+        };
+      }
+
+      // Transform to BarbershopStaff UI shape
+      const transformed = {
+        id: data.id,
+        barbershopId: data.barbershop_id,
+        name: data.name,
+        avatar: data.avatar || '',
+        bio: data.bio || '',
+        rating: typeof data.rating === 'number' ? data.rating : 0,
+        totalReviews: typeof data.total_reviews === 'number' ? data.total_reviews : 0,
+        completedJobs: typeof data.completed_jobs === 'number' ? data.completed_jobs : 0,
+        joinedDate: data.created_at,
+        specializations: Array.isArray(data.specializations) ? data.specializations : [],
+        certifications: Array.isArray(data.certifications) ? data.certifications : [],
+        photos: Array.isArray(data.photos) ? data.photos : [],
+        serviceIds: Array.isArray(data.service_ids) ? data.service_ids : [],
+        isAvailable: data.is_available ?? true,
+        isVerified: data.is_verified ?? false,
+      };
+
+      console.log('✅ Staff found:', transformed.name);
+
+      return {
+        success: true,
+        data: transformed,
+      };
+    } catch (error: any) {
+      console.error('❌ Error in getStaffById:', error);
       return {
         success: false,
         error: error.message || 'Failed to fetch staff',

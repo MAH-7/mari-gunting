@@ -22,7 +22,6 @@ import { Colors } from '@mari-gunting/shared/theme';
 import { COLORS } from '@/shared/constants';
 
 const ROLES = ['Senior Barber', 'Barber', 'Junior Barber', 'Stylist', 'Trainee'];
-const SPECIALIZATIONS = ['Haircut', 'Fade', 'Beard Trim', 'Shaving', 'Hair Coloring', 'Perm', 'Kids Haircut'];
 
 export default function StaffManagementScreen() {
   const currentUser = useStore((state) => state.currentUser);
@@ -37,7 +36,6 @@ export default function StaffManagementScreen() {
   const [formData, setFormData] = useState({
     name: '',
     role: '',
-    specializations: [] as string[],
   });
 
   useEffect(() => {
@@ -79,7 +77,7 @@ export default function StaffManagementScreen() {
   };
 
   const handleAddStaff = () => {
-    setFormData({ name: '', role: '', specializations: [] });
+    setFormData({ name: '', role: '' });
     setEditingStaff(null);
     setShowModal(true);
   };
@@ -88,7 +86,6 @@ export default function StaffManagementScreen() {
     setFormData({
       name: member.name,
       role: member.role,
-      specializations: member.specializations,
     });
     setEditingStaff(member);
     setShowModal(true);
@@ -101,10 +98,6 @@ export default function StaffManagementScreen() {
     }
     if (!formData.role) {
       Alert.alert('Role Required', 'Please select a role');
-      return;
-    }
-    if (formData.specializations.length === 0) {
-      Alert.alert('Specializations Required', 'Please select at least one specialization');
       return;
     }
     if (!barbershopId) {
@@ -120,7 +113,6 @@ export default function StaffManagementScreen() {
         const updates: UpdateStaffInput = {
           name: formData.name.trim(),
           role: formData.role,
-          specializations: formData.specializations,
         };
         await staffService.updateStaff(editingStaff.id, updates);
       } else {
@@ -128,7 +120,6 @@ export default function StaffManagementScreen() {
         const newStaff: CreateStaffInput = {
           name: formData.name.trim(),
           role: formData.role,
-          specializations: formData.specializations,
         };
         await staffService.createStaff(barbershopId, newStaff);
       }
@@ -178,19 +169,6 @@ export default function StaffManagementScreen() {
     }
   };
 
-  const toggleSpecialization = (spec: string) => {
-    if (formData.specializations.includes(spec)) {
-      setFormData({
-        ...formData,
-        specializations: formData.specializations.filter((s) => s !== spec),
-      });
-    } else {
-      setFormData({
-        ...formData,
-        specializations: [...formData.specializations, spec],
-      });
-    }
-  };
 
   if (loading) {
     return (
@@ -269,15 +247,6 @@ export default function StaffManagementScreen() {
                   />
                 </View>
 
-                {/* Specializations */}
-                <View style={styles.specsContainer}>
-                  {member.specializations.map((spec, index) => (
-                    <View key={index} style={styles.specChip}>
-                      <Text style={styles.specChipText}>{spec}</Text>
-                    </View>
-                  ))}
-                </View>
-
                 {/* Actions */}
                 <View style={styles.actions}>
                   <TouchableOpacity
@@ -345,30 +314,6 @@ export default function StaffManagementScreen() {
                       ]}
                     >
                       {role}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Specializations */}
-              <Text style={styles.inputLabel}>Specializations *</Text>
-              <View style={styles.specsGrid}>
-                {SPECIALIZATIONS.map((spec) => (
-                  <TouchableOpacity
-                    key={spec}
-                    style={[
-                      styles.specChipButton,
-                      formData.specializations.includes(spec) && styles.specChipButtonActive,
-                    ]}
-                    onPress={() => toggleSpecialization(spec)}
-                  >
-                    <Text
-                      style={[
-                        styles.specChipButtonText,
-                        formData.specializations.includes(spec) && styles.specChipButtonTextActive,
-                      ]}
-                    >
-                      {spec}
                     </Text>
                   </TouchableOpacity>
                 ))}

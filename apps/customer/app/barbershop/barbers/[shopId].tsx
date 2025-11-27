@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -70,13 +70,6 @@ export default function SelectBarberScreen() {
                 </View>
               </View>
 
-              {/* Specializations */}
-              <View style={styles.specializationsContainer}>
-                <SkeletonBase width={90} height={28} borderRadius={14} />
-                <SkeletonBase width={100} height={28} borderRadius={14} />
-                <SkeletonBase width={80} height={28} borderRadius={14} />
-              </View>
-
               {/* Footer */}
               <View style={styles.barberFooter}>
                 <View style={styles.priceContainer}>
@@ -125,132 +118,112 @@ export default function SelectBarberScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Shop Info Banner */}
+      {/* Shop Info Banner - Compact */}
       <View style={styles.shopBanner}>
-        <View style={styles.shopBannerLeft}>
-          <Image source={{ uri: shop.image }} style={styles.shopLogo} />
-          <View style={styles.shopBannerInfo}>
+        <View style={styles.shopBannerRow}>
+          <View style={styles.shopBannerLeft}>
+            <Ionicons name="storefront" size={20} color={Colors.primary} />
             <Text style={styles.shopBannerName}>{shop.name}</Text>
-            <View style={styles.shopBannerMeta}>
-              <Ionicons name="star" size={14} color="#FBBF24" />
-              <Text style={styles.shopBannerRating}>{shop.rating.toFixed(1)}</Text>
-              <View style={styles.shopBannerDot} />
-              <Text style={styles.shopBannerText}>{barbers.length} barbers</Text>
-            </View>
+          </View>
+          <View style={styles.shopBannerMeta}>
+            <Ionicons name="star" size={14} color="#FBBF24" />
+            <Text style={styles.shopBannerRating}>{shop.rating.toFixed(1)}</Text>
           </View>
         </View>
+        <Text style={styles.shopBannerSubtext}>{barbers.length} barbers available</Text>
       </View>
 
-      {/* Shop Pricing Info */}
-      <View style={styles.pricingBanner}>
-        <View style={styles.pricingContent}>
-          <Ionicons name="pricetag-outline" size={20} color={Colors.primary} />
-          <View style={styles.pricingInfo}>
-            <Text style={styles.pricingLabel}>Services starting from</Text>
-            <Text style={styles.pricingValue}>
-              {formatCurrency(Math.min(...shop.services.map((s: any) => s.price)))}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.pricingNote}>All staff offer same services at shop's prices</Text>
-      </View>
-
-      {/* Barbers List */}
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Barbers List - Flat Grab Style */}
+      <View style={styles.barbersList}>
         {barbers.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={64} color={Colors.gray[300]} />
-            <Text style={styles.emptyTitle}>No Barbers Available</Text>
-            <Text style={styles.emptyText}>This barbershop doesn't have any barbers at the moment</Text>
+            <Ionicons name="people-outline" size={48} color={Colors.gray[300]} />
+            <Text style={styles.emptyText}>No barbers available</Text>
           </View>
         ) : (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Available Barbers</Text>
-              <Text style={styles.sectionSubtitle}>Choose your preferred barber</Text>
-            </View>
-
-            {barbers.map((staff: BarbershopStaff) => {
-              return (
-                <View
-                  key={staff.id}
-                  style={styles.barberCard}
-                >
-                  {/* Staff Avatar & Info */}
-                  <View style={styles.barberHeader}>
-                    <View style={styles.avatarContainer}>
-                      <Image source={{ uri: staff.avatar }} style={styles.barberAvatar} />
-                      {staff.isAvailable && <View style={styles.onlineBadge} />}
-                    </View>
-                    
-                    <View style={styles.barberInfo}>
-                      <View style={styles.barberNameRow}>
-                        <Text style={styles.barberName}>{staff.name}</Text>
-                        {staff.isVerified && (
-                          <Ionicons name="checkmark-circle" size={18} color={Colors.info} />
-                        )}
-                      </View>
-                      
-                      <View style={styles.barberMeta}>
-                        <View style={styles.ratingContainer}>
-                          <Ionicons name="star" size={14} color="#FBBF24" />
-                          <Text style={styles.ratingText}>{staff.rating.toFixed(1)}</Text>
-                          <Text style={styles.reviewsText}>({staff.totalReviews})</Text>
-                        </View>
-                        <View style={styles.metaDivider} />
-                        <Text style={styles.jobsText}>{staff.completedJobs} jobs</Text>
-                      </View>
-
-                      {staff.isAvailable ? (
-                        <View style={styles.statusBadge}>
-                          <View style={styles.statusDot} />
-                          <Text style={styles.statusText}>Available Today</Text>
-                        </View>
-                      ) : (
-                        <View style={[styles.statusBadge, styles.statusBadgeOffline]}>
-                          <Text style={styles.statusTextOffline}>Not Available</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-
-                  {/* Specializations */}
-                  {staff.specializations && staff.specializations.length > 0 && (
-                    <View style={styles.specializationsContainer}>
-                      {staff.specializations.slice(0, 3).map((spec: string, idx: number) => (
-                        <View key={idx} style={styles.specPill}>
-                          <Text style={styles.specPillText}>{spec}</Text>
-                        </View>
-                      ))}
-                      {staff.specializations.length > 3 && (
-                        <View style={styles.morePill}>
-                          <Text style={styles.morePillText}>+{staff.specializations.length - 3}</Text>
-                        </View>
-                      )}
-                    </View>
+          barbers.map((staff: BarbershopStaff, index: number) => (
+            <TouchableOpacity
+              key={staff.id}
+              style={[
+                styles.barberItem,
+                index < barbers.length - 1 && styles.barberItemBorder,
+                !staff.isAvailable && styles.barberItemDisabled
+              ]}
+              onPress={() => {
+                if (staff.isAvailable) {
+                  router.push(`/barbershop/booking/${staff.id}?shopId=${shopId}` as any);
+                }
+              }}
+              activeOpacity={staff.isAvailable ? ACTIVE_OPACITY.SECONDARY : 1}
+              disabled={!staff.isAvailable}
+            >
+              {/* Avatar */}
+              <View style={[
+                styles.barberAvatar,
+                !staff.isAvailable && styles.barberAvatarDisabled
+              ]}>
+                <Text style={[
+                  styles.avatarText,
+                  !staff.isAvailable && styles.avatarTextDisabled
+                ]}>
+                  {staff.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              
+              {/* Info */}
+              <View style={styles.barberInfo}>
+                <View style={styles.barberNameRow}>
+                  <Text style={[
+                    styles.barberName,
+                    !staff.isAvailable && styles.barberNameDisabled
+                  ]}>
+                    {staff.name}
+                  </Text>
+                  {staff.isVerified && (
+                    <Ionicons 
+                      name="checkmark-circle" 
+                      size={16} 
+                      color={staff.isAvailable ? Colors.info : Colors.gray[300]} 
+                    />
                   )}
-
-                  {/* Select Button - Full Width */}
-                  <View style={styles.barberFooter}>
-                    <TouchableOpacity 
-                      style={styles.selectButtonFull}
-                      onPress={() => router.push(`/barbershop/booking/${staff.id}?shopId=${shopId}` as any)}
-                      activeOpacity={ACTIVE_OPACITY.PRIMARY}
-                    >
-                      <Text style={styles.selectButtonFullText}>Select {staff.name.split(' ')[0]}</Text>
-                      <Ionicons name="arrow-forward" size={18} color={Colors.white} />
-                    </TouchableOpacity>
-                  </View>
                 </View>
-              );
-            })}
-          </>
+                <View style={styles.barberMeta}>
+                  <Ionicons 
+                    name="star" 
+                    size={12} 
+                    color={staff.isAvailable ? "#FBBF24" : Colors.gray[300]} 
+                  />
+                  <Text style={[
+                    styles.ratingText,
+                    !staff.isAvailable && styles.textDisabled
+                  ]}>
+                    {staff.rating.toFixed(1)}
+                  </Text>
+                  <Text style={[
+                    styles.metaDivider,
+                    !staff.isAvailable && styles.textDisabled
+                  ]}>
+                    {' • '}
+                  </Text>
+                  <Text style={[
+                    styles.jobsText,
+                    !staff.isAvailable && styles.textDisabled
+                  ]}>
+                    {staff.completedJobs} jobs
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Arrow or disabled indicator */}
+              {staff.isAvailable ? (
+                <Ionicons name="chevron-forward" size={20} color={Colors.gray[400]} />
+              ) : (
+                <Text style={styles.unavailableText}>Unavailable</Text>
+              )}
+            </TouchableOpacity>
+          ))
         )}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -305,20 +278,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray[100],
   },
+  shopBannerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   shopBannerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  shopLogo: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: Colors.gray[100],
-  },
-  shopBannerInfo: {
-    flex: 1,
-    gap: 4,
+    gap: 8,
   },
   shopBannerName: {
     fontSize: 16,
@@ -328,248 +297,102 @@ const styles = StyleSheet.create({
   shopBannerMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   shopBannerRating: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.text.primary,
   },
-  shopBannerDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.gray[300],
-  },
-  shopBannerText: {
-    fontSize: 14,
+  shopBannerSubtext: {
+    fontSize: 13,
     color: Colors.gray[500],
     fontWeight: '500',
+    marginLeft: 28,
   },
-  pricingBanner: {
-    backgroundColor: Colors.primaryLight,
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#DDD6FE',
-  },
-  pricingContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  pricingInfo: {
-    flex: 1,
-  },
-  pricingLabel: {
-    fontSize: 12,
-    color: '#059669',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  pricingValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  pricingNote: {
-    fontSize: 11,
-    color: '#059669',
-    fontWeight: '500',
-    fontStyle: 'italic',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  sectionHeader: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text.primary,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: Colors.gray[500],
-    fontWeight: '500',
-  },
-  emptyState: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    gap: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-  },
-  barberCard: {
+  barbersList: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: Colors.gray[100],
   },
-  barberHeader: {
+  barberItem: {
     flexDirection: 'row',
-    marginBottom: 16,
-    paddingBottom: 16,
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  barberItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray[100],
   },
-  avatarContainer: {
-    position: 'relative',
+  barberItemDisabled: {
+    opacity: 0.5,
   },
   barberAvatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barberAvatarDisabled: {
     backgroundColor: Colors.gray[100],
   },
-  onlineBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: Colors.primary,
-    borderWidth: 3,
-    borderColor: Colors.white,
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  avatarTextDisabled: {
+    color: Colors.gray[400],
   },
   barberInfo: {
     flex: 1,
-    marginLeft: 16,
-    gap: 8,
+    gap: 4,
   },
   barberNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   barberName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: Colors.text.primary,
   },
-  barberMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  barberNameDisabled: {
+    color: Colors.gray[400],
   },
-  ratingContainer: {
+  barberMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   ratingText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.text.primary,
   },
-  reviewsText: {
-    fontSize: 13,
-    color: Colors.gray[500],
-    fontWeight: '500',
-  },
   metaDivider: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.gray[300],
+    fontSize: 13,
+    color: Colors.gray[400],
+    fontWeight: '500',
   },
   jobsText: {
     fontSize: 13,
     color: Colors.gray[500],
     fontWeight: '500',
   },
-  statusBadge: {
-    flexDirection: 'row',
+  textDisabled: {
+    color: Colors.gray[400],
+  },
+  unavailableText: {
+    fontSize: 12,
+    color: Colors.gray[400],
+    fontWeight: '600',
+  },
+  emptyState: {
+    padding: 40,
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: getStatusBackground("ready"),
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 4,
-  },
-  statusBadgeOffline: {
-    backgroundColor: Colors.gray[100],
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  statusTextOffline: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.gray[500],
-  },
-  specializationsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  specPill: {
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-  },
-  specPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  morePill: {
-    backgroundColor: Colors.backgroundSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.gray[200],
-  },
-  morePillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.gray[500],
-  },
-  barberFooter: {
-    marginTop: 4,
-  },
-  selectButtonFull: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  selectButtonFullText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.white,
+    gap: 12,
   },
 });
